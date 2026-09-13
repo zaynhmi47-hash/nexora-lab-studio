@@ -4,7 +4,7 @@ from django.db import IntegrityError, transaction
 from django.utils.text import slugify
 
 from apps.access.services import provision_organization_access
-from apps.core.exceptions import ConflictException, NotFoundException, ValidationException
+from apps.core.exceptions import ConflictException, NotFoundException, PermissionDeniedException, ValidationException
 from apps.identity.models import NexoraUser
 from apps.organizations.models import Membership, Organization
 
@@ -22,6 +22,10 @@ class OrganizationService:
         normalized_name = " ".join(name.split()) if isinstance(name, str) else ""
         if len(normalized_name) < 2:
             raise ValidationException("Organization name must contain at least two characters.")
+        if created_by is not None and (
+            created_by.deleted_at is not None or created_by.status != NexoraUser.Status.ACTIVE
+        ):
+            raise PermissionDeniedException("An inactive identity cannot own an organization.")
         normalized_slug = slugify(slug or normalized_name)
         if not normalized_slug:
             raise ValidationException("Organization slug cannot be empty.")
