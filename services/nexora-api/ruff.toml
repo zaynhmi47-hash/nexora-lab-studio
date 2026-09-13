@@ -1,7 +1,7 @@
 line-length = 120
 
 [lint]
-select = ["E4", "E7", "E9", "F", "I"]
+select = ["E4", "E7", "E9", "F"]
 ignore = [
     "RUF012", # Django/DRF class attributes intentionally use mutable lists in view configuration.
     "B039",   # RequestContext is immutable; ContextVar default is handled explicitly in application code.
@@ -9,6 +9,3 @@ ignore = [
     "UP037",  # Future-annotations style is intentionally retained for compatibility.
     "EXE001", # manage.py is invoked through Python in CI/deployment.
 ]
-
-[lint.per-file-ignores]
-"**/migrations/*.py" = ["I001"]
