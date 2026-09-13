@@ -9,6 +9,6 @@ urlpatterns = [
     path("health/ready/", ReadinessView.as_view(), name="health-ready"),
     path("organizations/", include("api.v1.urls_organizations")),
     path("products/", include("apps.products.api.urls")),
-    path("capabilities/", include("apps.capabilities.api.urls")),
     path("products/", include("apps.capabilities.api.urls_products")),
+    path("capabilities/", include("apps.capabilities.api.urls")),
 ]
