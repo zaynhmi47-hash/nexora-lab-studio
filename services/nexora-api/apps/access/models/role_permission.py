@@ -23,12 +23,18 @@ class RolePermission(AuditableBaseModel):
         if self.role_id and self.permission_id:
             role = self.role
             permission = self.permission
+            if role.organization_id and permission.deleted_at is not None:
+                raise ValidationError("Deleted permissions cannot be assigned to roles.")
             if role.is_system:
                 from apps.access.services.provisioning import ROLE_PERMISSIONS
 
                 allowed_codes = ROLE_PERMISSIONS.get(role.slug, set())
                 if permission.code not in allowed_codes:
                     raise ValidationError("System roles cannot receive permissions outside their fixed policy.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
     def soft_delete(self):
         if self.role.is_system:
