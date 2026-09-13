@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from apps.core.models import AuditableBaseModel
@@ -16,3 +17,20 @@ class RolePermission(AuditableBaseModel):
             )
         ]
         indexes = [models.Index(fields=("role",), name="access_rp_role_idx")]
+
+    def clean(self):
+        super().clean()
+        if self.role_id and self.permission_id:
+            role = self.role
+            permission = self.permission
+            if role.is_system:
+                from apps.access.services.provisioning import ROLE_PERMISSIONS
+
+                allowed_codes = ROLE_PERMISSIONS.get(role.slug, set())
+                if permission.code not in allowed_codes:
+                    raise ValidationError("System roles cannot receive permissions outside their fixed policy.")
+
+    def soft_delete(self):
+        if self.role.is_system:
+            raise ValidationError("Permissions cannot be removed from system roles.")
+        return super().soft_delete()
