@@ -1,7 +1,8 @@
 import pytest
+from django.core.exceptions import ValidationError
 
 from apps.access.services import authorize
-from apps.core.exceptions import PermissionDeniedException, ValidationException
+from apps.core.exceptions import PermissionDeniedException
 from apps.identity.models import NexoraUser
 from apps.organizations.models import Membership, Organization
 from apps.organizations.selectors import get_active_membership, get_user_organizations
@@ -36,7 +37,7 @@ def test_membership_role_must_belong_to_same_organization():
     foreign_role = first_org.roles.get(slug="member")
 
     membership.role = foreign_role
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         membership.full_clean()
 
 
