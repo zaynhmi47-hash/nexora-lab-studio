@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError
 
 from apps.access.models import Role
 from apps.core.exceptions import ConflictException, NotFoundException, PermissionDeniedException
