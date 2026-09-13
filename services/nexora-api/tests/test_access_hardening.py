@@ -1,7 +1,7 @@
 import pytest
 from django.core.exceptions import ValidationError
 
-from apps.access.models import Permission, Role, RolePermission
+from apps.access.models import Permission, RolePermission
 from apps.access.services import assign_role, provision_organization_access
 from apps.core.exceptions import PermissionDeniedException
 from apps.identity.models import NexoraUser
