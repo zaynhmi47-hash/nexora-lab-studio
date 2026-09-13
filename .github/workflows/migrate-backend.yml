@@ -1,0 +1,57 @@
+name: Migrate existing Nexora backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/migrate-backend.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout monorepo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Clone existing backend
+        run: git clone --depth 1 https://github.com/zaynhmi47-hash/BackEnd.git /tmp/nexora-backend
+
+      - name: Copy backend into service boundary
+        run: |
+          set -euo pipefail
+          mkdir -p services/nexora-api
+          rsync -a --delete \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.env' \
+            /tmp/nexora-backend/ services/nexora-api/
+          rm -rf services/nexora-api/.git services/nexora-api/.github
+          find services/nexora-api -type d -name '__pycache__' -prune -exec rm -rf {} +
+          find services/nexora-api -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
+
+      - name: Preserve monorepo environment boundaries
+        run: |
+          set -euo pipefail
+          if [ -f services/nexora-api/.env.example ]; then
+            cp services/nexora-api/.env.example services/nexora-api/.env.example.migrated
+            rm services/nexora-api/.env.example
+            mv services/nexora-api/.env.example.migrated services/nexora-api/.env.example
+          fi
+
+      - name: Commit migrated backend
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add services/nexora-api
+          if git diff --cached --quiet; then
+            echo 'No backend changes to commit.'
+            exit 0
+          fi
+          git commit -m 'feat(backend): migrate existing BackEnd into nexora-api'
+          git push origin HEAD:main
