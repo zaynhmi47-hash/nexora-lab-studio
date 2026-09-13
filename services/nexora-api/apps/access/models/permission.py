@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
 
@@ -24,6 +25,18 @@ class Permission(AuditableBaseModel):
         db_table = "access_permissions"
         ordering = ("code",)
         indexes = [models.Index(fields=("category",), name="access_perm_category_idx")]
+
+    def clean(self):
+        super().clean()
+        if self.is_system and self.pk:
+            previous = type(self).objects.filter(pk=self.pk).values("code", "is_system").first()
+            if previous and (previous["code"] != self.code or not previous["is_system"]):
+                raise ValidationError("System permission identity cannot be changed.")
+
+    def soft_delete(self):
+        if self.is_system:
+            raise ValidationError("System permissions cannot be deleted.")
+        return super().soft_delete()
 
     def __str__(self) -> str:
         return self.code
