@@ -11,6 +11,8 @@ from apps.organizations.models import Membership, Organization
 class MembershipService:
     @staticmethod
     def add_user(*, user: NexoraUser, organization_id) -> Membership:
+        if user.deleted_at is not None or user.status != NexoraUser.Status.ACTIVE:
+            raise PermissionDeniedException("An inactive identity cannot join an organization.")
         organization = Organization.objects.active().filter(id=organization_id).first()
         if organization is None:
             raise NotFoundException("Organization not found.")
