@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from apps.access.services import authorize
 from apps.core.exceptions import PermissionDeniedException
 from apps.identity.models import NexoraUser
-from apps.organizations.models import Membership, Organization
+from apps.organizations.models import Organization
 from apps.organizations.selectors import get_active_membership, get_user_organizations
 from apps.organizations.services import MembershipService, OrganizationService
 
