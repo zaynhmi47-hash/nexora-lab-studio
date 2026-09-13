@@ -33,6 +33,10 @@ class Permission(AuditableBaseModel):
             if previous and (previous["code"] != self.code or not previous["is_system"]):
                 raise ValidationError("System permission identity cannot be changed.")
 
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
     def soft_delete(self):
         if self.is_system:
             raise ValidationError("System permissions cannot be deleted.")
