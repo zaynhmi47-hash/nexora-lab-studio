@@ -4,18 +4,22 @@ on:
   push:
     branches:
       - feat/import-nexora-frontend
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
 
 jobs:
   import:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - name: Checkout monorepo
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref_name }}
+          ref: ${{ github.head_ref || github.ref_name }}
           fetch-depth: 1
 
       - name: Checkout generated frontend
@@ -68,4 +72,4 @@ jobs:
             exit 0
           fi
           git commit -m "feat(frontend): import generated Nexora frontend"
-          git push origin HEAD:${{ github.ref_name }}
+          git push origin HEAD:${{ github.head_ref || github.ref_name }}
