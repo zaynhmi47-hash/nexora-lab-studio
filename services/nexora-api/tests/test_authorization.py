@@ -39,8 +39,7 @@ def test_authorize_denies_cross_tenant_role():
     user = NexoraUser.objects.create(email="member@example.com", status=NexoraUser.Status.ACTIVE)
     role = Role.objects.create(organization=other_organization, name="Admin", slug="admin")
 
-    membership = Membership(user=user, organization=organization, role=role)
-    membership.save(validate=False)
+    Membership.objects.create(user=user, organization=organization, role=role)
 
     decision = authorize(user=user, organization=organization, permission_code="organization.read")
 
