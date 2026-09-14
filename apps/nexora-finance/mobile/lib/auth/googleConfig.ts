@@ -1,0 +1,7 @@
+export const GOOGLE_AUTH_REDIRECT_PATH = 'oauthredirect';
+
+export const GOOGLE_CLIENT_ID_ENV = {
+  web: 'EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID',
+  android: 'EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID',
+  ios: 'EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID',
+} as const;
