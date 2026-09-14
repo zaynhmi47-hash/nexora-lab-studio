@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Platform } from 'react-native';
-import { AuthProvider } from '../lib/auth/AuthProvider';
+import { AuthProvider } from '../lib/auth/AuthProvider.v2';
 
 export const unstable_settings = {
   initialRouteName: '(tabs)',
@@ -21,10 +21,7 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="modal"
-          options={{ presentation: 'modal', title: 'Scanner & Quick Ledger' }}
-        />
+        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Scanner & Quick Ledger' }} />
         <Stack.Screen name="+not-found" options={{ title: 'Page Not Found' }} />
       </Stack>
     </AuthProvider>
