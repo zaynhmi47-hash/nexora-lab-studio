@@ -1,6 +1,8 @@
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 
+import { OrganizationSwitcher } from '../../components/organization/OrganizationSwitcher';
+
 export default function TabLayout() {
   return (
     <Tabs
@@ -13,6 +15,7 @@ export default function TabLayout() {
           borderBottomColor: '#1e293b',
         },
         headerTintColor: '#ffffff',
+        headerTitle: () => <OrganizationSwitcher />,
         tabBarStyle: {
           backgroundColor: '#0f172a',
           borderTopColor: '#1e293b',
@@ -26,11 +29,11 @@ export default function TabLayout() {
         tabBarLabelStyle: { fontSize: 11, fontWeight: '700' },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Dashboard', headerTitle: 'Nexora Operating Core' }} />
-      <Tabs.Screen name="pos" options={{ title: 'POS Kasir', headerTitle: 'Nexora Smart POS' }} />
-      <Tabs.Screen name="finance" options={{ title: 'Finance', headerTitle: 'AI Financial Ledger' }} />
-      <Tabs.Screen name="inventory" options={{ title: 'Inventory', headerTitle: 'Multi-Warehouse Inventory' }} />
-      <Tabs.Screen name="growth" options={{ title: 'Growth & Ads', headerTitle: 'AI Marketing & Growth Copilot' }} />
+      <Tabs.Screen name="index" options={{ title: 'Dashboard' }} />
+      <Tabs.Screen name="pos" options={{ title: 'POS Kasir' }} />
+      <Tabs.Screen name="finance" options={{ title: 'Finance' }} />
+      <Tabs.Screen name="inventory" options={{ title: 'Inventory' }} />
+      <Tabs.Screen name="growth" options={{ title: 'Growth & Ads' }} />
     </Tabs>
   );
 }
