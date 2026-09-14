@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, type PropsWithChildren } from 'react';
 
-import { useAuth } from '../auth/AuthProvider.v2';
+import { useAuth } from '../auth/AuthProvider';
 import { createApiClient } from './client';
 
 export type NexoraApi = ReturnType<typeof createApiClient>;
