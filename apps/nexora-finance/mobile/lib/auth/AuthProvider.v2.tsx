@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
 import type { User } from 'firebase/auth';
-import { getFirebaseIdToken, signOutFromFirebase, subscribeToAuthState } from './firebase';
-import { signInWithGoogleAuthSession } from './google';
+import { getFirebaseIdToken, signOutFromFirebase, subscribeToAuthState } from './firebase.v2';
+import { signInWithGoogleAuthSession } from './google.v2';
 
 export type AuthContextValue = {
   user: User | null;
