@@ -1,7 +1,12 @@
 import { Platform } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
-import { GoogleAuthProvider, signInWithCredential, type User } from 'firebase/auth';
+import {
+  GoogleAuthProvider,
+  signInWithCredential,
+  signInWithPopup,
+  type User,
+} from 'firebase/auth';
 import { getFirebaseAuth } from '../firebase/config';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -24,19 +29,22 @@ function getClientId(): string {
   return clientId;
 }
 
-export async function signInWithGoogleAuthSession(): Promise<User> {
-  const redirectUri = AuthSession.makeRedirectUri({
-    scheme: 'nexorafinance',
-    path: 'oauthredirect',
-  });
+export async function signInWithGoogle(): Promise<User> {
+  const auth = getFirebaseAuth();
+
+  if (Platform.OS === 'web') {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    return (await signInWithPopup(auth, provider)).user;
+  }
 
   const request = new AuthSession.AuthRequest({
     clientId: getClientId(),
     responseType: AuthSession.ResponseType.Code,
     scopes: ['openid', 'profile', 'email'],
-    redirectUri,
+    redirectUri: AuthSession.makeRedirectUri({ scheme: 'nexorafinance', path: 'oauthredirect' }),
     usePKCE: true,
-    extraParams: { access_type: 'offline', prompt: 'select_account' },
+    extraParams: { prompt: 'select_account' },
   });
 
   const result = await request.promptAsync(googleDiscovery);
@@ -50,6 +58,5 @@ export async function signInWithGoogleAuthSession(): Promise<User> {
   }
 
   const credential = GoogleAuthProvider.credential(idToken);
-  const userCredential = await signInWithCredential(getFirebaseAuth(), credential);
-  return userCredential.user;
+  return (await signInWithCredential(auth, credential)).user;
 }
