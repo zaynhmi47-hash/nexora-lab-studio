@@ -1,5 +1,5 @@
 import type { ApiEnvelope } from './client';
-import { useNexoraApi } from './NexoraApiProvider';
+import type { NexoraApi } from './NexoraApiProvider';
 
 export type Organization = {
   id: string;
@@ -14,15 +14,13 @@ export type OrganizationMembership = {
   status: string;
 };
 
-export async function getOrganizations(
-  request: ReturnType<typeof useNexoraApi>,
-): Promise<Organization[]> {
+export async function getOrganizations(request: NexoraApi): Promise<Organization[]> {
   const response = await request.request<Organization[]>('/api/v1/organizations/');
   return requireData(response, 'organizations');
 }
 
 export async function getOrganization(
-  request: ReturnType<typeof useNexoraApi>,
+  request: NexoraApi,
   organizationId: string,
 ): Promise<Organization> {
   const response = await request.request<Organization>(
@@ -32,7 +30,7 @@ export async function getOrganization(
 }
 
 export async function getOrganizationMembership(
-  request: ReturnType<typeof useNexoraApi>,
+  request: NexoraApi,
   organizationId: string,
 ): Promise<OrganizationMembership> {
   const response = await request.request<OrganizationMembership>(
