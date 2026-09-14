@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { AuthProvider, useAuth } from '../lib/auth/AuthProvider';
 import { NexoraApiProvider } from '../lib/api/NexoraApiProvider';
+import { OrganizationProvider } from '../lib/organization/OrganizationProvider';
 
 export const unstable_settings = {
   initialRouteName: '(tabs)',
@@ -10,23 +11,16 @@ export const unstable_settings = {
 
 function LoadingScreen() {
   return (
-    <View
-      style={{
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#020617',
-      }}
-    >
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#020617' }}>
       <ActivityIndicator size="large" color="#38bdf8" />
     </View>
   );
 }
 
 function RootNavigator() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
-  if (loading) return <LoadingScreen />;
+  if (authLoading) return <LoadingScreen />;
 
   return (
     <Stack
@@ -56,8 +50,10 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <NexoraApiProvider>
-        <StatusBar style="light" backgroundColor="#020617" />
-        <RootNavigator />
+        <OrganizationProvider>
+          <StatusBar style="light" backgroundColor="#020617" />
+          <RootNavigator />
+        </OrganizationProvider>
       </NexoraApiProvider>
     </AuthProvider>
   );
