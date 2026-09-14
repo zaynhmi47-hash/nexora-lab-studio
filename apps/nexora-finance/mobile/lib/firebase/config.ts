@@ -1,5 +1,7 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
+import { getAuth, initializeAuth, getReactNativePersistence, type Auth } from 'firebase/auth';
+import { Platform } from 'react-native';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -11,24 +13,28 @@ const firebaseConfig = {
 };
 
 function assertConfig(): void {
-  const required: Array<keyof typeof firebaseConfig> = [
-    'apiKey',
-    'authDomain',
-    'projectId',
-    'appId',
-  ];
-
+  const required: Array<keyof typeof firebaseConfig> = ['apiKey', 'authDomain', 'projectId', 'appId'];
   const missing = required.filter((key) => !firebaseConfig[key]);
-  if (missing.length > 0) {
+  if (missing.length) {
     throw new Error(`Firebase configuration is incomplete: ${missing.join(', ')}`);
   }
 }
 
 export function getFirebaseApp(): FirebaseApp {
   assertConfig();
-  return getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  return getApps().length ? getApp() : initializeApp(firebaseConfig);
 }
 
 export function getFirebaseAuth(): Auth {
-  return getAuth(getFirebaseApp());
+  const app = getFirebaseApp();
+  if (Platform.OS === 'web') return getAuth(app);
+
+  try {
+    return initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
+  } catch (error) {
+    if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'auth/already-initialized') {
+      return getAuth(app);
+    }
+    throw error;
+  }
 }
