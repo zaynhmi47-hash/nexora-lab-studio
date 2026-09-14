@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Platform, ActivityIndicator, View } from 'react-native';
-import { AuthProvider, useAuth } from '../lib/auth/AuthProvider.v2';
+import { ActivityIndicator, Platform, View } from 'react-native';
+import { AuthProvider, useAuth } from '../lib/auth/AuthProvider';
 import { NexoraApiProvider } from '../lib/api/NexoraApiProvider';
 
 export const unstable_settings = {
