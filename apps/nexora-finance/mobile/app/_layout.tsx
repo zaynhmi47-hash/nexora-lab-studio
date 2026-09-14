@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Platform } from 'react-native';
+import { AuthProvider } from '../lib/auth/AuthProvider';
 
 export const unstable_settings = {
   initialRouteName: '(tabs)',
@@ -8,7 +9,7 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   return (
-    <>
+    <AuthProvider>
       <StatusBar style="light" backgroundColor="#020617" />
       <Stack
         screenOptions={{
@@ -26,6 +27,6 @@ export default function RootLayout() {
         />
         <Stack.Screen name="+not-found" options={{ title: 'Page Not Found' }} />
       </Stack>
-    </>
+    </AuthProvider>
   );
 }
