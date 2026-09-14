@@ -24,7 +24,7 @@ ROLE_PERMISSIONS = {
         "finance.transactions.read",
         "finance.transactions.create",
     },
-    "member": {"organization.read"},
+    "member": {"organization.read", "finance.transactions.read"},
 }
 
 
