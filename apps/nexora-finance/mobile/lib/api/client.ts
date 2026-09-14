@@ -47,12 +47,16 @@ async function parseEnvelope(response: Response): Promise<ApiEnvelope<unknown> |
 }
 
 export function createApiClient(getAccessToken: AccessTokenProvider) {
-  if (!apiBaseUrl) {
-    throw new Error('EXPO_PUBLIC_NEXORA_API_URL is not configured.');
-  }
-
   return {
     async request<T>(path: string, init: RequestInit = {}): Promise<ApiEnvelope<T>> {
+      if (!apiBaseUrl) {
+        throw new NexoraApiError('Nexora Core API URL is not configured.', {
+          status: 0,
+          payload: null,
+          requestId: createRequestId(),
+        });
+      }
+
       const requestId = createRequestId();
       const headers = new Headers(init.headers);
       headers.set('Accept', 'application/json');
@@ -67,9 +71,8 @@ export function createApiClient(getAccessToken: AccessTokenProvider) {
 
       let response = await fetch(`${apiBaseUrl}${path}`, { ...init, headers });
 
-      // Firebase refreshes tokens automatically when they are near expiry, but a
-      // server-side 401 can still occur at the exact expiry boundary. Refresh once
-      // and retry; never loop indefinitely.
+      // Firebase normally refreshes tokens before expiry. A single forced refresh
+      // handles the expiry boundary without creating an infinite retry loop.
       if (response.status === 401 && token) {
         token = await getAccessToken(true);
         if (token) {
