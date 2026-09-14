@@ -8,6 +8,7 @@ urlpatterns = [
     path("health/live/", LivenessView.as_view(), name="health-live"),
     path("health/ready/", ReadinessView.as_view(), name="health-ready"),
     path("organizations/", include("api.v1.urls_organizations")),
+    path("organizations/<uuid:organization_id>/finance/", include("api.v1.urls_finance")),
     path("products/", include("apps.products.api.urls")),
     path("products/", include("apps.capabilities.api.urls_products")),
     path("capabilities/", include("apps.capabilities.api.urls")),
