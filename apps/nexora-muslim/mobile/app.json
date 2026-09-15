@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "Nexora Muslim",
+    "slug": "nexora-muslim",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "nexoramuslim",
+    "userInterfaceStyle": "automatic",
+    "plugins": ["expo-router"],
+    "experiments": { "typedRoutes": true },
+    "android": { "package": "com.nexora.muslim" },
+    "ios": { "bundleIdentifier": "com.nexora.muslim" },
+    "web": { "bundler": "metro" }
+  }
+}
