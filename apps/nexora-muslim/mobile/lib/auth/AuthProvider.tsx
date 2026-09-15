@@ -1,4 +1,11 @@
-import { createContext, useContext, useMemo, useState, type PropsWithChildren } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type PropsWithChildren,
+} from 'react';
 import { mockAuth } from './mockAuth';
 import type { AuthPort, AuthSession } from './types';
 
@@ -12,29 +19,49 @@ const AuthContext = createContext<{
 export function AuthProvider({ children }: PropsWithChildren) {
   const auth: AuthPort = mockAuth;
   const [session, setSession] = useState<AuthSession | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const value = useMemo(() => ({
-    session,
-    loading,
-    async signIn() {
-      setLoading(true);
-      try {
-        setSession(await auth.signIn());
-      } finally {
-        setLoading(false);
-      }
-    },
-    async signOut() {
-      setLoading(true);
-      try {
-        await auth.signOut();
-        setSession(null);
-      } finally {
-        setLoading(false);
-      }
-    },
-  }), [auth, loading, session]);
+  useEffect(() => {
+    let active = true;
+
+    void auth
+      .getSession()
+      .then((nextSession) => {
+        if (active) setSession(nextSession);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [auth]);
+
+  const value = useMemo(
+    () => ({
+      session,
+      loading,
+      async signIn() {
+        setLoading(true);
+        try {
+          setSession(await auth.signIn());
+        } finally {
+          setLoading(false);
+        }
+      },
+      async signOut() {
+        setLoading(true);
+        try {
+          await auth.signOut();
+          setSession(null);
+        } finally {
+          setLoading(false);
+        }
+      },
+    }),
+    [auth, loading, session],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
