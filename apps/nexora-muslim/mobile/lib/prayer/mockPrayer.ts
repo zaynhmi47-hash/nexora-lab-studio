@@ -1,0 +1,21 @@
+import type { DailyPrayerSchedule, DhikrItem } from './types';
+
+export const mockPrayerSchedule: DailyPrayerSchedule = {
+  dateLabel: 'Monday, 15 September 2026',
+  locationLabel: 'Makassar, Indonesia',
+  hijriLabel: '23 Rabiul Awal 1448 H',
+  sunrise: '05:58',
+  prayers: [
+    { name: 'Fajr', time: '05:01', completed: true, isNext: false },
+    { name: 'Dhuhr', time: '12:02', completed: true, isNext: false },
+    { name: 'Asr', time: '15:18', completed: false, isNext: false },
+    { name: 'Maghrib', time: '18:02', completed: false, isNext: true },
+    { name: 'Isha', time: '19:12', completed: false, isNext: false },
+  ],
+};
+
+export const mockDhikr: DhikrItem[] = [
+  { id: 'morning', title: 'Morning adhkar', target: 10, completed: 6 },
+  { id: 'istighfar', title: 'Istighfar', target: 100, completed: 37 },
+  { id: 'salawat', title: 'Salawat', target: 100, completed: 24 },
+];
