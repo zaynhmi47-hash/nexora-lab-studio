@@ -10,7 +10,7 @@ class TransactionCreateSerializer(serializers.Serializer):
     amount = serializers.DecimalField(max_digits=18, decimal_places=2, min_value=0.01)
     currency = serializers.CharField(required=False, default="IDR", max_length=3, min_length=3)
     category = serializers.CharField(max_length=100, trim_whitespace=True)
-    description = serializers.CharField(required=False, allow_blank=True, max_length=255)
+    description = serializers.CharField(required=False, default="", allow_blank=True, max_length=255)
     occurred_at = serializers.DateTimeField()
 
     def validate_currency(self, value: str) -> str:
