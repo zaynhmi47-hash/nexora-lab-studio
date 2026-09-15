@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "apps.access",
     "apps.products",
     "apps.capabilities",
+    "apps.finance",
 ]
 
 MIDDLEWARE = [
@@ -56,9 +57,9 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-            ],
+            ]
         },
-    },
+    }
 ]
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"

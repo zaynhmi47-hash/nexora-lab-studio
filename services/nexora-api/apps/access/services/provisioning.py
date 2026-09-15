@@ -9,6 +9,8 @@ DEFAULT_PERMISSIONS = {
     "organization.members.manage": ("Manage members", "Manage organization memberships."),
     "organization.roles.read": ("Read roles", "Read organization roles."),
     "organization.roles.manage": ("Manage roles", "Manage organization roles."),
+    "finance.transactions.read": ("Finance transaction read", "Read organization finance transactions."),
+    "finance.transactions.create": ("Finance transaction create", "Create organization finance transactions."),
 }
 
 ROLE_PERMISSIONS = {
@@ -19,8 +21,10 @@ ROLE_PERMISSIONS = {
         "organization.members.read",
         "organization.members.manage",
         "organization.roles.read",
+        "finance.transactions.read",
+        "finance.transactions.create",
     },
-    "member": {"organization.read"},
+    "member": {"organization.read", "finance.transactions.read"},
 }
 
 
@@ -29,7 +33,7 @@ def provision_organization_access(organization):
     permissions = {
         code: Permission.objects.get_or_create(
             code=code,
-            defaults={"name": name, "description": description, "category": "organization", "is_system": True},
+            defaults={"name": name, "description": description, "category": code.split(".", 1)[0], "is_system": True},
         )[0]
         for code, (name, description) in DEFAULT_PERMISSIONS.items()
     }
