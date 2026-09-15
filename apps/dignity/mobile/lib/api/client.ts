@@ -1,3 +1,5 @@
+import type { TokenPort } from '@/lib/auth';
+
 export interface ApiEnvelope<T> {
   data: T;
   meta?: Record<string, unknown>;
@@ -17,12 +19,25 @@ export interface NexoraApiClient {
   request<T>(path: string, init?: RequestInit): Promise<ApiEnvelope<T>>;
 }
 
-export function createNexoraApiClient(baseUrl: string): NexoraApiClient {
+export interface NexoraApiClientOptions {
+  tokenPort?: TokenPort;
+}
+
+export function createNexoraApiClient(baseUrl: string, options: NexoraApiClientOptions = {}): NexoraApiClient {
   const normalizedBaseUrl = baseUrl.replace(/\/$/, '');
 
   return {
     async request<T>(path, init) {
-      const response = await fetch(`${normalizedBaseUrl}${path}`, init);
+      const token = await options.tokenPort?.getIdToken();
+      const headers = new Headers(init?.headers);
+      if (token && !headers.has('Authorization')) {
+        headers.set('Authorization', `Bearer ${token.value}`);
+      }
+
+      const response = await fetch(`${normalizedBaseUrl}${path}`, {
+        ...init,
+        headers,
+      });
       if (!response.ok) {
         throw new NexoraApiError(`Nexora API request failed with status ${response.status}`, response.status);
       }
