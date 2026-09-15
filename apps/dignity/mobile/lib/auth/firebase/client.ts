@@ -9,13 +9,13 @@ import {
 
 import { firebaseConfig } from './config';
 
-const firebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+const hasExistingFirebaseApp = getApps().length > 0;
+const firebaseApp = hasExistingFirebaseApp ? getApp() : initializeApp(firebaseConfig);
 
-export const firebaseAuth: Auth =
-  getApps().length > 0
-    ? getAuth(firebaseApp)
-    : initializeAuth(firebaseApp, {
-        persistence: getReactNativePersistence(AsyncStorage),
-      });
+export const firebaseAuth: Auth = hasExistingFirebaseApp
+  ? getAuth(firebaseApp)
+  : initializeAuth(firebaseApp, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
 
 export { firebaseApp };
