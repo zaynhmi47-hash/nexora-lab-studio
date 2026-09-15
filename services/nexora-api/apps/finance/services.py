@@ -4,6 +4,8 @@ from datetime import datetime
 from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import DecimalField, Q, Sum, Value
+from django.db.models.functions import Coalesce
 
 from apps.core.exceptions import NotFoundException, ValidationException
 from apps.identity.models import NexoraUser
@@ -14,13 +16,56 @@ from .models import Transaction
 
 class FinanceService:
     @staticmethod
-    def list_transactions(*, user: NexoraUser, organization_id):
+    def _base_queryset(*, user: NexoraUser, organization_id):
         return Transaction.objects.filter(
             organization_id=organization_id,
             organization__memberships__user=user,
             organization__memberships__status="active",
             organization__status=Organization.Status.ACTIVE,
         ).distinct()
+
+    @staticmethod
+    def list_transactions(
+        *,
+        user: NexoraUser,
+        organization_id,
+        transaction_type: str | None = None,
+        category: str | None = None,
+        occurred_from: datetime | None = None,
+        occurred_to: datetime | None = None,
+    ):
+        queryset = FinanceService._base_queryset(user=user, organization_id=organization_id)
+        if transaction_type:
+            queryset = queryset.filter(transaction_type=transaction_type)
+        if category:
+            queryset = queryset.filter(category__iexact=category.strip())
+        if occurred_from:
+            queryset = queryset.filter(occurred_at__gte=occurred_from)
+        if occurred_to:
+            queryset = queryset.filter(occurred_at__lt=occurred_to)
+        return queryset
+
+    @staticmethod
+    def summarize_transactions(*, user: NexoraUser, organization_id, occurred_from=None, occurred_to=None):
+        queryset = FinanceService._base_queryset(user=user, organization_id=organization_id)
+        if occurred_from:
+            queryset = queryset.filter(occurred_at__gte=occurred_from)
+        if occurred_to:
+            queryset = queryset.filter(occurred_at__lt=occurred_to)
+
+        zero = Value(Decimal("0.00"), output_field=DecimalField(max_digits=18, decimal_places=2))
+        totals = queryset.aggregate(
+            income=Coalesce(Sum("amount", filter=Q(transaction_type=Transaction.TransactionType.INCOME)), zero),
+            expense=Coalesce(Sum("amount", filter=Q(transaction_type=Transaction.TransactionType.EXPENSE)), zero),
+        )
+        income = totals["income"]
+        expense = totals["expense"]
+        return {
+            "income": income,
+            "expense": expense,
+            "net": income - expense,
+            "currency": "IDR",
+        }
 
     @staticmethod
     @transaction.atomic
