@@ -6,7 +6,7 @@ import {
   useState,
   type PropsWithChildren,
 } from 'react';
-import { mockAuth } from './mockAuth';
+import { createAuthPort } from './createAuthPort';
 import type { AuthPort, AuthSession } from './types';
 
 const AuthContext = createContext<{
@@ -16,8 +16,9 @@ const AuthContext = createContext<{
   signOut: () => Promise<void>;
 } | null>(null);
 
+const auth: AuthPort = createAuthPort();
+
 export function AuthProvider({ children }: PropsWithChildren) {
-  const auth: AuthPort = mockAuth;
   const [session, setSession] = useState<AuthSession | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -36,7 +37,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return () => {
       active = false;
     };
-  }, [auth]);
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -60,7 +61,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
       },
     }),
-    [auth, loading, session],
+    [loading, session],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
