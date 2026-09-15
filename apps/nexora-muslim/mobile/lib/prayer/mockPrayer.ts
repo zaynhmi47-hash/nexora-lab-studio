@@ -1,9 +1,9 @@
 import type { DailyPrayerSchedule, DhikrItem } from './types';
 
 export const mockPrayerSchedule: DailyPrayerSchedule = {
-  dateLabel: 'Monday, 15 September 2026',
-  locationLabel: 'Makassar, Indonesia',
-  hijriLabel: '23 Rabiul Awal 1448 H',
+  dateLabel: 'Today',
+  locationLabel: 'Current location',
+  hijriLabel: 'Hijri date will be provided by the prayer service',
   sunrise: '05:58',
   prayers: [
     { name: 'Fajr', time: '05:01', completed: true, isNext: false },
