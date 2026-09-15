@@ -4,13 +4,12 @@
     "slug": "nexora-finance",
     "version": "0.1.0",
     "orientation": "portrait",
-    "scheme": "nexorafinance",
+    "scheme": "nexora-finance",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "web": {
       "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/favicon.png"
+      "output": "static"
     },
     "plugins": ["expo-router"],
     "experiments": {
