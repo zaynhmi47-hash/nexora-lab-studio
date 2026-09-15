@@ -1,3 +1,56 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-export default function ProfileScreen(){return <ScrollView contentContainerStyle={styles.container}><Text style={styles.heading}>My Journey</Text><View style={styles.profile}><View style={styles.avatar}><Text style={styles.avatarText}>M</Text></View><View><Text style={styles.name}>Muslim Journey</Text><Text style={styles.muted}>Beginner · 17 day streak</Text></View></View>{[['Quran Reading','78%'],['Tajwid','60%'],['Arabic','40%'],['Kitab Kuning','30%']].map(([x,p])=><View style={styles.card} key={x}><View style={styles.row}><Text style={styles.title}>{x}</Text><Text>{p}</Text></View><View style={styles.bar}><View style={[styles.fill,{width:p}]}/></View></View>)}</ScrollView>}
-const styles=StyleSheet.create({container:{padding:24,paddingTop:60,backgroundColor:'#f7faf9'},heading:{fontSize:28,fontWeight:'800',color:'#123b35'},profile:{backgroundColor:'#fff',borderRadius:22,padding:20,marginTop:20,flexDirection:'row',alignItems:'center',gap:14},avatar:{width:56,height:56,borderRadius:28,backgroundColor:'#dff2ee',alignItems:'center',justifyContent:'center'},avatarText:{fontSize:22,fontWeight:'800',color:'#0f766e'},name:{fontSize:18,fontWeight:'800',color:'#183c37'},muted:{color:'#70837f',marginTop:4},card:{backgroundColor:'#fff',padding:18,borderRadius:18,marginTop:12},row:{flexDirection:'row',justifyContent:'space-between'},title:{fontWeight:'700',color:'#183c37'},bar:{height:8,backgroundColor:'#e3ecea',borderRadius:8,marginTop:12},fill:{height:8,backgroundColor:'#0f766e',borderRadius:8}});
+import { Button, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Card } from '@/components/Card';
+import { Screen } from '@/components/Screen';
+import { colors, spacing } from '@/constants/theme';
+import { useAuth } from '@/lib/auth/AuthProvider';
+
+export default function ProfileScreen() {
+  const { session, loading, signIn, signOut } = useAuth();
+
+  return (
+    <Screen>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.heading}>My Journey</Text>
+        <Card style={styles.profile}>
+          <View style={styles.avatar}><Text style={styles.avatarText}>M</Text></View>
+          <View style={styles.identity}>
+            <Text style={styles.name}>{session?.user.displayName ?? 'Guest'}</Text>
+            <Text style={styles.muted}>{session ? session.user.email : 'Sign in to sync your journey'}</Text>
+          </View>
+        </Card>
+
+        <View style={styles.authButton}>
+          <Button title={loading ? 'Please wait…' : session ? 'Sign out' : 'Sign in (Development)'} onPress={session ? signOut : signIn} disabled={loading} />
+        </View>
+
+        {['Quran Reading', 'Tajwid', 'Arabic', 'Kitab Kuning'].map((item, index) => {
+          const progress = ['78%', '60%', '40%', '30%'][index];
+          return (
+            <Card key={item} style={styles.progressCard}>
+              <View style={styles.row}><Text style={styles.title}>{item}</Text><Text style={styles.value}>{progress}</Text></View>
+              <View style={styles.bar}><View style={[styles.fill, { width: progress }]} /></View>
+            </Card>
+          );
+        })}
+      </ScrollView>
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  content: { paddingBottom: spacing.xl },
+  heading: { fontSize: 28, fontWeight: '800', color: colors.text },
+  profile: { marginTop: spacing.lg, flexDirection: 'row', alignItems: 'center' },
+  avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: 22, fontWeight: '800', color: colors.primary },
+  identity: { marginLeft: spacing.md, flex: 1 },
+  name: { fontSize: 18, fontWeight: '800', color: colors.text },
+  muted: { color: colors.textMuted, marginTop: 4 },
+  authButton: { marginTop: spacing.md },
+  progressCard: { marginTop: spacing.md },
+  row: { flexDirection: 'row', justifyContent: 'space-between' },
+  title: { fontWeight: '700', color: colors.text },
+  value: { color: colors.textMuted },
+  bar: { height: 8, backgroundColor: colors.border, borderRadius: 8, marginTop: spacing.sm, overflow: 'hidden' },
+  fill: { height: 8, backgroundColor: colors.primary, borderRadius: 8 },
+});
