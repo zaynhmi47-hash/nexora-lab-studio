@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Dignity",
+    "slug": "dignity",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "dignity",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "plugins": ["expo-router"],
+    "ios": {
+      "bundleIdentifier": "com.nexora.dignity"
+    },
+    "android": {
+      "package": "com.nexora.dignity"
+    }
+  }
+}
