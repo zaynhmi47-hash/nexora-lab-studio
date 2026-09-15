@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.utils.dateparse import parse_datetime
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
@@ -41,9 +42,29 @@ class TransactionView(APIView):
         )
 
     def get(self, request, organization_id):
-        transactions = FinanceService.list_transactions(user=request.user, organization_id=organization_id)
-        data = [self._serialize(item) for item in transactions[:100]]
-        return success_response(data, meta={"count": len(data), "limit": 100})
+        try:
+            occurred_from = self._parse_date(request.query_params.get("from"))
+            occurred_to = self._parse_date(request.query_params.get("to"))
+            if occurred_from and occurred_to and occurred_from >= occurred_to:
+                return error_response("validation.error", "from must be earlier than to.", status=400)
+            transaction_type = request.query_params.get("transaction_type")
+            if transaction_type and transaction_type not in {"income", "expense"}:
+                return error_response("validation.error", "transaction_type must be income or expense.", status=400)
+
+            transactions = FinanceService.list_transactions(
+                user=request.user,
+                organization_id=organization_id,
+                transaction_type=transaction_type,
+                category=request.query_params.get("category"),
+                occurred_from=occurred_from,
+                occurred_to=occurred_to,
+            )
+            data = [self._serialize(item) for item in transactions[:100]]
+            return success_response(data, meta={"count": len(data), "limit": 100})
+        except ValueError:
+            return error_response("validation.error", "Invalid transaction date filter.", status=400)
+        except NexoraException as exception:
+            return self._error(request, exception)
 
     def post(self, request, organization_id):
         serializer = TransactionCreateSerializer(data=request.data)
@@ -65,6 +86,15 @@ class TransactionView(APIView):
             return success_response(self._serialize(transaction), status=201)
         except NexoraException as exception:
             return self._error(request, exception)
+
+    @staticmethod
+    def _parse_date(value: str | None):
+        if not value:
+            return None
+        parsed = parse_datetime(value)
+        if parsed is None:
+            raise ValueError("Invalid datetime")
+        return parsed
 
     @staticmethod
     def _serialize(transaction):
