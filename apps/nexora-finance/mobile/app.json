@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Nexora Finance",
+    "slug": "nexora-finance",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "nexora-finance",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "plugins": ["expo-router"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nexora.finance"
+    },
+    "android": {
+      "package": "com.nexora.finance"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
