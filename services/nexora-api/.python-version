@@ -1,0 +1,2 @@
+# Python runtime is isolated from the Node/pnpm workspace.
+3.12

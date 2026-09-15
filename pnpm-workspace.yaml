@@ -3,3 +3,7 @@ packages:
   - "apps/*/web"
   - "apps/*/mobile"
   - "packages/*"
+
+# Keep workspace dependencies isolated. Each package must declare what it imports.
+# This prevents accidental dependency access through hoisting.
+nodeLinker: isolated
