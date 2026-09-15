@@ -46,8 +46,14 @@ class FinanceService:
         return queryset
 
     @staticmethod
-    def summarize_transactions(*, user: NexoraUser, organization_id, occurred_from=None, occurred_to=None):
-        queryset = FinanceService._base_queryset(user=user, organization_id=organization_id)
+    def summarize_transactions(*, user: NexoraUser, organization_id, occurred_from=None, occurred_to=None, currency="IDR"):
+        normalized_currency = currency.strip().upper()
+        if len(normalized_currency) != 3 or not normalized_currency.isalpha():
+            raise ValidationException("currency must be a 3-letter ISO currency code.")
+
+        queryset = FinanceService._base_queryset(user=user, organization_id=organization_id).filter(
+            currency=normalized_currency
+        )
         if occurred_from:
             queryset = queryset.filter(occurred_at__gte=occurred_from)
         if occurred_to:
@@ -60,12 +66,7 @@ class FinanceService:
         )
         income = totals["income"]
         expense = totals["expense"]
-        return {
-            "income": income,
-            "expense": expense,
-            "net": income - expense,
-            "currency": "IDR",
-        }
+        return {"income": income, "expense": expense, "net": income - expense, "currency": normalized_currency}
 
     @staticmethod
     @transaction.atomic
