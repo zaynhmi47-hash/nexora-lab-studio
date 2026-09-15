@@ -1,0 +1,84 @@
+name: Dependency Boundaries
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend isolated environment
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/nexora-api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: services/nexora-api/requirements/*.txt
+
+      - name: Create virtual environment
+        run: python -m venv .venv
+
+      - name: Install backend dependencies
+        run: .venv/bin/python -m pip install -r requirements/testing.txt
+
+      - name: Validate dependency set
+        run: .venv/bin/python -m pip check
+
+      - name: Django system check
+        env:
+          SECRET_KEY: ci-only-not-a-secret
+          DEBUG: "True"
+          ALLOWED_HOSTS: localhost,127.0.0.1
+          CSRF_TRUSTED_ORIGINS: http://localhost:8000
+          DATABASE_URL: sqlite:///db.sqlite3
+          DATABASE_CONN_MAX_AGE: "0"
+          DATABASE_CONN_HEALTH_CHECKS: "True"
+          FIREBASE_PROJECT_ID: nexora-73cfa
+        run: .venv/bin/python manage.py check
+
+      - name: Backend tests
+        env:
+          SECRET_KEY: ci-only-not-a-secret
+          DEBUG: "True"
+          ALLOWED_HOSTS: localhost,127.0.0.1
+          CSRF_TRUSTED_ORIGINS: http://localhost:8000
+          DATABASE_URL: sqlite:///db.sqlite3
+          DATABASE_CONN_MAX_AGE: "0"
+          DATABASE_CONN_HEALTH_CHECKS: "True"
+          FIREBASE_PROJECT_ID: nexora-73cfa
+        run: .venv/bin/python -m pytest
+
+  frontend:
+    name: Frontend isolated workspace
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check frontend/backend boundaries
+        run: pnpm check:boundaries
