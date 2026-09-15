@@ -1,0 +1,49 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    paths:
+      - 'apps/**/mobile/**'
+      - 'apps/**/web/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/frontend-ci.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/**/mobile/**'
+      - 'apps/**/web/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/frontend-ci.yml'
+
+jobs:
+  finance-mobile-typecheck:
+    name: Finance mobile typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/nexora-finance/mobile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
