@@ -20,6 +20,8 @@ export default function RootLayout() {
         <Tabs.Screen name="learn" options={{ title: 'Learn', tabBarIcon: ({ color, size }) => <Ionicons name="school-outline" color={color} size={size} /> }} />
         <Tabs.Screen name="prayer" options={{ title: 'Prayer', tabBarIcon: ({ color, size }) => <Ionicons name="moon-outline" color={color} size={size} /> }} />
         <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" color={color} size={size} /> }} />
+        <Tabs.Screen name="qibla" options={{ href: null }} />
+        <Tabs.Screen name="dhikr" options={{ href: null }} />
         <Tabs.Screen name="travel" options={{ href: null }} />
       </Tabs>
     </AuthProvider>
