@@ -23,6 +23,8 @@ export default function RootLayout() {
         <Tabs.Screen name="qibla" options={{ href: null }} />
         <Tabs.Screen name="dhikr" options={{ href: null }} />
         <Tabs.Screen name="travel" options={{ href: null }} />
+        <Tabs.Screen name="umrah" options={{ href: null }} />
+        <Tabs.Screen name="knowledge" options={{ href: null }} />
       </Tabs>
     </AuthProvider>
   );
