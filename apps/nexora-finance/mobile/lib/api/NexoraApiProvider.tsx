@@ -1,13 +1,13 @@
-import { createContext, useContext, type PropsWithChildren } from 'react';
+import { createContext, useContext, useMemo, type PropsWithChildren } from 'react';
 
+import { env } from '../config/env';
 import { createNexoraApiClient, type NexoraApiClient } from './client';
 
 const ApiContext = createContext<NexoraApiClient | null>(null);
 
-const baseUrl = process.env.EXPO_PUBLIC_NEXORA_API_URL ?? 'http://localhost:8000';
-
 export function NexoraApiProvider({ children }: PropsWithChildren) {
-  const client = createNexoraApiClient(baseUrl);
+  const client = useMemo(() => createNexoraApiClient(env.nexoraApiUrl), []);
+
   return <ApiContext.Provider value={client}>{children}</ApiContext.Provider>;
 }
 
