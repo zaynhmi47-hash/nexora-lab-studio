@@ -1,3 +1,6 @@
+from decimal import Decimal
+
+from django.core.validators import MinValueValidator
 from django.db import migrations, models
 import django.db.models.deletion
 import uuid
@@ -19,7 +22,7 @@ class Migration(migrations.Migration):
                 ("updated_at", models.DateTimeField(auto_now=True)),
                 ("deleted_at", models.DateTimeField(blank=True, db_index=True, null=True)),
                 ("transaction_type", models.CharField(choices=[("income", "Income"), ("expense", "Expense")], max_length=16)),
-                ("amount", models.DecimalField(decimal_places=2, max_digits=18)),
+                ("amount", models.DecimalField(decimal_places=2, max_digits=18, validators=[MinValueValidator(Decimal("0.01"))])),
                 ("currency", models.CharField(default="IDR", max_length=3)),
                 ("category", models.CharField(max_length=100)),
                 ("description", models.CharField(blank=True, max_length=255)),
