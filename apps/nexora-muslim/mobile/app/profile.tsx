@@ -24,11 +24,11 @@ export default function ProfileScreen() {
         </View>
 
         {['Quran Reading', 'Tajwid', 'Arabic', 'Kitab Kuning'].map((item, index) => {
-          const progress = ['78%', '60%', '40%', '30%'][index];
+          const progress = [78, 60, 40, 30][index];
           return (
             <Card key={item} style={styles.progressCard}>
-              <View style={styles.row}><Text style={styles.title}>{item}</Text><Text style={styles.value}>{progress}</Text></View>
-              <View style={styles.bar}><View style={[styles.fill, { width: progress }]} /></View>
+              <View style={styles.row}><Text style={styles.title}>{item}</Text><Text style={styles.value}>{progress}%</Text></View>
+              <View style={styles.bar}><View style={[styles.fill, { width: `${progress}%` }]} /></View>
             </Card>
           );
         })}
