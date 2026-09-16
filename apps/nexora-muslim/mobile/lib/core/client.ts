@@ -11,7 +11,7 @@ function joinUrl(baseUrl: string, path: string): string {
 
 export function createCoreClient(baseUrl: string): CoreClient {
   return {
-    async get<T>(path, session) {
+    async get<T>(path: string, session: AuthSession) {
       let response: Response;
 
       try {
