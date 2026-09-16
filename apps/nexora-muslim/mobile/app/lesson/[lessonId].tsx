@@ -1,21 +1,51 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/constants/theme';
-import { mockLearning, type LearningLesson } from '@/lib/learning';
+import { mockLearning, type LearningLesson, type QuizQuestion } from '@/lib/learning';
 
 export default function LessonScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
+  const [lesson, setLesson] = useState<LearningLesson | null>(null);
+  const [quiz, setQuiz] = useState<QuizQuestion | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [completed, setCompleted] = useState(false);
 
-  const lesson = useMemo<LearningLesson | null>(() => {
-    if (!lessonId) return null;
-    return mockLearning.findLesson(lessonId) ?? null;
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadLesson = async () => {
+      if (!lessonId) {
+        setLesson(null);
+        setQuiz(null);
+        return;
+      }
+
+      const courses = await mockLearning.getCourses();
+      const foundLesson = courses
+        .flatMap((course) => course.lessons)
+        .find((item) => item.id === lessonId) ?? null;
+      const questions = await mockLearning.getQuiz(lessonId);
+
+      if (!cancelled) {
+        setLesson(foundLesson);
+        setQuiz(questions[0] ?? null);
+      }
+    };
+
+    void loadLesson();
+
+    return () => {
+      cancelled = true;
+    };
   }, [lessonId]);
+
+  const answerOptions = useMemo(() => quiz?.options ?? [], [quiz]);
+  const hasQuiz = answerOptions.length > 0;
+  const correct = quiz?.correctOptionIndex === selected;
 
   if (!lesson) {
     return (
@@ -32,17 +62,13 @@ export default function LessonScreen() {
   }
 
   const submitAnswer = () => {
-    if (selected === null) return;
+    if (selected === null || !quiz) return;
     setSubmitted(true);
   };
 
   const finishLesson = () => {
     setCompleted(true);
   };
-
-  const answerOptions = lesson.quiz?.options ?? [];
-  const correct = lesson.quiz?.correctOptionIndex === selected;
-  const hasQuiz = answerOptions.length > 0;
 
   return (
     <Screen>
@@ -59,22 +85,22 @@ export default function LessonScreen() {
 
         <Card style={styles.contentCard}>
           <Text style={styles.sectionLabel}>Today's lesson</Text>
-          <Text style={styles.body}>{lesson.content}</Text>
+          <Text style={styles.body}>{lesson.description}</Text>
         </Card>
 
-        {hasQuiz && (
+        {hasQuiz && quiz && (
           <Card style={styles.quizCard}>
             <Text style={styles.sectionLabel}>Quick check</Text>
-            <Text style={styles.question}>{lesson.quiz?.question}</Text>
+            <Text style={styles.question}>{quiz.prompt}</Text>
 
             <View style={styles.options}>
               {answerOptions.map((option, index) => {
                 const isSelected = selected === index;
-                const isCorrect = submitted && lesson.quiz?.correctOptionIndex === index;
+                const isCorrect = submitted && quiz.correctOptionIndex === index;
                 const isWrong = submitted && isSelected && !correct;
                 return (
                   <Pressable
-                    key={option}
+                    key={`${quiz.id}-${option}`}
                     onPress={() => !submitted && setSelected(index)}
                     disabled={submitted}
                     accessibilityRole="radio"
@@ -105,7 +131,9 @@ export default function LessonScreen() {
               <View style={[styles.feedback, correct ? styles.feedbackCorrect : styles.feedbackWrong]}>
                 <Text style={styles.feedbackTitle}>{correct ? 'Correct!' : 'Not quite yet'}</Text>
                 <Text style={styles.feedbackText}>
-                  {correct ? 'Great work. You can continue this lesson.' : 'Review the lesson content and try the next activity.'}
+                  {correct
+                    ? quiz.explanation ?? 'Great work. You can continue this lesson.'
+                    : 'Review the lesson content and try the next activity.'}
                 </Text>
               </View>
             )}
