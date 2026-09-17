@@ -75,33 +75,39 @@ export default function LearnScreen() {
         </View>
 
         <Text style={styles.sectionTitle}>Learning paths</Text>
-        {courses.map((course) => (
-          <Card key={course.id} style={styles.courseCard}>
-            <View style={styles.row}>
-              <View style={styles.courseInfo}>
-                <Text style={styles.courseTitle}>{course.title}</Text>
-                <Text style={styles.muted}>{course.description}</Text>
-              </View>
-              <Text style={styles.level}>L{course.level}</Text>
-            </View>
-            {course.lessons.map((lesson) => {
-              const done = progress?.completedLessonIds.includes(lesson.id) || lesson.status === 'completed';
-              const locked = lesson.status === 'locked';
-              return (
-                <Pressable key={lesson.id} onPress={() => openLesson(lesson)} disabled={locked}>
-                  <View style={styles.lesson}>
-                    <View style={[styles.circle, done && styles.circleDone]}><Text style={styles.circleText}>{done ? '✓' : lesson.order}</Text></View>
-                    <View style={styles.lessonInfo}>
-                      <Text style={styles.title}>{lesson.title}</Text>
-                      <Text style={styles.muted}>{done ? 'Completed' : locked ? 'Locked' : 'Available'} · +{lesson.xpReward} XP</Text>
-                    </View>
-                    <Text style={styles.status}>{locked ? '🔒' : done ? '✓' : '›'}</Text>
+        {courses.map((course) => {
+          const completedCount = course.lessons.filter((lesson) => progress?.completedLessonIds.includes(lesson.id)).length;
+          return (
+            <Card key={course.id} style={styles.courseCard}>
+              <Pressable onPress={() => router.push(`/course/${course.id}`)} accessibilityRole="button">
+                <View style={styles.row}>
+                  <View style={styles.courseInfo}>
+                    <Text style={styles.courseTitle}>{course.title}</Text>
+                    <Text style={styles.muted}>{course.description}</Text>
                   </View>
-                </Pressable>
-              );
-            })}
-          </Card>
-        ))}
+                  <Text style={styles.level}>L{course.level}</Text>
+                </View>
+                <Text style={styles.courseProgress}>{completedCount}/{course.lessons.length} completed · View path →</Text>
+              </Pressable>
+              {course.lessons.map((lesson) => {
+                const done = progress?.completedLessonIds.includes(lesson.id) || lesson.status === 'completed';
+                const locked = lesson.status === 'locked';
+                return (
+                  <Pressable key={lesson.id} onPress={() => openLesson(lesson)} disabled={locked}>
+                    <View style={styles.lesson}>
+                      <View style={[styles.circle, done && styles.circleDone]}><Text style={styles.circleText}>{done ? '✓' : lesson.order}</Text></View>
+                      <View style={styles.lessonInfo}>
+                        <Text style={styles.title}>{lesson.title}</Text>
+                        <Text style={styles.muted}>{done ? 'Completed' : locked ? 'Locked' : 'Available'} · +{lesson.xpReward} XP</Text>
+                      </View>
+                      <Text style={styles.status}>{locked ? '🔒' : done ? '✓' : '›'}</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </Card>
+          );
+        })}
       </ScrollView>
     </Screen>
   );
@@ -132,6 +138,7 @@ const styles = StyleSheet.create({
   courseCard: { marginBottom: spacing.md },
   courseInfo: { flex: 1, paddingRight: spacing.md },
   courseTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 4 },
+  courseProgress: { color: colors.primary, fontWeight: '800', marginTop: spacing.md },
   level: { fontWeight: '800', color: colors.primary },
   lesson: { flexDirection: 'row', alignItems: 'center', paddingTop: spacing.md, marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
   circle: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' },
