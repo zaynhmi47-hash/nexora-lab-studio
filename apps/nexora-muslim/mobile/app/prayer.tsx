@@ -1,25 +1,45 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { SectionTitle } from '@/components/SectionTitle';
 import { colors, radius, spacing, typography } from '@/constants/theme';
-import { mockDhikr, mockPrayerSchedule, type PrayerTime } from '@/lib/prayer';
+import {
+  mockDhikr,
+  mockPrayerRepository,
+  mockPrayerSchedule,
+  type PrayerTime,
+} from '@/lib/prayer';
 
 export default function PrayerScreen() {
-  const [prayers, setPrayers] = useState(mockPrayerSchedule.prayers);
+  const [schedule, setSchedule] = useState(mockPrayerSchedule);
   const [dhikr, setDhikr] = useState(mockDhikr);
+
+  useEffect(() => {
+    let active = true;
+
+    void mockPrayerRepository.getDailySchedule().then((nextSchedule) => {
+      if (active) setSchedule(nextSchedule);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const { prayers } = schedule;
   const nextPrayer = prayers.find((prayer) => prayer.isNext);
   const completedPrayerCount = prayers.filter((prayer) => prayer.completed).length;
 
   const togglePrayer = (name: PrayerTime['name']) => {
-    setPrayers((current) =>
-      current.map((prayer) =>
-        prayer.name === name ? { ...prayer, completed: !prayer.completed } : prayer,
-      ),
-    );
+    const prayer = prayers.find((item) => item.name === name);
+    if (!prayer) return;
+
+    void mockPrayerRepository
+      .setPrayerCompleted(name, !prayer.completed)
+      .then(setSchedule);
   };
 
   const incrementDhikr = (id: string) => {
@@ -39,7 +59,7 @@ export default function PrayerScreen() {
           <Text style={styles.eyebrow}>IBADAH</Text>
           <Text style={styles.heading}>Prayer & Dhikr</Text>
           <Text style={styles.subtitle}>
-            {mockPrayerSchedule.dateLabel} · {mockPrayerSchedule.locationLabel}
+            {schedule.dateLabel} · {schedule.locationLabel}
           </Text>
         </View>
         <Pressable
@@ -146,7 +166,7 @@ export default function PrayerScreen() {
             <Ionicons name="sunny-outline" size={17} color={colors.textMuted} />
             <Text style={styles.muted}>Sunrise</Text>
           </View>
-          <Text style={styles.muted}>{mockPrayerSchedule.sunrise}</Text>
+          <Text style={styles.muted}>{schedule.sunrise}</Text>
         </View>
       </Card>
 
@@ -195,7 +215,7 @@ export default function PrayerScreen() {
       <Card style={styles.noteCard}>
         <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
         <Text style={styles.note}>
-          Prayer times and location-based calculations will be connected to the provider layer in the backend integration phase.
+          These prayer times are demo data. A calculation/provider service will supply verified times and location-aware values in the backend integration phase.
         </Text>
       </Card>
     </Screen>
