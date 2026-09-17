@@ -35,4 +35,7 @@ export type IslamicKnowledgeSnapshot = {
 
 export type IslamicKnowledgeProvider = {
   getSnapshot(): Promise<IslamicKnowledgeSnapshot>;
+  getTopic(topicId: string): Promise<KnowledgeTopic | null>;
+  getHadith(hadithId: string): Promise<HadithItem | null>;
+  listSources(topicId?: string): Promise<SourceReference[]>;
 };
