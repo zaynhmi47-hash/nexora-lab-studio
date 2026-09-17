@@ -37,7 +37,7 @@ export default function QiblaScreen() {
         <Text style={styles.cardTitle}>Direction to Kaaba</Text>
         <Text style={styles.location}>{direction?.locationLabel ?? 'Loading location...'}</Text>
 
-        <View style={styles.compass}>
+        <View style={styles.compass} accessibilityLabel="Qibla direction compass">
           <View style={styles.compassRing}>
             <Text style={[styles.marker, styles.north]}>N</Text>
             <Text style={[styles.marker, styles.east]}>E</Text>
@@ -63,16 +63,18 @@ export default function QiblaScreen() {
           </View>
           <View style={styles.divider} />
           <View>
-            <Text style={styles.infoLabel}>Status</Text>
-            <Text style={styles.infoValue}>{direction?.calibrated ? 'Calibrated' : 'Demo mode'}</Text>
+            <Text style={styles.infoLabel}>Source</Text>
+            <Text style={styles.infoValue}>{direction?.sourceLabel ?? '--'}</Text>
           </View>
         </View>
       </View>
 
       <View style={styles.notice}>
         <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
-        <Text style={styles.noticeText}>Compass, GPS, calibration and a production Qibla calculation provider will be connected in a later integration step.</Text>
+        <Text style={styles.noticeText}>The calculation layer is ready for GPS coordinates. Compass sensor, location permission and a production location provider will be connected in the integration phase.</Text>
       </View>
+
+      <Text style={styles.disclaimer}>The displayed direction and distance are demo values until a real location provider is connected.</Text>
     </ScrollView>
   );
 }
@@ -102,7 +104,8 @@ const styles = StyleSheet.create({
   infoRow: { flexDirection: 'row', width: '100%', marginTop: spacing.xl, paddingTop: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border, justifyContent: 'space-around', alignItems: 'center' },
   divider: { width: 1, height: 36, backgroundColor: colors.border },
   infoLabel: { color: colors.textMuted, fontSize: typography.small },
-  infoValue: { color: colors.text, fontSize: typography.body, fontWeight: '800', marginTop: 3 },
+  infoValue: { color: colors.text, fontSize: typography.body, fontWeight: '800', marginTop: 3, maxWidth: 120 },
   notice: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg, padding: spacing.lg, backgroundColor: colors.primarySoft, borderRadius: radius.md },
   noticeText: { flex: 1, color: colors.primaryDark, fontSize: typography.caption, lineHeight: 19 },
+  disclaimer: { color: colors.textMuted, fontSize: typography.small, lineHeight: 17, textAlign: 'center', marginTop: spacing.md },
 });
