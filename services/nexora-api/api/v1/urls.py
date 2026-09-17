@@ -12,6 +12,7 @@ urlpatterns = [
     path("identity/me/", CurrentIdentityView.as_view(), name="identity-me"),
     path("app-state/", CurrentAppStateView.as_view(), name="app-state"),
     path("learning/", include("apps.learning.urls")),
+    path("quran/", include("apps.quran.urls")),
     path("organizations/", include("api.v1.urls_organizations")),
     path("products/", include("apps.products.api.urls")),
     path("products/", include("apps.capabilities.api.urls_products")),
