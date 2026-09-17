@@ -1,18 +1,18 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
-import { env } from '@/lib/config/env';
+import { firebaseEnv } from './config';
 
 const firebaseConfig = {
-  apiKey: env.firebase.apiKey,
-  authDomain: env.firebase.authDomain,
-  projectId: env.firebase.projectId,
-  storageBucket: env.firebase.storageBucket,
-  messagingSenderId: env.firebase.messagingSenderId,
-  appId: env.firebase.appId,
+  apiKey: firebaseEnv.apiKey,
+  authDomain: firebaseEnv.authDomain,
+  projectId: firebaseEnv.projectId,
+  storageBucket: firebaseEnv.storageBucket,
+  messagingSenderId: firebaseEnv.messagingSenderId,
+  appId: firebaseEnv.appId,
 };
 
 export function getFirebaseApp(): FirebaseApp {
-  if (!env.firebase.enabled) {
+  if (!firebaseEnv.enabled) {
     throw new Error('Firebase is disabled. Set EXPO_PUBLIC_FIREBASE_ENABLED=true.');
   }
 
