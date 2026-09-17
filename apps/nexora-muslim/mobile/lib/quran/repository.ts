@@ -42,14 +42,18 @@ export const nexoraCoreQuranRepository = (session: AuthSession): QuranPort => ({
     body: JSON.stringify(position),
   }),
   listBookmarks: () => request<Bookmark[]>(session, '/bookmarks/'),
-  saveBookmark: (bookmark) => request(session, '/bookmarks/', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      ayahId: `${bookmark.surahNumber}:${bookmark.ayahNumber}`,
-      note: bookmark.note ?? '',
-    }),
-  }),
+  saveBookmark: async (bookmark) => {
+    const response = await request<Bookmark>(session, '/bookmarks/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        surahNumber: bookmark.surahNumber,
+        ayahNumber: bookmark.ayahNumber,
+        note: bookmark.note ?? '',
+      }),
+    });
+    return response;
+  },
   removeBookmark: (bookmarkId) => request(session, `/bookmarks/${bookmarkId}/`, { method: 'DELETE' }),
   listRecitations: () => request<Recitation[]>(session, '/recitations/'),
 });
