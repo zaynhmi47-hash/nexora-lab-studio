@@ -5,9 +5,11 @@ import { router } from 'expo-router';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/constants/theme';
+import { useAppState } from '@/lib/app-state';
 import { mockQuran, type Bookmark, type QuranPage, type ReadingPosition, type SurahSummary } from '@/lib/quran';
 
 export default function QuranScreen() {
+  const { refresh: refreshAppState } = useAppState();
   const [surahs, setSurahs] = useState<SurahSummary[]>([]);
   const [page, setPage] = useState<QuranPage | null>(null);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -36,6 +38,7 @@ export default function QuranScreen() {
     if (isBookmarked) await mockQuran.removeBookmark(id);
     else await mockQuran.saveBookmark({ id, surahNumber: ayah.surahNumber, ayahNumber: ayah.numberInSurah, createdAt: new Date().toISOString() });
     setBookmarks(await mockQuran.listBookmarks());
+    await refreshAppState();
   }
 
   async function openSurah(surah: SurahSummary) {
@@ -47,6 +50,7 @@ export default function QuranScreen() {
       const position = { surahNumber: surah.number, ayahNumber: firstAyah.numberInSurah, updatedAt: new Date().toISOString() };
       setReadingPosition(position);
       await mockQuran.saveReadingPosition(position);
+      await refreshAppState();
     }
     setShowSurahs(false);
   }
@@ -56,6 +60,7 @@ export default function QuranScreen() {
     const position = { surahNumber: ayah.surahNumber, ayahNumber: ayah.numberInSurah, updatedAt: new Date().toISOString() };
     await mockQuran.saveReadingPosition(position);
     setReadingPosition(position);
+    await refreshAppState();
   }
 
   return (
@@ -102,7 +107,7 @@ export default function QuranScreen() {
         <Text style={styles.sectionHeading}>Explore</Text>
         <Pressable style={styles.item} onPress={() => setShowSurahs(true)}><View style={styles.itemIcon}><Ionicons name="book-outline" size={21} color={colors.primary} /></View><View style={styles.itemBody}><Text style={styles.itemText}>Surah</Text><Text style={styles.itemDescription}>Browse the Quran</Text></View><Ionicons name="chevron-forward" size={18} color={colors.textMuted} /></Pressable>
         <Pressable style={styles.item} onPress={() => router.push('/quran-bookmarks')}><View style={styles.itemIcon}><Ionicons name="bookmark-outline" size={21} color={colors.primary} /></View><View style={styles.itemBody}><Text style={styles.itemText}>Bookmarks</Text><Text style={styles.itemDescription}>{bookmarks.length} saved</Text></View><Ionicons name="chevron-forward" size={18} color={colors.textMuted} /></Pressable>
-        {[["chatbox-ellipses-outline", "Tafsir", "Source-aware explanations"], ["headset-outline", "Audio Recitations", "Provider-ready audio layer"]].map(([icon, title, description]) => <View key={title} style={styles.item}><View style={styles.itemIcon}><Ionicons name={icon as never} size={21} color={colors.primary} /></View><View style={styles.itemBody}><Text style={styles.itemText}>{title}</Text><Text style={styles.itemDescription}>{description}</Text></View><Ionicons name="chevron-forward" size={18} color={colors.textMuted} /></View>)}
+        {[['chatbox-ellipses-outline', 'Tafsir', 'Source-aware explanations'], ['headset-outline', 'Audio Recitations', 'Provider-ready audio layer']].map(([icon, title, description]) => <View key={title} style={styles.item}><View style={styles.itemIcon}><Ionicons name={icon as never} size={21} color={colors.primary} /></View><View style={styles.itemBody}><Text style={styles.itemText}>{title}</Text><Text style={styles.itemDescription}>{description}</Text></View><Ionicons name="chevron-forward" size={18} color={colors.textMuted} /></View>)}
       </ScrollView>
     </Screen>
   );
