@@ -4,15 +4,19 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/constants/theme';
+import { useAuth } from '@/lib/auth/AuthProvider';
 import { mockLearning, type LearningLesson, type QuizQuestion } from '@/lib/learning';
 
 export default function LessonScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
+  const { session } = useAuth();
+  const userId = session?.user.id ?? '00000000-0000-0000-0000-000000000001';
   const [lesson, setLesson] = useState<LearningLesson | null>(null);
   const [quiz, setQuiz] = useState<QuizQuestion | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -29,10 +33,12 @@ export default function LessonScreen() {
         .flatMap((course) => course.lessons)
         .find((item) => item.id === lessonId) ?? null;
       const questions = await mockLearning.getQuiz(lessonId);
+      const progress = await mockLearning.getProgress(userId);
 
       if (!cancelled) {
         setLesson(foundLesson);
         setQuiz(questions[0] ?? null);
+        setCompleted(progress.completedLessonIds.includes(lessonId));
       }
     };
 
@@ -41,7 +47,7 @@ export default function LessonScreen() {
     return () => {
       cancelled = true;
     };
-  }, [lessonId]);
+  }, [lessonId, userId]);
 
   const answerOptions = useMemo(() => quiz?.options ?? [], [quiz]);
   const hasQuiz = answerOptions.length > 0;
@@ -66,8 +72,21 @@ export default function LessonScreen() {
     setSubmitted(true);
   };
 
-  const finishLesson = () => {
-    setCompleted(true);
+  const finishLesson = async () => {
+    if (completed || saving) return;
+
+    setSaving(true);
+    try {
+      const progress = await mockLearning.completeLesson(userId, lesson.id);
+      setCompleted(progress.completedLessonIds.includes(lesson.id));
+      const courses = await mockLearning.getCourses();
+      const updatedLesson = courses
+        .flatMap((course) => course.lessons)
+        .find((item) => item.id === lesson.id);
+      if (updatedLesson) setLesson(updatedLesson);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -141,23 +160,23 @@ export default function LessonScreen() {
         )}
 
         <View style={styles.footerCard}>
-          <View>
+          <View style={styles.rewardCopy}>
             <Text style={styles.reward}>+{lesson.xpReward} XP</Text>
-            <Text style={styles.muted}>Learning progress only</Text>
+            <Text style={styles.muted}>{completed ? 'Completed' : 'Learning progress only'}</Text>
           </View>
           <Pressable
-            style={[styles.primaryButton, hasQuiz && !submitted && styles.buttonDisabled]}
-            disabled={hasQuiz && !submitted}
-            onPress={finishLesson}
+            style={[styles.primaryButton, hasQuiz && !submitted && !completed && styles.buttonDisabled]}
+            disabled={saving || (hasQuiz && !submitted && !completed) || completed}
+            onPress={() => void finishLesson()}
           >
-            <Text style={styles.primaryButtonText}>{completed ? 'Completed ✓' : 'Complete lesson'}</Text>
+            <Text style={styles.primaryButtonText}>{saving ? 'Saving…' : completed ? 'Completed ✓' : 'Complete lesson'}</Text>
           </Pressable>
         </View>
 
         {completed && (
           <Card style={styles.completeCard}>
             <Text style={styles.completeTitle}>Lesson complete</Text>
-            <Text style={styles.muted}>Your prototype progress is ready for persistence through the learning provider in a later integration step.</Text>
+            <Text style={styles.muted}>Your progress has been updated. The next unlocked activity is now available in the learning path.</Text>
             <Pressable style={styles.secondaryButton} onPress={() => router.replace('/learn')}>
               <Text style={styles.secondaryButtonText}>Back to learning</Text>
             </Pressable>
@@ -198,6 +217,7 @@ const styles = StyleSheet.create({
   feedbackTitle: { color: colors.text, fontWeight: '900' },
   feedbackText: { color: colors.text, marginTop: 4, lineHeight: 20 },
   footerCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surfaceMuted },
+  rewardCopy: { flex: 1 },
   reward: { color: colors.success, fontWeight: '900', fontSize: 17 },
   completeCard: { marginTop: spacing.lg },
   completeTitle: { color: colors.text, fontSize: 20, fontWeight: '900' },
