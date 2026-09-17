@@ -4,9 +4,11 @@ import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { SectionTitle } from '@/components/SectionTitle';
 import { colors, radius, spacing, typography } from '@/constants/theme';
+import { useAppState } from '@/lib/app-state';
 import { mockUmrahRepository, type JourneyStage, type UmrahJourney } from '@/lib/umrah';
 
 export default function UmrahScreen() {
+  const { refresh: refreshAppState } = useAppState();
   const [journey, setJourney] = useState<UmrahJourney | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -32,6 +34,7 @@ export default function UmrahScreen() {
     setBusyId(id);
     try {
       setJourney(await mockUmrahRepository.toggleChecklist(id));
+      await refreshAppState();
     } finally {
       setBusyId(null);
     }
