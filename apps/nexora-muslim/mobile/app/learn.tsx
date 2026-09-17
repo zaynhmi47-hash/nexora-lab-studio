@@ -5,26 +5,35 @@ import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { colors, spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth/AuthProvider';
-import { mockLearning, type LearningCourse, type LearningLesson, type LearningProgress } from '@/lib/learning';
+import { nexoraCoreLearningRepository, mockLearning, type LearningCourse, type LearningLesson, type LearningPort, type LearningProgress } from '@/lib/learning';
 
 export default function LearnScreen() {
   const router = useRouter();
   const { session } = useAuth();
   const userId = session?.user.id ?? '00000000-0000-0000-0000-000000000001';
+  const repository = useMemo<LearningPort>(() => (
+    session?.user.provider === 'firebase' ? nexoraCoreLearningRepository(session) : mockLearning
+  ), [session]);
   const [courses, setCourses] = useState<LearningCourse[]>([]);
   const [progress, setProgress] = useState<LearningProgress | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    Promise.all([mockLearning.getCourses(), mockLearning.getProgress(userId)]).then(([nextCourses, nextProgress]) => {
-      if (!active) return;
-      setCourses(nextCourses);
-      setProgress(nextProgress);
-    });
+    setError(null);
+    Promise.all([repository.getCourses(), repository.getProgress(userId)])
+      .then(([nextCourses, nextProgress]) => {
+        if (!active) return;
+        setCourses(nextCourses);
+        setProgress(nextProgress);
+      })
+      .catch(() => {
+        if (active) setError('Unable to load learning progress. Please try again.');
+      });
     return () => { active = false; };
-  }, [userId]);
+  }, [repository, userId]);
 
-  const currentLesson = useMemo(() => courses.flatMap((course) => course.lessons).find((lesson) => lesson.status === 'in_progress'), [courses]);
+  const currentLesson = useMemo(() => courses.flatMap((course) => course.lessons).find((lesson) => lesson.status === 'in_progress' || lesson.status === 'available'), [courses]);
   const xpIntoLevel = (progress?.xp ?? 0) % 100;
   const xpPercent = `${Math.min(xpIntoLevel, 100)}%` as `${number}%`;
 
@@ -38,6 +47,7 @@ export default function LearnScreen() {
         <Text style={styles.eyebrow}>LEARNING</Text>
         <Text style={styles.heading}>Quran Mastery</Text>
         <Text style={styles.muted}>Learn step by step. XP and streaks track learning progress, not religious merit.</Text>
+        {error && <Text style={styles.error}>{error}</Text>}
 
         <Card style={styles.progressCard}>
           <View style={styles.row}>
@@ -118,6 +128,7 @@ const styles = StyleSheet.create({
   eyebrow: { fontSize: 11, fontWeight: '800', color: colors.primary },
   heading: { fontSize: 28, fontWeight: '800', color: colors.text, marginTop: spacing.sm },
   muted: { color: colors.textMuted, lineHeight: 21 },
+  error: { color: colors.danger, fontWeight: '700', marginTop: spacing.md },
   progressCard: { marginTop: spacing.lg },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   progressTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
