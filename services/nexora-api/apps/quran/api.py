@@ -56,3 +56,8 @@ class QuranBookmarkDetailView(QuranBaseView):
     def delete(self, request, bookmark_id):
         QuranService().remove_bookmark(request.user, bookmark_id)
         return Response(status=204)
+
+
+class QuranRecitationListView(QuranBaseView):
+    def get(self, request):
+        return Response([{"id": str(item.id), "name": item.name, "language": item.language, "audioUrl": item.audio_url} for item in QuranService().list_recitations()])
