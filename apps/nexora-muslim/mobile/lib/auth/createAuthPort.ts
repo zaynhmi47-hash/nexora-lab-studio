@@ -1,4 +1,5 @@
 import { env } from '@/lib/config/env';
+import { firebaseAuth } from '@/lib/infrastructure/firebase/auth';
 import { mockAuth } from './mockAuth';
 import type { AuthPort } from './types';
 
@@ -7,9 +8,7 @@ export function createAuthPort(): AuthPort {
     case 'mock':
       return mockAuth;
     case 'firebase':
-      throw new Error(
-        'Firebase auth mode is configured but the Firebase adapter is not installed yet.',
-      );
+      return firebaseAuth;
     default:
       throw new Error(`Unsupported auth mode: ${env.authMode}`);
   }
