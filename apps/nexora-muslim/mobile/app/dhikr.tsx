@@ -3,9 +3,11 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { colors, radius, spacing, typography } from '@/constants/theme';
+import { useAppState } from '@/lib/app-state';
 import { mockDhikrRepository, type Dhikr } from '@/lib/dhikr';
 
 export default function DhikrScreen() {
+  const { refresh: refreshAppState } = useAppState();
   const [items, setItems] = useState<Dhikr[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,11 +36,13 @@ export default function DhikrScreen() {
   const increment = async (id: string) => {
     const updated = await mockDhikrRepository.increment(id);
     setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+    await refreshAppState();
   };
 
   const reset = async (id: string) => {
     const updated = await mockDhikrRepository.reset(id);
     setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+    await refreshAppState();
   };
 
   return (
