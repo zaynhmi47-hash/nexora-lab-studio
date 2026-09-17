@@ -1,45 +1,40 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { SectionTitle } from '@/components/SectionTitle';
 import { colors, radius, spacing, typography } from '@/constants/theme';
-import { mockUmrahJourney, type JourneyStage } from '@/lib/umrah';
+import { mockUmrahRepository, type JourneyStage, type UmrahJourney } from '@/lib/umrah';
 
 export default function UmrahScreen() {
-  const [journey, setJourney] = useState(mockUmrahJourney);
+  const [journey, setJourney] = useState<UmrahJourney | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void mockUmrahRepository.getJourney().then((data) => {
+      if (active) setJourney(data);
+    });
+    return () => { active = false; };
+  }, []);
 
   const currentStage = useMemo(
-    () => journey.stages.find((stage) => stage.id === journey.currentStageId),
-    [journey.currentStageId, journey.stages],
+    () => journey?.stages.find((stage) => stage.id === journey.currentStageId),
+    [journey],
   );
 
-  const toggleChecklist = (id: string) => {
-    setJourney((current) => {
-      const checklist = current.checklist.map((item) =>
-        item.id === id ? { ...item, completed: !item.completed } : item,
-      );
+  if (!journey) {
+    return <Screen><Text style={styles.muted}>Loading Umrah journey…</Text></Screen>;
+  }
 
-      const stages = current.stages.map((stage) => {
-        const stageItems = checklist.filter((item) => item.stageId === stage.id);
-        const completedCount = stageItems.filter((item) => item.completed).length;
-        return {
-          ...stage,
-          checklistCount: stageItems.length,
-          completedChecklistCount: completedCount,
-          progress: stageItems.length === 0 ? 0 : completedCount / stageItems.length,
-        };
-      });
-
-      const completedCount = checklist.filter((item) => item.completed).length;
-
-      return {
-        ...current,
-        checklist,
-        stages,
-        overallProgress: checklist.length === 0 ? 0 : completedCount / checklist.length,
-      };
-    });
+  const toggleChecklist = async (id: string) => {
+    if (busyId) return;
+    setBusyId(id);
+    try {
+      setJourney(await mockUmrahRepository.toggleChecklist(id));
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const statusLabel = (stage: JourneyStage) => {
@@ -61,9 +56,7 @@ export default function UmrahScreen() {
       <View style={styles.hero}>
         <Text style={styles.heroLabel}>YOUR JOURNEY</Text>
         <Text style={styles.progressValue}>{Math.round(journey.overallProgress * 100)}%</Text>
-        <Text style={styles.heroText}>
-          Progress is a preparation aid, not a measure of worship or spiritual worth.
-        </Text>
+        <Text style={styles.heroText}>Progress is a preparation aid, not a measure of worship or spiritual worth.</Text>
         <View style={styles.progressTrack}>
           <View style={[styles.progressFill, { width: `${journey.overallProgress * 100}%` }]} />
         </View>
@@ -79,17 +72,13 @@ export default function UmrahScreen() {
             <View style={styles.flex}>
               <View style={styles.titleRow}>
                 <Text style={styles.stageTitle}>{stage.title}</Text>
-                <Text style={[styles.status, stage.status === 'current' && styles.statusCurrent]}>
-                  {statusLabel(stage)}
-                </Text>
+                <Text style={[styles.status, stage.status === 'current' && styles.statusCurrent]}>{statusLabel(stage)}</Text>
               </View>
               <Text style={styles.description}>{stage.description}</Text>
               <View style={styles.smallProgressTrack}>
                 <View style={[styles.smallProgressFill, { width: `${stage.progress * 100}%` }]} />
               </View>
-              <Text style={styles.muted}>
-                {stage.completedChecklistCount} / {stage.checklistCount} checklist items
-              </Text>
+              <Text style={styles.muted}>{stage.completedChecklistCount} / {stage.checklistCount} checklist items</Text>
             </View>
           </View>
         </Card>
@@ -101,8 +90,10 @@ export default function UmrahScreen() {
           {currentChecklist.map((item) => (
             <Pressable
               key={item.id}
-              onPress={() => toggleChecklist(item.id)}
-              accessibilityRole="button"
+              disabled={busyId !== null}
+              onPress={() => void toggleChecklist(item.id)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: item.completed, disabled: busyId !== null }}
               accessibilityLabel={`${item.title}, ${item.completed ? 'completed' : 'not completed'}`}
             >
               <Card style={styles.checkCard}>
@@ -122,11 +113,7 @@ export default function UmrahScreen() {
         </>
       ) : null}
 
-      <Text style={styles.disclaimer}>
-        Travel requirements, health rules, visa information, and religious guidance can change.
-        Nexora Muslim will connect these areas to verified official or qualified sources before
-        production use. This prototype does not act as a travel organizer or religious authority.
-      </Text>
+      <Text style={styles.disclaimer}>Travel requirements, health rules, visa information, and religious guidance can change. Nexora Muslim will connect these areas to verified official or qualified sources before production use. This prototype does not act as a travel organizer or religious authority.</Text>
     </Screen>
   );
 }
