@@ -38,6 +38,8 @@ const initialProgress: LearningProgress = {
   completedLessonIds: ['arabic-alphabet', 'harakat'],
 };
 
+const progressByUser = new Map<string, LearningProgress>();
+
 const quizzes: Record<string, QuizQuestion[]> = {
   harakat: [
     {
@@ -51,22 +53,60 @@ const quizzes: Record<string, QuizQuestion[]> = {
   ],
 };
 
+function cloneProgress(progress: LearningProgress): LearningProgress {
+  return {
+    ...progress,
+    completedLessonIds: [...progress.completedLessonIds],
+  };
+}
+
 export const mockLearning: LearningPort = {
   async getCourses() {
-    return courses;
+    return courses.map((course) => ({
+      ...course,
+      lessons: course.lessons.map((lesson) => ({ ...lesson })),
+    }));
   },
   async getProgress(userId) {
-    return { ...initialProgress, userId, completedLessonIds: [...initialProgress.completedLessonIds] };
+    const existing = progressByUser.get(userId);
+    if (existing) return cloneProgress(existing);
+
+    const progress = cloneProgress({ ...initialProgress, userId });
+    progressByUser.set(userId, progress);
+    return cloneProgress(progress);
   },
   async getQuiz(lessonId) {
-    return quizzes[lessonId] ?? [];
+    return (quizzes[lessonId] ?? []).map((question) => ({
+      ...question,
+      options: [...question.options],
+    }));
   },
   async completeLesson(userId, lessonId) {
     const progress = await this.getProgress(userId);
-    if (!progress.completedLessonIds.includes(lessonId)) {
-      progress.completedLessonIds.push(lessonId);
-      progress.xp += 20;
+    if (progress.completedLessonIds.includes(lessonId)) return progress;
+
+    const lesson = courses
+      .flatMap((course) => course.lessons)
+      .find((item) => item.id === lessonId);
+
+    if (!lesson || lesson.status === 'locked') return progress;
+
+    progress.completedLessonIds.push(lessonId);
+    progress.xp += lesson.xpReward;
+    progress.lastCompletedAt = new Date().toISOString();
+
+    lesson.status = 'completed';
+
+    const nextLesson = courses
+      .find((course) => course.id === lesson.courseId)
+      ?.lessons
+      .find((item) => item.order === lesson.order + 1);
+
+    if (nextLesson && nextLesson.status === 'locked') {
+      nextLesson.status = 'available';
     }
-    return progress;
+
+    progressByUser.set(userId, progress);
+    return cloneProgress(progress);
   },
 };
