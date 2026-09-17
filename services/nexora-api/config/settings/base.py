@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "apps.access",
     "apps.products",
     "apps.capabilities",
+    "apps.learning",
 ]
 
 MIDDLEWARE = [
@@ -98,25 +99,3 @@ REST_FRAMEWORK = {
 CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
 
 SECURE_CONTENT_TYPE_NOSNIFF = True
-X_FRAME_OPTIONS = "DENY"
-SECURE_REFERRER_POLICY = "same-origin"
-
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "filters": {"correlation_id": {"()": "apps.core.logging.CorrelationIDFilter"}},
-    "formatters": {
-        "standard": {
-            "format": "{asctime} {levelname} {name} correlation_id={correlation_id} {message}",
-            "style": "{",
-        }
-    },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "filters": ["correlation_id"],
-            "formatter": "standard",
-        }
-    },
-    "loggers": {"django": {"handlers": ["console"], "level": "INFO", "propagate": False}},
-}
