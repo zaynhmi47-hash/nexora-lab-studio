@@ -10,6 +10,6 @@ export const mockQiblaDirection: QiblaDirection = {
 
 export const mockQiblaProvider: QiblaProvider = {
   async getDirection() {
-    return mockQiblaDirection;
+    return { ...mockQiblaDirection };
   },
 };
