@@ -5,11 +5,13 @@ import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/constants/theme';
 import { useAuth } from '@/lib/auth/AuthProvider';
+import { useAppState } from '@/lib/app-state';
 import { mockLearning, type LearningLesson, type QuizQuestion } from '@/lib/learning';
 
 export default function LessonScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const { session } = useAuth();
+  const { refresh: refreshAppState } = useAppState();
   const userId = session?.user.id ?? '00000000-0000-0000-0000-000000000001';
   const [lesson, setLesson] = useState<LearningLesson | null>(null);
   const [quiz, setQuiz] = useState<QuizQuestion[]>([]);
@@ -106,6 +108,7 @@ export default function LessonScreen() {
         .flatMap((course) => course.lessons)
         .find((item) => item.id === lesson.id);
       if (updatedLesson) setLesson(updatedLesson);
+      await refreshAppState();
     } catch {
       setError('Unable to save your progress. Please try again.');
     } finally {
