@@ -50,6 +50,68 @@ const quizzes: Record<string, QuizQuestion[]> = {
       correctOptionIndex: 0,
       explanation: 'Harakat are Arabic vowel marks used in reading practice.',
     },
+    {
+      id: 'harakat-q2',
+      lessonId: 'harakat',
+      prompt: 'What is the main purpose of learning harakat in this path?',
+      options: ['Support accurate reading practice', 'Calculate prayer times', 'Track travel distance', 'Store bookmarks'],
+      correctOptionIndex: 0,
+      explanation: 'The lesson uses vowel-mark recognition as a foundation for reading practice.',
+    },
+  ],
+  makharij: [
+    {
+      id: 'makharij-q1',
+      lessonId: 'makharij',
+      prompt: 'What does this practice focus on?',
+      options: ['Articulation points', 'Travel planning', 'Book lending', 'Account settings'],
+      correctOptionIndex: 0,
+      explanation: 'Makharij practice focuses on the articulation points used when producing letters.',
+    },
+    {
+      id: 'makharij-q2',
+      lessonId: 'makharij',
+      prompt: 'What is the intended outcome of articulation practice?',
+      options: ['More accurate pronunciation practice', 'A longer reading streak automatically', 'A new user account', 'A saved audio file'],
+      correctOptionIndex: 0,
+      explanation: 'The goal is guided practice toward more accurate articulation.',
+    },
+  ],
+  'tajwid-foundations': [
+    {
+      id: 'tajwid-q1',
+      lessonId: 'tajwid-foundations',
+      prompt: 'What does this lesson introduce?',
+      options: ['Core tajwid rules', 'Travel checklists', 'Qibla coordinates', 'Profile settings'],
+      correctOptionIndex: 0,
+      explanation: 'This learning activity is the foundation for deeper tajwid practice.',
+    },
+    {
+      id: 'tajwid-q2',
+      lessonId: 'tajwid-foundations',
+      prompt: 'Why is this lesson placed before deeper practice?',
+      options: ['It establishes foundational concepts', 'It unlocks unrelated account settings', 'It replaces the Quran reader', 'It changes the device language'],
+      correctOptionIndex: 0,
+      explanation: 'Foundational concepts are introduced before more advanced guided practice.',
+    },
+  ],
+  tahsin: [
+    {
+      id: 'tahsin-q1',
+      lessonId: 'tahsin',
+      prompt: 'What is the focus of this activity?',
+      options: ['Improving reading accuracy', 'Managing travel documents', 'Creating a bookmark folder', 'Changing notification settings'],
+      correctOptionIndex: 0,
+      explanation: 'Tahsin is represented here as guided practice for improving reading accuracy.',
+    },
+    {
+      id: 'tahsin-q2',
+      lessonId: 'tahsin',
+      prompt: 'How is improvement represented in this prototype?',
+      options: ['Through guided practice', 'By skipping all lessons', 'By changing the profile name', 'By opening a map'],
+      correctOptionIndex: 0,
+      explanation: 'The prototype models tahsin as guided learning and practice.',
+    },
   ],
 };
 
