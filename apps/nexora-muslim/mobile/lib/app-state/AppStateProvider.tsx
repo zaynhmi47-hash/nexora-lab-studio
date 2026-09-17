@@ -9,7 +9,8 @@ import {
 } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 import { mockAppStateRepository } from './mockAppState';
-import type { AppStateSnapshot } from './types';
+import { nexoraCoreAppStateRepository } from './repository';
+import type { AppStateRepository, AppStateSnapshot } from './types';
 
 const AppStateContext = createContext<{
   snapshot: AppStateSnapshot | null;
@@ -22,19 +23,26 @@ export function AppStateProvider({ children }: PropsWithChildren) {
   const [snapshot, setSnapshot] = useState<AppStateSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const repository = useMemo<AppStateRepository | null>(() => {
+    if (!session) return null;
+    return session.user.provider === 'firebase'
+      ? nexoraCoreAppStateRepository(session)
+      : mockAppStateRepository;
+  }, [session]);
+
   const refresh = useCallback(async () => {
-    if (!session?.user.id) {
+    if (!session?.user.id || !repository) {
       setSnapshot(null);
       return;
     }
 
     setLoading(true);
     try {
-      setSnapshot(await mockAppStateRepository.getSnapshot(session.user.id));
+      setSnapshot(await repository.getSnapshot(session.user.id));
     } finally {
       setLoading(false);
     }
-  }, [session?.user.id]);
+  }, [repository, session?.user.id]);
 
   useEffect(() => {
     void refresh();
