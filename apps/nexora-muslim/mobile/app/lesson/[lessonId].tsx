@@ -12,33 +12,45 @@ export default function LessonScreen() {
   const { session } = useAuth();
   const userId = session?.user.id ?? '00000000-0000-0000-0000-000000000001';
   const [lesson, setLesson] = useState<LearningLesson | null>(null);
-  const [quiz, setQuiz] = useState<QuizQuestion | null>(null);
+  const [quiz, setQuiz] = useState<QuizQuestion[]>([]);
+  const [questionIndex, setQuestionIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [correctAnswers, setCorrectAnswers] = useState(0);
   const [completed, setCompleted] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadLesson = async () => {
-      if (!lessonId) {
-        setLesson(null);
-        setQuiz(null);
-        return;
-      }
+      try {
+        setError(null);
+        if (!lessonId) {
+          setLesson(null);
+          setQuiz([]);
+          return;
+        }
 
-      const courses = await mockLearning.getCourses();
-      const foundLesson = courses
-        .flatMap((course) => course.lessons)
-        .find((item) => item.id === lessonId) ?? null;
-      const questions = await mockLearning.getQuiz(lessonId);
-      const progress = await mockLearning.getProgress(userId);
+        const courses = await mockLearning.getCourses();
+        const foundLesson = courses
+          .flatMap((course) => course.lessons)
+          .find((item) => item.id === lessonId) ?? null;
+        const questions = await mockLearning.getQuiz(lessonId);
+        const progress = await mockLearning.getProgress(userId);
 
-      if (!cancelled) {
-        setLesson(foundLesson);
-        setQuiz(questions[0] ?? null);
-        setCompleted(progress.completedLessonIds.includes(lessonId));
+        if (!cancelled) {
+          setLesson(foundLesson);
+          setQuiz(questions);
+          setQuestionIndex(0);
+          setSelected(null);
+          setSubmitted(false);
+          setCorrectAnswers(0);
+          setCompleted(progress.completedLessonIds.includes(lessonId));
+        }
+      } catch {
+        if (!cancelled) setError('Unable to load this learning activity. Please try again.');
       }
     };
 
@@ -49,9 +61,11 @@ export default function LessonScreen() {
     };
   }, [lessonId, userId]);
 
-  const answerOptions = useMemo(() => quiz?.options ?? [], [quiz]);
-  const hasQuiz = answerOptions.length > 0;
-  const correct = quiz?.correctOptionIndex === selected;
+  const currentQuestion = quiz[questionIndex] ?? null;
+  const answerOptions = useMemo(() => currentQuestion?.options ?? [], [currentQuestion]);
+  const hasQuiz = quiz.length > 0;
+  const isLastQuestion = questionIndex === quiz.length - 1;
+  const answerIsCorrect = currentQuestion?.correctOptionIndex === selected;
 
   if (!lesson) {
     return (
@@ -68,12 +82,20 @@ export default function LessonScreen() {
   }
 
   const submitAnswer = () => {
-    if (selected === null || !quiz) return;
+    if (selected === null || !currentQuestion || submitted) return;
     setSubmitted(true);
+    if (answerIsCorrect) setCorrectAnswers((value) => value + 1);
+  };
+
+  const nextQuestion = () => {
+    if (!submitted || isLastQuestion) return;
+    setQuestionIndex((value) => value + 1);
+    setSelected(null);
+    setSubmitted(false);
   };
 
   const finishLesson = async () => {
-    if (completed || saving) return;
+    if (completed || saving || (hasQuiz && !submitted)) return;
 
     setSaving(true);
     try {
@@ -84,6 +106,8 @@ export default function LessonScreen() {
         .flatMap((course) => course.lessons)
         .find((item) => item.id === lesson.id);
       if (updatedLesson) setLesson(updatedLesson);
+    } catch {
+      setError('Unable to save your progress. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -102,34 +126,43 @@ export default function LessonScreen() {
           <Text style={styles.muted}>{lesson.description}</Text>
         </View>
 
+        {error && (
+          <Card style={styles.errorCard}>
+            <Text style={styles.errorText}>{error}</Text>
+          </Card>
+        )}
+
         <Card style={styles.contentCard}>
           <Text style={styles.sectionLabel}>Today's lesson</Text>
           <Text style={styles.body}>{lesson.description}</Text>
         </Card>
 
-        {hasQuiz && quiz && (
+        {hasQuiz && currentQuestion && (
           <Card style={styles.quizCard}>
-            <Text style={styles.sectionLabel}>Quick check</Text>
-            <Text style={styles.question}>{quiz.prompt}</Text>
+            <View style={styles.quizHeader}>
+              <Text style={styles.sectionLabel}>Quick check</Text>
+              <Text style={styles.progressLabel}>Question {questionIndex + 1} of {quiz.length}</Text>
+            </View>
+            <View style={styles.questionBar}>
+              {quiz.map((question, index) => (
+                <View key={question.id} style={[styles.questionDot, index <= questionIndex && styles.questionDotActive]} />
+              ))}
+            </View>
+            <Text style={styles.question}>{currentQuestion.prompt}</Text>
 
             <View style={styles.options}>
               {answerOptions.map((option, index) => {
                 const isSelected = selected === index;
-                const isCorrect = submitted && quiz.correctOptionIndex === index;
-                const isWrong = submitted && isSelected && !correct;
+                const isCorrect = submitted && currentQuestion.correctOptionIndex === index;
+                const isWrong = submitted && isSelected && !answerIsCorrect;
                 return (
                   <Pressable
-                    key={`${quiz.id}-${option}`}
+                    key={`${currentQuestion.id}-${option}`}
                     onPress={() => !submitted && setSelected(index)}
                     disabled={submitted}
                     accessibilityRole="radio"
                     accessibilityState={{ selected: isSelected, disabled: submitted }}
-                    style={[
-                      styles.option,
-                      isSelected && styles.optionSelected,
-                      isCorrect && styles.optionCorrect,
-                      isWrong && styles.optionWrong,
-                    ]}
+                    style={[styles.option, isSelected && styles.optionSelected, isCorrect && styles.optionCorrect, isWrong && styles.optionWrong]}
                   >
                     <Text style={styles.optionIndex}>{String.fromCharCode(65 + index)}</Text>
                     <Text style={styles.optionText}>{option}</Text>
@@ -147,13 +180,18 @@ export default function LessonScreen() {
                 <Text style={styles.primaryButtonText}>Check answer</Text>
               </Pressable>
             ) : (
-              <View style={[styles.feedback, correct ? styles.feedbackCorrect : styles.feedbackWrong]}>
-                <Text style={styles.feedbackTitle}>{correct ? 'Correct!' : 'Not quite yet'}</Text>
-                <Text style={styles.feedbackText}>
-                  {correct
-                    ? quiz.explanation ?? 'Great work. You can continue this lesson.'
-                    : 'Review the lesson content and try the next activity.'}
-                </Text>
+              <View>
+                <View style={[styles.feedback, answerIsCorrect ? styles.feedbackCorrect : styles.feedbackWrong]}>
+                  <Text style={styles.feedbackTitle}>{answerIsCorrect ? 'Correct!' : 'Not quite yet'}</Text>
+                  <Text style={styles.feedbackText}>
+                    {currentQuestion.explanation ?? (answerIsCorrect ? 'Good work. Continue to the next question.' : 'Review the lesson content and continue learning.')}
+                  </Text>
+                </View>
+                {!isLastQuestion && (
+                  <Pressable style={styles.primaryButton} onPress={nextQuestion}>
+                    <Text style={styles.primaryButtonText}>Next question</Text>
+                  </Pressable>
+                )}
               </View>
             )}
           </Card>
@@ -162,11 +200,13 @@ export default function LessonScreen() {
         <View style={styles.footerCard}>
           <View style={styles.rewardCopy}>
             <Text style={styles.reward}>+{lesson.xpReward} XP</Text>
-            <Text style={styles.muted}>{completed ? 'Completed' : 'Learning progress only'}</Text>
+            <Text style={styles.muted}>
+              {completed ? 'Completed' : hasQuiz && submitted && isLastQuestion ? `${correctAnswers}/${quiz.length} correct` : 'Learning progress only'}
+            </Text>
           </View>
           <Pressable
-            style={[styles.primaryButton, hasQuiz && !submitted && !completed && styles.buttonDisabled]}
-            disabled={saving || (hasQuiz && !submitted && !completed) || completed}
+            style={[styles.primaryButton, hasQuiz && (!submitted || !isLastQuestion) && !completed && styles.buttonDisabled]}
+            disabled={saving || (hasQuiz && (!submitted || !isLastQuestion)) || completed}
             onPress={() => void finishLesson()}
           >
             <Text style={styles.primaryButtonText}>{saving ? 'Saving…' : completed ? 'Completed ✓' : 'Complete lesson'}</Text>
@@ -196,11 +236,18 @@ const styles = StyleSheet.create({
   badgeText: { color: colors.primaryDark, fontSize: typography.small, fontWeight: '900' },
   title: { color: colors.text, fontSize: typography.title, fontWeight: '900', marginTop: spacing.md },
   muted: { color: colors.textMuted, lineHeight: 21, marginTop: spacing.xs },
+  errorCard: { marginBottom: spacing.lg, borderColor: colors.danger },
+  errorText: { color: colors.danger, fontWeight: '700' },
   contentCard: { marginBottom: spacing.lg },
   sectionLabel: { color: colors.primary, fontSize: typography.small, fontWeight: '900', letterSpacing: 0.7 },
   body: { color: colors.text, fontSize: typography.body, lineHeight: 25, marginTop: spacing.md },
   quizCard: { marginBottom: spacing.lg },
-  question: { color: colors.text, fontSize: 18, lineHeight: 25, fontWeight: '800', marginTop: spacing.md },
+  quizHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  progressLabel: { color: colors.textMuted, fontSize: typography.small, fontWeight: '700' },
+  questionBar: { flexDirection: 'row', gap: 5, marginTop: spacing.md },
+  questionDot: { flex: 1, height: 4, borderRadius: 4, backgroundColor: colors.border },
+  questionDotActive: { backgroundColor: colors.primary },
+  question: { color: colors.text, fontSize: 18, lineHeight: 25, fontWeight: '800', marginTop: spacing.lg },
   options: { gap: spacing.sm, marginTop: spacing.lg, marginBottom: spacing.lg },
   option: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, backgroundColor: colors.surface },
   optionSelected: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
@@ -211,7 +258,7 @@ const styles = StyleSheet.create({
   primaryButton: { alignItems: 'center', justifyContent: 'center', minHeight: 46, paddingHorizontal: spacing.lg, borderRadius: radius.md, backgroundColor: colors.primary },
   primaryButtonText: { color: colors.white, fontWeight: '900' },
   buttonDisabled: { opacity: 0.45 },
-  feedback: { borderRadius: radius.md, padding: spacing.md },
+  feedback: { borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md },
   feedbackCorrect: { backgroundColor: '#DCFCE7' },
   feedbackWrong: { backgroundColor: '#FEE2E2' },
   feedbackTitle: { color: colors.text, fontWeight: '900' },
