@@ -7,6 +7,7 @@ import {
   type PropsWithChildren,
 } from 'react';
 import { createAuthPort } from './createAuthPort';
+import { resolveNexoraIdentity } from '@/lib/infrastructure/nexora-core/identity';
 import type { AuthPort, AuthSession } from './types';
 
 const AuthContext = createContext<{
@@ -18,6 +19,11 @@ const AuthContext = createContext<{
 
 const auth: AuthPort = createAuthPort();
 
+async function resolveSessionIdentity(session: AuthSession | null) {
+  if (!session) return null;
+  return resolveNexoraIdentity(session);
+}
+
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,6 +33,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     void auth
       .getSession()
+      .then(resolveSessionIdentity)
       .then((nextSession) => {
         if (active) setSession(nextSession);
       })
@@ -46,7 +53,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       async signIn() {
         setLoading(true);
         try {
-          setSession(await auth.signIn());
+          const authenticatedSession = await auth.signIn();
+          setSession(await resolveSessionIdentity(authenticatedSession));
         } finally {
           setLoading(false);
         }
