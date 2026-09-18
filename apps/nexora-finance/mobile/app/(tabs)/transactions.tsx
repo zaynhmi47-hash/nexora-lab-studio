@@ -8,7 +8,8 @@ import { AdaptiveHeader, ResponsiveContainer, ResponsiveGrid, ResponsiveScaffold
 import { useResponsive } from '@/lib/responsive';
 import { theme } from '@/lib/theme';
 import { useTransactions } from '@/lib/features/transactions';
-import type { FinanceTransaction, TransactionDirection } from '@/lib/features/transactions';
+import type { FinanceTransaction, TransactionDirection, TransactionStatus } from '@/lib/features/transactions';
+import type { TransactionListFilters } from '@/lib/features/transactions/transactionApi';
 import type { UpdateTransactionInput } from '@/lib/features/transactions/transactionApi';
 
 const formatIdr = (amountMinor: number) => new Intl.NumberFormat('id-ID', {
@@ -26,7 +27,11 @@ type ModalMode = 'detail' | 'add' | 'edit';
 
 export default function TransactionsScreen() {
   const { isMobile } = useResponsive();
-  const { transactions, loading, error, create, update, voidTransaction, refresh, ready } = useTransactions();
+  const [filterDirection, setFilterDirection] = useState<TransactionDirection | undefined>();
+  const [filterStatus, setFilterStatus] = useState<TransactionStatus | undefined>();
+  const [page, setPage] = useState(1);
+  const filters = useMemo<TransactionListFilters>(() => ({ direction: filterDirection, status: filterStatus, page, pageSize: 20 }), [filterDirection, filterStatus, page]);
+  const { transactions, loading, error, create, update, voidTransaction, refresh, ready, pageInfo } = useTransactions(filters);
   const [selected, setSelected] = useState<FinanceTransaction | null>(null);
   const [mode, setMode] = useState<ModalMode>('detail');
   const [direction, setDirection] = useState<TransactionDirection>('income');
@@ -146,6 +151,16 @@ export default function TransactionsScreen() {
         <ScrollView contentContainerStyle={styles.content}>
           <AdaptiveHeader title="Transactions" subtitle="Track income and expenses in your active organization." />
 
+          <View style={styles.filterBar}>
+            {(['all', 'income', 'expense'] as const).map((label) => {
+              const value = label === 'all' ? undefined : label;
+              return <Pressable key={label} onPress={() => { setFilterDirection(value); setPage(1); }} style={[styles.filterChip, filterDirection === value && styles.filterChipActive]}><Text style={[styles.filterChipText, filterDirection === value && styles.filterChipTextActive]}>{label[0].toUpperCase() + label.slice(1)}</Text></Pressable>;
+            })}
+            {(['posted', 'void'] as const).map((value) => (
+              <Pressable key={value} onPress={() => { setFilterStatus(filterStatus === value ? undefined : value); setPage(1); }} style={[styles.filterChip, filterStatus === value && styles.filterChipActive]}><Text style={[styles.filterChipText, filterStatus === value && styles.filterChipTextActive]}>{value.toUpperCase()}</Text></Pressable>
+            ))}
+          </View>
+
           <View style={styles.toolbar}>
             <View style={styles.toolbarCopy}>
               <Text style={styles.sectionTitle}>All transactions</Text>
@@ -196,6 +211,13 @@ export default function TransactionsScreen() {
                   </Text>
                 </Pressable>
               ))}
+              {pageInfo.totalPages > 1 ? (
+                <View style={styles.pagination}>
+                  <Pressable disabled={page <= 1 || loading} onPress={() => setPage((current) => current - 1)} style={[styles.secondaryButton, (page <= 1 || loading) && styles.disabledButton]}><Text style={styles.secondaryButtonText}>Previous</Text></Pressable>
+                  <Text style={styles.hint}>Page {pageInfo.page} of {pageInfo.totalPages} · {pageInfo.total} total</Text>
+                  <Pressable disabled={page >= pageInfo.totalPages || loading} onPress={() => setPage((current) => current + 1)} style={[styles.secondaryButton, (page >= pageInfo.totalPages || loading) && styles.disabledButton]}><Text style={styles.secondaryButtonText}>Next</Text></Pressable>
+                </View>
+              ) : null}
             </View>
           )}
         </ScrollView>
@@ -285,6 +307,12 @@ export default function TransactionsScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingTop: 20, paddingBottom: 40, gap: 16 },
+  filterBar: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  filterChip: { minHeight: 38, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, alignItems: 'center', justifyContent: 'center' },
+  filterChipActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+  filterChipText: { fontSize: 13, fontWeight: '700', color: theme.colors.text },
+  filterChipTextActive: { color: theme.colors.surface },
+  pagination: { minHeight: 64, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   toolbar: { padding: theme.spacing.lg, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
   toolbarCopy: { flex: 1, gap: 3 },
   sectionTitle: { fontSize: 18, fontWeight: '800', color: theme.colors.text },
