@@ -1,0 +1,5 @@
+import type { AuthSession } from '@/lib/auth/types';
+import type { ArabicPath, ArabicPort, ArabicPracticeItem, ArabicProgress } from './types';
+const baseUrl=process.env.EXPO_PUBLIC_NEXORA_CORE_URL ?? 'http://localhost:8000';
+async function request<T>(session:AuthSession,path:string,init?:RequestInit):Promise<T>{const response=await fetch(baseUrl+'/api/v1/arabic/'+path,{...init,headers:{Accept:'application/json',Authorization:'Bearer '+session.accessToken,...(init?.headers??{})}});if(!response.ok)throw new Error('Nexora Core Arabic request failed ('+response.status+').');return await response.json() as T;}
+export function nexoraCoreArabicRepository(session:AuthSession):ArabicPort{return{getPaths:()=>request<ArabicPath[]>(session,'paths/'),getProgress:()=>request<ArabicProgress>(session,'progress/'),getPractice:(id)=>request<ArabicPracticeItem[]>(session,'lessons/'+encodeURIComponent(id)+'/practice/'),completeLesson:(id)=>request<ArabicProgress>(session,'lessons/'+encodeURIComponent(id)+'/complete/',{method:'POST'})};}
