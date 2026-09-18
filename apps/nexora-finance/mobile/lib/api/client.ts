@@ -7,10 +7,11 @@ export interface ApiEnvelope<T> {
 
 export interface NexoraApiClient {
   request<T>(path: string, init?: RequestInit): Promise<ApiEnvelope<T>>;
+  setAccessToken(token: string | null): void;
 }
 
 function joinUrl(baseUrl: string, path: string): string {
-  return `${baseUrl.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`;
+  return `${baseUrl.replace(/\\/+$/, '')}/${path.replace(/^\\/+/, '')}`;
 }
 
 async function readErrorMessage(response: Response): Promise<string> {
@@ -21,28 +22,23 @@ async function readErrorMessage(response: Response): Promise<string> {
   } catch {
     // Fall back to the HTTP status when the response is not JSON.
   }
-
   return `Nexora API request failed with status ${response.status}`;
 }
 
 export function createNexoraApiClient(baseUrl: string): NexoraApiClient {
+  let accessToken: string | null = null;
   return {
+    setAccessToken(token) {
+      accessToken = token;
+    },
     async request<T>(path, init) {
-      const response = await fetch(joinUrl(baseUrl, path), {
-        ...init,
-        headers: {
-          Accept: 'application/json',
-          ...init?.headers,
-        },
-      });
-
+      const headers = new Headers(init?.headers);
+      headers.set('Accept', 'application/json');
+      if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
+      const response = await fetch(joinUrl(baseUrl, path), { ...init, headers });
       if (!response.ok) {
-        throw new NexoraApiError(
-          await readErrorMessage(response),
-          response.status,
-        );
+        throw new NexoraApiError(await readErrorMessage(response), response.status);
       }
-
       return (await response.json()) as ApiEnvelope<T>;
     },
   };
