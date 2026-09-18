@@ -4,12 +4,20 @@ import { useAuth } from '@/lib/auth';
 import { useFinanceSummaryApi } from './summaryApi';
 import type { FinanceSummary } from './types';
 
-export function useFinanceSummary() {
+export interface FinanceSummaryPeriod {
+  startDate?: string;
+  endDate?: string;
+}
+
+export function useFinanceSummary(period?: FinanceSummaryPeriod) {
   const { status } = useAuth();
   const api = useFinanceSummaryApi();
   const [summary, setSummary] = useState<FinanceSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+
+  const startDate = period?.startDate;
+  const endDate = period?.endDate;
 
   const refresh = useCallback(async () => {
     if (status !== 'authenticated' || !api.ready) {
@@ -20,13 +28,13 @@ export function useFinanceSummary() {
     setLoading(true);
     setError(null);
     try {
-      setSummary(await api.getSummary());
+      setSummary(await api.getSummary({ startDate, endDate }));
     } catch (cause) {
       setError(cause instanceof Error ? cause : new Error('Failed to load finance summary.'));
     } finally {
       setLoading(false);
     }
-  }, [api, status]);
+  }, [api, endDate, startDate, status]);
 
   useEffect(() => {
     void refresh();
