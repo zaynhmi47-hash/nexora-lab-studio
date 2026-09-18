@@ -4,6 +4,7 @@ from django.urls import path
 from api.v1.app_state import CurrentAppStateView
 from api.v1.health import HealthView, LivenessView, ReadinessView
 from api.v1.identity import CurrentIdentityView
+from apps.finance.api.summary_views import FinanceSummaryView
 
 urlpatterns = [
     path("health/", HealthView.as_view(), name="health"),
@@ -28,5 +29,7 @@ urlpatterns = [
     path("organizations/", include("api.v1.urls_organizations")),
     path("products/", include("apps.products.api.urls")),
     path("products/", include("apps.capabilities.api.urls_products")),
-    path("capabilities/", include("apps.capabilities.api.urls")),\n    path("organizations/<uuid:organization_id>/finance/transactions/", include("apps.finance.api.urls")),
+    path("capabilities/", include("apps.capabilities.api.urls")),
+    path("organizations/<uuid:organization_id>/finance/transactions/", include("apps.finance.api.urls")),
+    path("organizations/<uuid:organization_id>/finance/summary/", FinanceSummaryView.as_view(), name="finance-summary"),
 ]
