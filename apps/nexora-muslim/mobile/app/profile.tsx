@@ -5,7 +5,7 @@ import { Screen } from '@/components/Screen';
 import { colors, spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { useAppState } from '@/lib/app-state';
-import { mockProfileRepository, type ProfileSnapshot } from '@/lib/profile';
+import { mockProfileRepository, nexoraCoreProfileRepository, type ProfileSnapshot } from '@/lib/profile';
 
 const progressItems = [
   ['Quran Reading', 'quranReading'],
@@ -19,20 +19,21 @@ export default function ProfileScreen() {
   const { snapshot: appState, refresh: refreshAppState } = useAppState();
   const [snapshot, setSnapshot] = useState<ProfileSnapshot | null>(null);
   const [savingPreferences, setSavingPreferences] = useState(false);
+  const profileRepository = session?.user.provider === 'firebase' ? nexoraCoreProfileRepository(session) : mockProfileRepository;
 
   useEffect(() => {
     let active = true;
-    void mockProfileRepository.getSnapshot().then((next) => {
+    void profileRepository.getSnapshot().then((next) => {
       if (active) setSnapshot(next);
     });
     return () => { active = false; };
-  }, []);
+  }, [profileRepository]);
 
   const updatePreference = async (key: keyof ProfileSnapshot['preferences'], value: boolean) => {
     if (!snapshot) return;
     setSavingPreferences(true);
     try {
-      const next = await mockProfileRepository.updatePreferences({ ...snapshot.preferences, [key]: value });
+      const next = await profileRepository.updatePreferences({ ...snapshot.preferences, [key]: value });
       setSnapshot(next);
       await refreshAppState();
     } finally {
