@@ -4,12 +4,14 @@ import { useRouter } from 'expo-router';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/constants/theme';
-import { mockTajwid, type TajwidPracticeItem } from '@/lib/tajwid';
+import { mockTajwid, nexoraCoreTajwidRepository, type TajwidPracticeItem } from '@/lib/tajwid';
+import { useAuth } from '@/lib/auth/AuthProvider';
 
 const DEMO_USER_ID = '00000000-0000-0000-0000-000000000001';
 
 export default function TajwidAssessmentScreen() {
   const router = useRouter();
+  const { session } = useAuth();
   const [items, setItems] = useState<TajwidPracticeItem[]>([]);
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
@@ -19,6 +21,7 @@ export default function TajwidAssessmentScreen() {
   const [passed, setPassed] = useState(false);
 
   useEffect(() => {
+    const repository = session?.user.provider === 'firebase' ? nexoraCoreTajwidRepository(session) : mockTajwid;
     void Promise.all([
       mockTajwid.getPractice('makharij'),
       mockTajwid.getPractice('sifat-huruf'),
@@ -28,7 +31,7 @@ export default function TajwidAssessmentScreen() {
       mockTajwid.getPractice('qalqalah'),
       mockTajwid.getPractice('waqaf-ibtida'),
     ]).then((groups) => setItems(groups.flat()));
-  }, []);
+  }, [session]);
 
   const item = items[index];
   const score = useMemo(() => (items.length ? Math.round((correct / items.length) * 100) : 0), [correct, items.length]);
@@ -51,7 +54,8 @@ export default function TajwidAssessmentScreen() {
 
     const finalScore = items.length ? Math.round((nextCorrect / items.length) * 100) : 0;
     const didPass = finalScore >= 70;
-    await mockTajwid.completeAssessment(DEMO_USER_ID, nextCorrect, items.length);
+    const repository = session?.user.provider === 'firebase' ? nexoraCoreTajwidRepository(session) : mockTajwid;
+    await repository.completeAssessment(session?.user.id ?? DEMO_USER_ID, nextCorrect, items.length);
     setCorrect(nextCorrect);
     setPassed(didPass);
     setFinished(true);
