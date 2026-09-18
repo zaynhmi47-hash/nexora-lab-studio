@@ -1,5 +1,5 @@
 export { mockUmrahJourney, mockUmrahProvider } from './mockUmrah';
-export { mockUmrahRepository } from './repository';
+export { mockUmrahRepository, nexoraCoreUmrahRepository } from './repository';
 export type {
   JourneyStage,
   JourneyStatus,
