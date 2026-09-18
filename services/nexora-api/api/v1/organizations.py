@@ -78,6 +78,7 @@ class OrganizationMembershipView(OrganizationAPIView):
                 {
                     "id": str(membership.id),
                     "organization_id": str(membership.organization_id),
+                    "role": membership.role.slug.upper(),
                     "status": membership.status,
                 }
             )
