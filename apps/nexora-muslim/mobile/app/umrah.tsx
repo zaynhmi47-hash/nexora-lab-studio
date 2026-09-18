@@ -5,20 +5,23 @@ import { Screen } from '@/components/Screen';
 import { SectionTitle } from '@/components/SectionTitle';
 import { colors, radius, spacing, typography } from '@/constants/theme';
 import { useAppState } from '@/lib/app-state';
-import { mockUmrahRepository, type JourneyStage, type UmrahJourney } from '@/lib/umrah';
+import { useAuth } from '@/lib/auth/AuthProvider';
+import { mockUmrahRepository, nexoraCoreUmrahRepository, type JourneyStage, type UmrahJourney } from '@/lib/umrah';
 
 export default function UmrahScreen() {
   const { refresh: refreshAppState } = useAppState();
+  const { session } = useAuth();
+  const repository = useMemo(() => session?.user.provider === 'firebase' ? nexoraCoreUmrahRepository(session) : mockUmrahRepository, [session]);
   const [journey, setJourney] = useState<UmrahJourney | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    void mockUmrahRepository.getJourney().then((data) => {
+    void repository.getJourney().then((data) => {
       if (active) setJourney(data);
     });
     return () => { active = false; };
-  }, []);
+  }, [repository]);
 
   const currentStage = useMemo(
     () => journey?.stages.find((stage) => stage.id === journey.currentStageId),
@@ -33,7 +36,7 @@ export default function UmrahScreen() {
     if (busyId) return;
     setBusyId(id);
     try {
-      setJourney(await mockUmrahRepository.toggleChecklist(id));
+      setJourney(await repository.toggleChecklist(id));
       await refreshAppState();
     } finally {
       setBusyId(null);
