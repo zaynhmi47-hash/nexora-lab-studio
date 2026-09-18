@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { NexoraApiProvider } from '@/lib/api/NexoraApiProvider';
 import { OrganizationProvider } from '@/lib/organization/OrganizationProvider';
+import { IdentityProvider } from '@/lib/identity';
 import { ThemeProvider, useTheme } from '@/lib/theme';
 import { useWorkspace, WorkspaceProvider } from '@/lib/workspace';
 
@@ -22,5 +23,5 @@ function AppShell() {
   return <><StatusBar style={mode === 'dark' ? 'light' : 'dark'} /><AuthGate /><Stack screenOptions={{ headerShown: false }} /></>;
 }
 export default function RootLayout() {
-  return <AuthProvider><NexoraApiProvider><WorkspaceProvider><OrganizationProvider><ThemeProvider><AppShell /></ThemeProvider></OrganizationProvider></WorkspaceProvider></NexoraApiProvider></AuthProvider>;
+  return <AuthProvider><NexoraApiProvider><IdentityProvider><WorkspaceProvider><OrganizationProvider><ThemeProvider><AppShell /></ThemeProvider></OrganizationProvider></WorkspaceProvider></IdentityProvider></NexoraApiProvider></AuthProvider>;
 }
