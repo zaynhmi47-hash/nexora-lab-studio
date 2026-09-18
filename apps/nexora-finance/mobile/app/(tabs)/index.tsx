@@ -1,76 +1,67 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { ResponsiveContainer, ResponsiveGrid } from '@/components/layout';
+import { AdaptiveHeader, ResponsiveContainer, ResponsiveGrid, ResponsiveScaffold } from '@/components/layout';
 import { useResponsive } from '@/lib/responsive';
 import { theme } from '@/lib/theme';
 
 export default function HomeScreen() {
-  const { isMobile, isUltrawide } = useResponsive();
+  const { isMobile } = useResponsive();
 
   return (
-    <ResponsiveContainer maxWidth={1440}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.eyebrow}>NEXORA FINANCE</Text>
-          <Text style={[styles.title, isMobile && styles.mobileTitle]}>Good morning</Text>
-          <Text style={styles.subtitle}>Your financial overview, adapted to your device.</Text>
-        </View>
-
-        <ResponsiveGrid gap={12}>
-          <View style={[styles.card, !isMobile && styles.cardWide]}>
-            <Text style={styles.cardLabel}>Balance</Text>
-            <Text style={styles.amount}>Rp 0</Text>
-            <Text style={styles.muted}>Available balance</Text>
+    <ResponsiveScaffold>
+      <ResponsiveContainer maxWidth={1440}>
+        <ScrollView contentContainerStyle={styles.content}>
+          <AdaptiveHeader
+            title="Dashboard"
+            subtitle="Your financial overview"
+          />
+          <ResponsiveGrid gap={12}>
+            {[
+              ['Balance', 'Rp 0', 'Available balance'],
+              ['This month', 'Rp 0', 'Income − expenses'],
+              ['Budget', '0%', 'Used this period'],
+            ].map(([label, value, hint]) => (
+              <View key={label} style={[styles.card, !isMobile && styles.cardWide]}>
+                <Text style={styles.label}>{label}</Text>
+                <Text style={styles.value}>{value}</Text>
+                <Text style={styles.hint}>{hint}</Text>
+              </View>
+            ))}
+          </ResponsiveGrid>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Quick actions</Text>
+            <Text style={styles.hint}>
+              Transactions, Accounting, POS, Inventory, CRM, Marketing and NORA will plug into this shell.
+            </Text>
           </View>
-          <View style={[styles.card, !isMobile && styles.cardWide]}>
-            <Text style={styles.cardLabel}>This month</Text>
-            <Text style={styles.amount}>Rp 0</Text>
-            <Text style={styles.muted}>Income − expenses</Text>
-          </View>
-          <View style={[styles.card, !isMobile && styles.cardWide]}>
-            <Text style={styles.cardLabel}>Budget</Text>
-            <Text style={styles.amount}>0%</Text>
-            <Text style={styles.muted}>Used this period</Text>
-          </View>
-        </ResponsiveGrid>
-
-        <View style={[styles.section, isUltrawide && styles.sectionWide]}>
-          <Text style={styles.sectionTitle}>Quick actions</Text>
-          <Text style={styles.muted}>The foundation is ready for Transactions, POS, Inventory, CRM, Accounting and NORA modules.</Text>
-        </View>
-      </ScrollView>
-    </ResponsiveContainer>
+        </ScrollView>
+      </ResponsiveContainer>
+    </ResponsiveScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: 24, paddingBottom: 40, gap: 24 },
-  header: { gap: 6 },
-  eyebrow: { fontSize: 12, fontWeight: '700', letterSpacing: 1.2, color: theme.colors.primary },
-  title: { fontSize: theme.typography.title, fontWeight: '800', color: theme.colors.text },
-  mobileTitle: { fontSize: 24 },
-  subtitle: { fontSize: theme.typography.body, color: theme.colors.muted },
+  content: { paddingTop: 20, paddingBottom: 40, gap: 20 },
   card: {
     width: '100%',
-    backgroundColor: theme.colors.surface,
+    padding: theme.spacing.xl,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    padding: theme.spacing.xl,
+    backgroundColor: theme.colors.surface,
     gap: 6,
   },
   cardWide: { width: '31%', minWidth: 220 },
-  cardLabel: { fontSize: 14, fontWeight: '600', color: theme.colors.muted },
-  amount: { fontSize: 24, fontWeight: '800', color: theme.colors.text },
-  muted: { fontSize: 14, lineHeight: 20, color: theme.colors.muted },
+  label: { fontSize: 14, fontWeight: '600', color: theme.colors.muted },
+  value: { fontSize: 24, fontWeight: '800', color: theme.colors.text },
+  hint: { fontSize: 14, lineHeight: 20, color: theme.colors.muted },
   section: {
-    backgroundColor: theme.colors.surface,
+    padding: theme.spacing.xl,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    padding: theme.spacing.xl,
+    backgroundColor: theme.colors.surface,
     gap: 8,
   },
-  sectionWide: { maxWidth: 900 },
-  sectionTitle: { fontSize: theme.typography.heading, fontWeight: '750', color: theme.colors.text },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.text },
 });
