@@ -4,7 +4,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/constants/theme';
-import { mockKnowledgeProvider, type HadithItem } from '@/lib/knowledge';
+import { mockKnowledgeProvider, nexoraCoreKnowledgeProvider, type HadithItem } from '@/lib/knowledge';
+import { useAuth } from '@/lib/auth/AuthProvider';
 
 const gradeLabel: Record<HadithItem['grade'], string> = {
   sahih: 'Sahih',
@@ -15,16 +16,18 @@ const gradeLabel: Record<HadithItem['grade'], string> = {
 
 export default function HadithDetailScreen() {
   const { hadithId } = useLocalSearchParams<{ hadithId: string }>();
+  const { session } = useAuth();
   const [item, setItem] = useState<HadithItem | null>(null);
 
   useEffect(() => {
     let active = true;
     if (!hadithId) return;
-    void mockKnowledgeProvider.getHadith(hadithId).then((nextItem) => {
+    const provider = session?.user.provider === 'firebase' ? nexoraCoreKnowledgeProvider(session) : mockKnowledgeProvider;
+    void provider.getHadith(hadithId).then((nextItem) => {
       if (active) setItem(nextItem);
     });
     return () => { active = false; };
-  }, [hadithId]);
+  }, [session, hadithId]);
 
   if (!item) {
     return <Screen><View style={styles.center}><Text style={styles.title}>Hadith not found</Text><Pressable onPress={() => router.back()}><Text style={styles.back}>‹ Go back</Text></Pressable></View></Screen>;
