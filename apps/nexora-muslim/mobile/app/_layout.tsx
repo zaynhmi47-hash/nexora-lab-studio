@@ -1,12 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { useEffect } from 'react';
 import { colors } from '@/constants/theme';
 import { AuthGate } from '@/components/auth/AuthGate';
 import { AppErrorBoundary } from '@/components/system/AppErrorBoundary';
 import { AuthProvider } from '@/lib/auth/AuthProvider';
 import { AppStateProvider } from '@/lib/app-state/AppStateProvider';
+import * as Notifications from 'expo-notifications';
+import { handlePrayerNotificationResponse } from '@/lib/reminders';
 
 export default function RootLayout() {
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(handlePrayerNotificationResponse);
+    return () => subscription.remove();
+  }, []);
+
   return (
     <AppErrorBoundary>
       <AuthProvider>
