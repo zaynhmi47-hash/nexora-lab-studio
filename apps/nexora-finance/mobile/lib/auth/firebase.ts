@@ -1,5 +1,7 @@
 import { getApp, getApps, initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, initializeAuth, getReactNativePersistence, type Auth } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 const config = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -10,13 +12,20 @@ const config = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-function assertConfig() {
-  const missing = Object.entries(config).filter(([, value]) => !value).map(([key]) => key);
-  if (missing.length) throw new Error(`Missing Firebase client configuration: ${missing.join(', ')}`);
+export function isFirebaseConfigured(): boolean {
+  return Object.values(config).every(Boolean);
 }
 
-export function getFirebaseAuth() {
+function assertConfig() {
+  const missing = Object.entries(config).filter(([, value]) => !value).map(([key]) => key);
+  if (missing.length) {
+    throw new Error('Missing Firebase client configuration: ' + missing.join(', '));
+  }
+}
+
+export function getFirebaseAuth(): Auth {
   assertConfig();
   const app = getApps().length ? getApp() : initializeApp(config);
-  return getAuth(app);
+  if (Platform.OS === 'web') return getAuth(app);
+  try { return getAuth(app); } catch { return initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) }); }
 }
