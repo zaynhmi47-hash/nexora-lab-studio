@@ -16,6 +16,7 @@ urlpatterns = [
     path("dhikr/", include("apps.dhikr.urls")),
     path("umrah/", include("apps.umrah.urls")),
     path("profile/", include("apps.profile.urls")),
+    path("knowledge/", include("apps.knowledge.urls")),
     path("organizations/", include("api.v1.urls_organizations")),
     path("products/", include("apps.products.api.urls")),
     path("products/", include("apps.capabilities.api.urls_products")),
