@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useTransactionApi } from './transactionApi';
 import type { CreateTransactionInput, FinanceTransaction } from './types';
+import type { UpdateTransactionInput } from './transactionApi';
 
 export function useTransactions() {
   const { status } = useAuth();
@@ -30,7 +31,26 @@ export function useTransactions() {
     return created;
   }, [api]);
 
+  const update = useCallback(async (id: string, input: UpdateTransactionInput) => {
+    setError(null);
+    const updated = await api.updateTransaction(id, input);
+    setTransactions((current) => current.map((item) => item.id === updated.id ? updated : item));
+    return updated;
+  }, [api]);
+
+  const voidTransaction = useCallback(async (id: string) => {
+    setError(null);
+    const voided = await api.voidTransaction(id);
+    setTransactions((current) => current.map((item) => item.id === voided.id ? voided : item));
+    return voided;
+  }, [api]);
+
+  const getTransaction = useCallback(async (id: string) => {
+    setError(null);
+    return api.getTransaction(id);
+  }, [api]);
+
   useEffect(() => { void refresh(); }, [refresh]);
 
-  return { transactions, loading, error, refresh, create, ready: api.ready };
+  return { transactions, loading, error, refresh, create, update, voidTransaction, getTransaction, ready: api.ready };
 }
