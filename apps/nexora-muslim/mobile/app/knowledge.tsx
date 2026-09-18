@@ -4,19 +4,22 @@ import { router } from 'expo-router';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/constants/theme';
-import { mockKnowledgeProvider } from '@/lib/knowledge';
+import { mockKnowledgeProvider, nexoraCoreKnowledgeProvider } from '@/lib/knowledge';
+import { useAuth } from '@/lib/auth/AuthProvider';
 import type { IslamicKnowledgeSnapshot } from '@/lib/knowledge';
 
 export default function KnowledgeScreen() {
+  const { session } = useAuth();
   const [snapshot, setSnapshot] = useState<IslamicKnowledgeSnapshot | null>(null);
 
   useEffect(() => {
     let active = true;
-    void mockKnowledgeProvider.getSnapshot().then((nextSnapshot) => {
+    const provider = session?.user.provider === 'firebase' ? nexoraCoreKnowledgeProvider(session) : mockKnowledgeProvider;
+    void provider.getSnapshot().then((nextSnapshot) => {
       if (active) setSnapshot(nextSnapshot);
     });
     return () => { active = false; };
-  }, []);
+  }, [session]);
 
   if (!snapshot) {
     return <Screen><Text style={styles.muted}>Loading knowledge foundation…</Text></Screen>;
