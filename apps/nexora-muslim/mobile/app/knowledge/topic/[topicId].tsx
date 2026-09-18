@@ -4,10 +4,12 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { colors, spacing, typography } from '@/constants/theme';
-import { mockKnowledgeProvider, type KnowledgeTopic, type SourceReference } from '@/lib/knowledge';
+import { mockKnowledgeProvider, nexoraCoreKnowledgeProvider, type KnowledgeTopic, type SourceReference } from '@/lib/knowledge';
+import { useAuth } from '@/lib/auth/AuthProvider';
 
 export default function KnowledgeTopicScreen() {
   const { topicId } = useLocalSearchParams<{ topicId: string }>();
+  const { session } = useAuth();
   const [topic, setTopic] = useState<KnowledgeTopic | null>(null);
   const [sources, setSources] = useState<SourceReference[]>([]);
 
@@ -15,9 +17,10 @@ export default function KnowledgeTopicScreen() {
     let active = true;
     const load = async () => {
       if (!topicId) return;
+      const provider = session?.user.provider === 'firebase' ? nexoraCoreKnowledgeProvider(session) : mockKnowledgeProvider;
       const [nextTopic, nextSources] = await Promise.all([
-        mockKnowledgeProvider.getTopic(topicId),
-        mockKnowledgeProvider.listSources(topicId),
+        provider.getTopic(topicId),
+        provider.listSources(topicId),
       ]);
       if (!active) return;
       setTopic(nextTopic);
@@ -25,7 +28,7 @@ export default function KnowledgeTopicScreen() {
     };
     void load();
     return () => { active = false; };
-  }, [topicId]);
+  }, [session, topicId]);
 
   if (!topic) {
     return <Screen><View style={styles.center}><Text style={styles.title}>Topic not found</Text><Pressable onPress={() => router.back()}><Text style={styles.back}>‹ Go back</Text></Pressable></View></Screen>;
