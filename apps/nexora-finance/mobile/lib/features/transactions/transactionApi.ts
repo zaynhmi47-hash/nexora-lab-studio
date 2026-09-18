@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 
 import { useTenantApi } from '@/lib/api/tenant';
-import type { CreateTransactionInput, FinanceTransaction, TransactionDirection } from './types';
+import type { CreateTransactionInput, FinanceTransaction, TransactionDirection, TransactionStatus } from './types';
 
 interface ApiTransaction {
   id: string;
@@ -17,6 +17,21 @@ interface ApiTransaction {
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+}
+
+export interface TransactionListFilters {
+  direction?: TransactionDirection;
+  status?: TransactionStatus;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface TransactionListResult {
+  transactions: FinanceTransaction[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
 }
 
 export interface UpdateTransactionInput {
@@ -43,9 +58,22 @@ function mapTransaction(item: ApiTransaction): FinanceTransaction {
 export function useTransactionApi() {
   const tenantApi = useTenantApi();
 
-  const listTransactions = useCallback(async () => {
-    const response = await tenantApi.request<ApiTransaction[]>('/finance/transactions/');
-    return response.data.map(mapTransaction);
+  const listTransactions = useCallback(async (filters: TransactionListFilters = {}): Promise<TransactionListResult> => {
+    const params = new URLSearchParams();
+    if (filters.direction) params.set('direction', filters.direction);
+    if (filters.status) params.set('status', filters.status);
+    if (filters.page) params.set('page', String(filters.page));
+    if (filters.pageSize) params.set('page_size', String(filters.pageSize));
+
+    const query = params.toString();
+    const response = await tenantApi.request<ApiTransaction[]>(`/finance/transactions/${query ? `?${query}` : ''}`);
+    const pagination = (response.meta?.pagination ?? {}) as Record<string, unknown>;
+    const page = Number(pagination.page ?? filters.page ?? 1);
+    const pageSize = Number(pagination.page_size ?? filters.pageSize ?? response.data.length);
+    const total = Number(pagination.total ?? response.data.length);
+    const totalPages = Number(pagination.total_pages ?? (total > 0 ? Math.ceil(total / Math.max(pageSize, 1)) : 1));
+
+    return { transactions: response.data.map(mapTransaction), page, pageSize, total, totalPages };
   }, [tenantApi]);
 
   const getTransaction = useCallback(async (id: string) => {
@@ -87,9 +115,7 @@ export function useTransactionApi() {
   }, [tenantApi]);
 
   const voidTransaction = useCallback(async (id: string) => {
-    const response = await tenantApi.request<ApiTransaction>(`/finance/transactions/${encodeURIComponent(id)}/`, {
-      method: 'DELETE',
-    });
+    const response = await tenantApi.request<ApiTransaction>(`/finance/transactions/${encodeURIComponent(id)}/`, { method: 'DELETE' });
     return mapTransaction(response.data);
   }, [tenantApi]);
 
