@@ -33,6 +33,7 @@ export default function RootLayout() {
               <Tabs.Screen name="knowledge" options={{ href: null }} />
               <Tabs.Screen name="dua" options={{ href: null }} />
               <Tabs.Screen name="fasting" options={{ href: null }} />
+              <Tabs.Screen name="calendar" options={{ href: null }} />
             </Tabs>
           </AppStateProvider>
         </AuthGate>
