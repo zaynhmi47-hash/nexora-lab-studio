@@ -4,12 +4,14 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/constants/theme';
-import { mockTajwid, type TajwidPracticeItem, type TajwidTopicId } from '@/lib/tajwid';
+import { mockTajwid, nexoraCoreTajwidRepository, type TajwidPracticeItem, type TajwidTopicId } from '@/lib/tajwid';
+import { useAuth } from '@/lib/auth/AuthProvider';
 
 const DEMO_USER_ID = '00000000-0000-0000-0000-000000000001';
 
 export default function TajwidTopicScreen() {
   const router = useRouter();
+  const { session } = useAuth();
   const { topicId } = useLocalSearchParams<{ topicId: string }>();
   const [items, setItems] = useState<TajwidPracticeItem[]>([]);
   const [index, setIndex] = useState(0);
@@ -20,8 +22,9 @@ export default function TajwidTopicScreen() {
 
   useEffect(() => {
     if (!topicId) return;
-    void mockTajwid.getPractice(topicId as TajwidTopicId).then(setItems);
-  }, [topicId]);
+    const repository = session?.user.provider === 'firebase' ? nexoraCoreTajwidRepository(session) : mockTajwid;
+    void repository.getPractice(topicId as TajwidTopicId).then(setItems);
+  }, [topicId, session]);
 
   const item = items[index];
   const topicTitle = topicId?.replaceAll('-', ' ') ?? 'Tajwid';
@@ -41,7 +44,8 @@ export default function TajwidTopicScreen() {
       return;
     }
 
-    await mockTajwid.completeTopic(DEMO_USER_ID, topicId as TajwidTopicId);
+    const repository = session?.user.provider === 'firebase' ? nexoraCoreTajwidRepository(session) : mockTajwid;
+    await repository.completeTopic(session?.user.id ?? DEMO_USER_ID, topicId as TajwidTopicId);
     setFinished(true);
   };
 
