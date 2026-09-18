@@ -1,0 +1,1 @@
+import type {CalendarPort} from "./types"; export const mockCalendar:CalendarPort={events:async()=>[{id:"ramadan",date:"2026-02-18",hijriMonth:9,hijriDay:1,title:"Ramadan",description:"Expected date; verify locally."}]};
