@@ -36,6 +36,7 @@ export default function RootLayout() {
               <Tabs.Screen name="calendar" options={{ href: null }} />
               <Tabs.Screen name="zakat" options={{ href: null }} />
               <Tabs.Screen name="worship" options={{ href: null }} />
+              <Tabs.Screen name="reminders" options={{ href: null }} />
             </Tabs>
           </AppStateProvider>
         </AuthGate>
