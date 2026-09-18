@@ -30,7 +30,16 @@ export default function TravelScreen() {
       </Pressable>
 
       <Text style={styles.section}>Preparation</Text>
-      {['Umrah Learning Path', 'Document Checklist', 'Packing List', 'Arabic for Umrah'].map((item) => (
+      <Pressable onPress={() => router.push('/arabic')} accessibilityRole="button">
+        <Card style={styles.item}>
+          <View style={styles.flex}>
+            <Text style={styles.title}>Arabic for Umrah</Text>
+            <Text style={styles.muted}>Learn practical greetings, vocabulary, and travel phrases</Text>
+          </View>
+          <Text style={styles.arrow}>›</Text>
+        </Card>
+      </Pressable>
+      {['Umrah Learning Path', 'Document Checklist', 'Packing List'].map((item) => (
         <Card key={item} style={styles.item}>
           <Text style={styles.title}>{item}</Text>
           <Text style={styles.muted}>Coming in the next journey module</Text>
