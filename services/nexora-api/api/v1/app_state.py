@@ -23,6 +23,7 @@ class CurrentAppStateView(APIView):
         user: NexoraUser = request.user
         progress = LearningService.progress(user)
         completed_count = len(LearningService.completed_lesson_ids(user))
+        umrah = UmrahService.get_journey(user)
         reading_position = QuranService().get_reading_position(user)
         bookmark_count = QuranService().list_bookmarks(user).count()
         dhikr_items = list(Dhikr.objects.filter(is_published=True, deleted_at__isnull=True))
@@ -56,7 +57,7 @@ class CurrentAppStateView(APIView):
                     "completedGoals": completed_goals,
                     "goalCount": len(dhikr_items),
                 },
-                "umrah": {\n                    "overallProgress": UmrahService.get_journey(user)["overallProgress"],\n                    "currentStageId": UmrahService.get_journey(user)["currentStageId"],\n                },
+                "umrah": {\n                    "overallProgress": umrah["overallProgress"],\n                    "currentStageId": umrah["currentStageId"],\n                },
                 "profile": {"preferences": {"notificationsEnabled": True, "showArabicTransliteration": True}},
                 "syncedAt": timezone.now().isoformat(),
             }
