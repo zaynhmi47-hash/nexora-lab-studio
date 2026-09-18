@@ -9,6 +9,7 @@ from apps.dhikr.models import Dhikr, DhikrProgress
 from apps.identity.authentication import FirebaseIdentityAuthentication
 from apps.identity.models import NexoraUser
 from apps.learning.services import LearningService
+from apps.umrah.services import UmrahService
 from apps.quran.services import QuranService
 
 
@@ -55,7 +56,7 @@ class CurrentAppStateView(APIView):
                     "completedGoals": completed_goals,
                     "goalCount": len(dhikr_items),
                 },
-                "umrah": {"overallProgress": 0, "currentStageId": "learn"},
+                "umrah": {\n                    "overallProgress": UmrahService.get_journey(user)["overallProgress"],\n                    "currentStageId": UmrahService.get_journey(user)["currentStageId"],\n                },
                 "profile": {"preferences": {"notificationsEnabled": True, "showArabicTransliteration": True}},
                 "syncedAt": timezone.now().isoformat(),
             }
