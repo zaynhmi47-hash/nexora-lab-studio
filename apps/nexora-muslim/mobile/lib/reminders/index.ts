@@ -4,3 +4,5 @@ export { hasNotificationPermission, requestNotificationPermission } from "./noti
 export { cancelPrayerReminders, schedulePrayerReminders } from "./scheduler";
 
 export { handlePrayerNotificationResponse } from "./notificationNavigation";
+
+export { subscribeToPrayerReminderResync, syncPrayerReminders } from "./sync";
