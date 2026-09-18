@@ -1,0 +1,1 @@
+export type DuaEntry={id:string;title:string;category:string;arabic:string;transliteration:string;translation:string;reference:string}; export interface DuaPort{list(category?:string):Promise<DuaEntry[]>;}
