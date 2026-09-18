@@ -28,5 +28,5 @@ urlpatterns = [
     path("organizations/", include("api.v1.urls_organizations")),
     path("products/", include("apps.products.api.urls")),
     path("products/", include("apps.capabilities.api.urls_products")),
-    path("capabilities/", include("apps.capabilities.api.urls")),
+    path("capabilities/", include("apps.capabilities.api.urls")),\n    path("organizations/<uuid:organization_id>/finance/transactions/", include("apps.finance.api.urls")),
 ]
