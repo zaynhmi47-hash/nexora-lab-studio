@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { useAuth } from '@/lib/auth';
 import { useNexoraApi } from '@/lib/api/NexoraApiProvider';
 
@@ -29,6 +31,7 @@ interface OrganizationContextValue {
   selectOrganization: (organizationId: string) => Promise<void>;
 }
 
+const ACTIVE_ORGANIZATION_KEY = '@nexora-finance/active-organization-id';
 const OrganizationContext = createContext<OrganizationContextValue | null>(null);
 
 export function OrganizationProvider({ children }: PropsWithChildren) {
@@ -40,11 +43,21 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
+  const verifyAndSelect = useCallback(async (organization: Organization) => {
+    const response = await api.request<OrganizationMembership>(
+      `/api/v1/organizations/${encodeURIComponent(organization.id)}/membership/`,
+    );
+    setActiveOrganization(organization);
+    setActiveMembership(response.data);
+    await AsyncStorage.setItem(ACTIVE_ORGANIZATION_KEY, organization.id);
+  }, [api]);
+
   const loadOrganizations = useCallback(async () => {
     if (status !== 'authenticated') {
       setOrganizations([]);
       setActiveOrganization(null);
       setActiveMembership(null);
+      await AsyncStorage.removeItem(ACTIVE_ORGANIZATION_KEY);
       return;
     }
 
@@ -55,22 +68,29 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
       const nextOrganizations = response.data;
       setOrganizations(nextOrganizations);
 
-      if (activeOrganization) {
-        const stillAvailable = nextOrganizations.find((item) => item.id === activeOrganization.id);
-        if (stillAvailable) setActiveOrganization(stillAvailable);
-        else {
-          setActiveOrganization(null);
-          setActiveMembership(null);
-        }
+      if (nextOrganizations.length === 0) {
+        setActiveOrganization(null);
+        setActiveMembership(null);
+        await AsyncStorage.removeItem(ACTIVE_ORGANIZATION_KEY);
+        return;
       }
+
+      const storedId = await AsyncStorage.getItem(ACTIVE_ORGANIZATION_KEY);
+      const preferred = nextOrganizations.find((item) => item.id === storedId) ?? nextOrganizations[0];
+
+      if (activeOrganization?.id === preferred.id && activeMembership?.status === 'active') return;
+
+      await verifyAndSelect(preferred);
     } catch (cause) {
       const nextError = cause instanceof Error ? cause : new Error('Failed to load organizations.');
       setError(nextError);
+      setActiveOrganization(null);
+      setActiveMembership(null);
       throw nextError;
     } finally {
       setLoading(false);
     }
-  }, [activeOrganization, api, status]);
+  }, [activeMembership?.status, activeOrganization?.id, api, status, verifyAndSelect]);
 
   const selectOrganization = useCallback(async (organizationId: string) => {
     const organization = organizations.find((item) => item.id === organizationId);
@@ -79,11 +99,7 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.request<OrganizationMembership>(
-        `/api/v1/organizations/${encodeURIComponent(organizationId)}/membership/`,
-      );
-      setActiveOrganization(organization);
-      setActiveMembership(response.data);
+      await verifyAndSelect(organization);
     } catch (cause) {
       const nextError = cause instanceof Error ? cause : new Error('Failed to verify organization membership.');
       setError(nextError);
@@ -93,18 +109,11 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
     } finally {
       setLoading(false);
     }
-  }, [api, organizations]);
+  }, [organizations, verifyAndSelect]);
 
   useEffect(() => {
-    if (status !== 'authenticated') {
-      setOrganizations([]);
-      setActiveOrganization(null);
-      setActiveMembership(null);
-      setError(null);
-      return;
-    }
     void loadOrganizations().catch(() => undefined);
-  }, [loadOrganizations, status]);
+  }, [loadOrganizations]);
 
   const value = useMemo<OrganizationContextValue>(() => ({
     organizations,
