@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AdaptiveHeader, ResponsiveContainer, ResponsiveGrid, ResponsiveScaffold } from '@/components/layout';
 import { useResponsive } from '@/lib/responsive';
 import { theme } from '@/lib/theme';
+import { useFinanceSummary } from '@/lib/features/summary';
 import { useTransactions } from '@/lib/features/transactions';
 
 const formatIdr = (amountMinor: number) =>
@@ -14,16 +15,19 @@ const formatIdr = (amountMinor: number) =>
 
 export default function HomeScreen() {
   const { isMobile } = useResponsive();
-  const { transactions, loading, error } = useTransactions();
+  const {
+    summary,
+    loading: summaryLoading,
+    error: summaryError,
+  } = useFinanceSummary();
+  const {
+    transactions,
+    loading: transactionsLoading,
+    error: transactionsError,
+  } = useTransactions();
 
-  const posted = transactions.filter((item) => item.status === 'posted');
-  const income = posted
-    .filter((item) => item.direction === 'income')
-    .reduce((total, item) => total + item.amountMinor, 0);
-  const expense = posted
-    .filter((item) => item.direction === 'expense')
-    .reduce((total, item) => total + item.amountMinor, 0);
-  const net = income - expense;
+  const loading = summaryLoading || transactionsLoading;
+  const error = summaryError ?? transactionsError;
 
   return (
     <ResponsiveScaffold>
@@ -31,21 +35,25 @@ export default function HomeScreen() {
         <ScrollView contentContainerStyle={styles.content}>
           <AdaptiveHeader
             title="Dashboard"
-            subtitle="Your financial overview"
+            subtitle={
+              summary
+                ? `Financial overview · ${summary.startDate} to ${summary.endDate}`
+                : 'Your financial overview'
+            }
           />
 
           {error ? (
             <View style={styles.alert}>
-              <Text style={styles.alertTitle}>Unable to load transactions</Text>
+              <Text style={styles.alertTitle}>Unable to load financial data</Text>
               <Text style={styles.hint}>{error.message}</Text>
             </View>
           ) : null}
 
           <ResponsiveGrid gap={12}>
             {[
-              ['Income', loading ? 'Loading…' : formatIdr(income), 'Posted income'],
-              ['Expenses', loading ? 'Loading…' : formatIdr(expense), 'Posted expenses'],
-              ['Net cash flow', loading ? 'Loading…' : formatIdr(net), 'Income − expenses'],
+              ['Income', loading && !summary ? 'Loading…' : formatIdr(summary?.totalIncomeMinor ?? 0), 'Posted income'],
+              ['Expenses', loading && !summary ? 'Loading…' : formatIdr(summary?.totalExpenseMinor ?? 0), 'Posted expenses'],
+              ['Net cash flow', loading && !summary ? 'Loading…' : formatIdr(summary?.netCashFlowMinor ?? 0), 'Income − expenses'],
             ].map(([label, value, hint]) => (
               <View key={label} style={[styles.card, !isMobile && styles.cardWide]}>
                 <Text style={styles.label}>{label}</Text>
@@ -57,7 +65,7 @@ export default function HomeScreen() {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Recent transactions</Text>
-            {loading && transactions.length === 0 ? (
+            {transactionsLoading && transactions.length === 0 ? (
               <Text style={styles.hint}>Loading transactions…</Text>
             ) : transactions.length === 0 ? (
               <Text style={styles.hint}>No transactions yet. Create your first income or expense to see it here.</Text>
