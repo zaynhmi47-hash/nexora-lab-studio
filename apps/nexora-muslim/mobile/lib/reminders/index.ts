@@ -2,3 +2,5 @@ export * from "./types"; export { mockReminders } from "./mockReminders"; export
 export { hasNotificationPermission, requestNotificationPermission } from "./notifications";
 
 export { cancelPrayerReminders, schedulePrayerReminders } from "./scheduler";
+
+export { handlePrayerNotificationResponse } from "./notificationNavigation";
