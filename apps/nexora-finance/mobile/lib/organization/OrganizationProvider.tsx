@@ -10,15 +10,7 @@ export interface Organization {
   status: string;
 }
 
-export type OrganizationRole =
-  | 'OWNER'
-  | 'ADMIN'
-  | 'MANAGER'
-  | 'ACCOUNTANT'
-  | 'CASHIER'
-  | 'MARKETING'
-  | 'STAFF'
-  | 'VIEWER';
+export type OrganizationRole = 'OWNER' | 'ADMIN' | 'MANAGER' | 'ACCOUNTANT' | 'CASHIER' | 'MARKETING' | 'STAFF' | 'VIEWER';
 
 export interface OrganizationMembership {
   id: string;
@@ -65,17 +57,14 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
 
       if (activeOrganization) {
         const stillAvailable = nextOrganizations.find((item) => item.id === activeOrganization.id);
-        if (stillAvailable) {
-          setActiveOrganization(stillAvailable);
-        } else {
+        if (stillAvailable) setActiveOrganization(stillAvailable);
+        else {
           setActiveOrganization(null);
           setActiveMembership(null);
         }
       }
     } catch (cause) {
-      const nextError = cause instanceof Error
-        ? cause
-        : new Error('Failed to load organizations.');
+      const nextError = cause instanceof Error ? cause : new Error('Failed to load organizations.');
       setError(nextError);
       throw nextError;
     } finally {
@@ -85,9 +74,7 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
 
   const selectOrganization = useCallback(async (organizationId: string) => {
     const organization = organizations.find((item) => item.id === organizationId);
-    if (!organization) {
-      throw new Error('The selected organization is not available to this account.');
-    }
+    if (!organization) throw new Error('The selected organization is not available to this account.');
 
     setLoading(true);
     setError(null);
@@ -98,9 +85,7 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
       setActiveOrganization(organization);
       setActiveMembership(response.data);
     } catch (cause) {
-      const nextError = cause instanceof Error
-        ? cause
-        : new Error('Failed to verify organization membership.');
+      const nextError = cause instanceof Error ? cause : new Error('Failed to verify organization membership.');
       setError(nextError);
       setActiveOrganization(null);
       setActiveMembership(null);
@@ -129,15 +114,7 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
     error,
     refresh: loadOrganizations,
     selectOrganization,
-  }), [
-    activeMembership,
-    activeOrganization,
-    error,
-    loadOrganizations,
-    loading,
-    organizations,
-    selectOrganization,
-  ]);
+  }), [activeMembership, activeOrganization, error, loadOrganizations, loading, organizations, selectOrganization]);
 
   return <OrganizationContext.Provider value={value}>{children}</OrganizationContext.Provider>;
 }
