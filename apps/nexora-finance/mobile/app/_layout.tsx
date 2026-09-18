@@ -12,8 +12,8 @@ function AuthGate() {
   const pathname = usePathname();
   if (status === 'unknown' || status === 'authenticating') return null;
   if (status !== 'authenticated') return pathname === '/auth' ? null : <Redirect href="/auth" />;
-  if (pathname === '/auth') return <Redirect href="/workspace" />;
-  if (pathname.startsWith('/(tabs)') && !activeWorkspace) return <Redirect href="/workspace" />;
+  if (pathname === '/auth' || pathname === '/') return <Redirect href="/workspace" />;
+  if (!activeWorkspace && pathname !== '/workspace') return <Redirect href="/workspace" />;
   return null;
 }
 
