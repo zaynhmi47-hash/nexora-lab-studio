@@ -19,20 +19,14 @@ class FinanceTransactionService:
             ).first()
             if existing is not None:
                 return existing
-        transaction_record = FinanceTransaction(
-            organization=organization,
-            direction=direction,
-            amount_minor=amount_minor,
-            currency=currency,
-            category=category,
-            description=description,
-            occurred_at=occurred_at,
-            reference=reference,
-            idempotency_key=idempotency_key,
+        record = FinanceTransaction(
+            organization=organization, direction=direction, amount_minor=amount_minor,
+            currency=currency, category=category, description=description,
+            occurred_at=occurred_at, reference=reference, idempotency_key=idempotency_key,
             metadata={} if metadata is None else metadata,
         )
         try:
-            transaction_record.save()
+            record.save()
         except IntegrityError as exc:
             if idempotency_key:
                 existing = FinanceTransaction.objects.active().filter(
@@ -41,6 +35,33 @@ class FinanceTransactionService:
                 if existing is not None:
                     return existing
             raise ConflictException("A transaction with this idempotency key already exists.") from exc
+        except ValidationError as exc:
+            raise ValidationException("Transaction data is invalid.", details=exc.message_dict) from exc
+        return record
+
+    @staticmethod
+    @transaction.atomic
+    def update_transaction(*, transaction_record: FinanceTransaction, **changes) -> FinanceTransaction:
+        if transaction_record.status == FinanceTransaction.Status.VOID:
+            raise ValidationException("Void transactions cannot be edited.")
+        allowed = {"direction", "amount_minor", "currency", "category", "description", "occurred_at", "reference", "metadata"}
+        for field, value in changes.items():
+            if field in allowed:
+                setattr(transaction_record, field, value)
+        try:
+            transaction_record.save()
+        except ValidationError as exc:
+            raise ValidationException("Transaction data is invalid.", details=exc.message_dict) from exc
+        return transaction_record
+
+    @staticmethod
+    @transaction.atomic
+    def void_transaction(*, transaction_record: FinanceTransaction) -> FinanceTransaction:
+        if transaction_record.status == FinanceTransaction.Status.VOID:
+            return transaction_record
+        transaction_record.status = FinanceTransaction.Status.VOID
+        try:
+            transaction_record.save()
         except ValidationError as exc:
             raise ValidationException("Transaction data is invalid.", details=exc.message_dict) from exc
         return transaction_record
