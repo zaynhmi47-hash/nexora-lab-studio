@@ -6,28 +6,32 @@ import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { SectionTitle } from '@/components/SectionTitle';
 import { colors, radius, spacing, typography } from '@/constants/theme';
+import { useAuth } from '@/lib/auth/AuthProvider';
 import {
   mockDhikr,
   mockPrayerRepository,
   mockPrayerSchedule,
+  nexoraCorePrayerRepository,
   type PrayerTime,
 } from '@/lib/prayer';
 
 export default function PrayerScreen() {
+  const { session } = useAuth();
+  const prayerRepository = session?.user.provider === 'firebase' ? nexoraCorePrayerRepository(session) : mockPrayerRepository;
   const [schedule, setSchedule] = useState(mockPrayerSchedule);
   const [dhikr, setDhikr] = useState(mockDhikr);
 
   useEffect(() => {
     let active = true;
 
-    void mockPrayerRepository.getDailySchedule().then((nextSchedule) => {
+    void prayerRepository.getDailySchedule().then((nextSchedule) => {
       if (active) setSchedule(nextSchedule);
     });
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [prayerRepository]);
 
   const { prayers } = schedule;
   const nextPrayer = prayers.find((prayer) => prayer.isNext);
@@ -37,7 +41,7 @@ export default function PrayerScreen() {
     const prayer = prayers.find((item) => item.name === name);
     if (!prayer) return;
 
-    void mockPrayerRepository
+    void prayerRepository
       .setPrayerCompleted(name, !prayer.completed)
       .then(setSchedule);
   };
