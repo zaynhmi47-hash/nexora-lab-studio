@@ -21,6 +21,7 @@ urlpatterns = [
     path("fasting/", include("apps.fasting.urls")),
     path("dua/", include("apps.dua.urls")),
     path("calendar/", include("apps.calendar.urls")),
+    path("zakat/", include("apps.zakat.urls")),
     path("organizations/", include("api.v1.urls_organizations")),
     path("products/", include("apps.products.api.urls")),
     path("products/", include("apps.capabilities.api.urls_products")),
