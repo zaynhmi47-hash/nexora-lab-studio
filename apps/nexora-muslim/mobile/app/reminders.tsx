@@ -12,6 +12,8 @@ import {
   nexoraCoreReminderRepository,
   requestNotificationPermission,
   schedulePrayerReminders,
+  syncPrayerReminders,
+  subscribeToPrayerReminderResync,
   type ReminderPort,
 } from "@/lib/reminders";
 
@@ -40,6 +42,8 @@ export default function RemindersScreen() {
       })
       .catch(() => setError("Unable to load reminder settings."));
   }, [reminderRepository]);
+
+  useEffect(() => subscribeToPrayerReminderResync(() => syncPrayerReminders(reminderRepository, prayerRepository)), [reminderRepository, prayerRepository]);
 
   const syncSchedule = async (nextEnabled: boolean, minutes: number) => {
     if (!nextEnabled) {
