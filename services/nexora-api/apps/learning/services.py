@@ -114,3 +114,36 @@ class LearningService:
         return LearningUserAchievement.objects.filter(
             user=user, deleted_at__isnull=True, achievement__is_published=True
         ).select_related("achievement").order_by("-earned_at")
+
+
+def learning_hub(user: NexoraUser):
+    learning = LearningService.progress(user)
+    tajwid = __import__("apps.tajwid.services", fromlist=["TajwidService"]).TajwidService.progress(user)
+    arabic = __import__("apps.arabic.services", fromlist=["ArabicService"]).ArabicService.progress(user)
+
+    total_xp = learning.xp + tajwid["xpEarned"] + arabic["xpEarned"]
+    return {
+        "userId": str(user.id),
+        "totalXp": total_xp,
+        "level": level_for_xp(total_xp),
+        "domains": {
+            "learning": {
+                "xp": learning.xp,
+                "level": learning.level,
+                "streak": learning.current_streak,
+                "completedCount": len(learning.completed_lesson_ids(user)),
+            },
+            "tajwid": {
+                "xp": tajwid["xpEarned"],
+                "streak": 0,
+                "completedCount": len(tajwid["completedTopicIds"]),
+                "practiceCompleted": tajwid["practiceCompleted"],
+                "assessmentCompleted": tajwid["assessmentCompleted"],
+            },
+            "arabic": {
+                "xp": arabic["xpEarned"],
+                "streak": arabic["currentStreak"],
+                "completedCount": len(arabic["completedLessonIds"]),
+            },
+        },
+    }
