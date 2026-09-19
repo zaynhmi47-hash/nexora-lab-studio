@@ -38,9 +38,9 @@ class IdentityDatabaseError(RuntimeError):
 class SQLIdentityRepository(IdentityRepository):
     """PostgreSQL-oriented repository adapter.
 
-    Transaction ownership stays with the host application. The caller must run
-    link_provider_account inside its database transaction. The unique provider
-    constraint is the final concurrency guard.
+    Transaction ownership stays with the host application. Provider-account
+    uniqueness is enforced by the database and the upsert path safely handles
+    concurrent first-login requests without exposing a raw unique violation.
     """
 
     connection: DBConnection
@@ -61,11 +61,7 @@ class SQLIdentityRepository(IdentityRepository):
         if row is None:
             return None
 
-        return Identity(
-            user_id=str(row[0]),
-            created_at=row[1],
-            updated_at=row[2],
-        )
+        return Identity(user_id=str(row[0]), created_at=row[1], updated_at=row[2])
 
     def get_user_id_by_provider_subject(
         self,
@@ -83,9 +79,7 @@ class SQLIdentityRepository(IdentityRepository):
                 (provider, provider_subject),
             ).fetchone()
         except Exception as exc:
-            raise IdentityDatabaseError(
-                "failed to resolve provider account"
-            ) from exc
+            raise IdentityDatabaseError("failed to resolve provider account") from exc
 
         return str(row[0]) if row else None
 
@@ -103,19 +97,6 @@ class SQLIdentityRepository(IdentityRepository):
         now = datetime.now(timezone.utc)
 
         try:
-            existing = self.connection.execute(
-                """
-                SELECT id, user_id, created_at, updated_at
-                FROM nexora_provider_accounts
-                WHERE provider = %s AND provider_subject = %s
-                FOR UPDATE
-                """,
-                (provider, provider_subject),
-            ).fetchone()
-
-            if existing is not None and str(existing[1]) != str(user_uuid):
-                raise IdentityConflict("provider account is already linked")
-
             self.connection.execute(
                 """
                 INSERT INTO nexora_identities (user_id, created_at, updated_at)
@@ -126,32 +107,41 @@ class SQLIdentityRepository(IdentityRepository):
                 (user_uuid, now, now),
             )
 
+            account_id = uuid4()
+            self.connection.execute(
+                """
+                INSERT INTO nexora_provider_accounts (
+                    id, provider, provider_subject, user_id,
+                    created_at, updated_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (provider, provider_subject) DO NOTHING
+                """,
+                (
+                    account_id,
+                    provider,
+                    provider_subject,
+                    user_uuid,
+                    now,
+                    now,
+                ),
+            )
+
+            existing = self.connection.execute(
+                """
+                SELECT id, user_id, created_at, updated_at
+                FROM nexora_provider_accounts
+                WHERE provider = %s AND provider_subject = %s
+                FOR UPDATE
+                """,
+                (provider, provider_subject),
+            ).fetchone()
+
             if existing is None:
-                account_id = uuid4()
-                self.connection.execute(
-                    """
-                    INSERT INTO nexora_provider_accounts (
-                        id, provider, provider_subject, user_id,
-                        created_at, updated_at
-                    )
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    """,
-                    (
-                        account_id,
-                        provider,
-                        provider_subject,
-                        user_uuid,
-                        now,
-                        now,
-                    ),
-                )
-                return ProviderAccount(
-                    provider=provider,
-                    provider_subject=provider_subject,
-                    user_id=str(user_uuid),
-                    created_at=now,
-                    updated_at=now,
-                )
+                raise IdentityDatabaseError("provider account was not persisted")
+
+            if str(existing[1]) != str(user_uuid):
+                raise IdentityConflict("provider account is already linked")
 
             self.connection.execute(
                 """
@@ -171,6 +161,4 @@ class SQLIdentityRepository(IdentityRepository):
         except IdentityConflict:
             raise
         except Exception as exc:
-            raise IdentityDatabaseError(
-                "failed to link provider account"
-            ) from exc
+            raise IdentityDatabaseError("failed to link provider account") from exc
