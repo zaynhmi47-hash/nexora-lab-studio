@@ -82,3 +82,29 @@ class LearningQuizQuestion(AuditableBaseModel):
         constraints = [
             models.UniqueConstraint(fields=("lesson", "sort_order"), name="learning_quiz_question_order_unique"),
         ]
+
+
+class LearningAchievement(AuditableBaseModel):
+    key = models.SlugField(max_length=100, unique=True)
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    xp_threshold = models.PositiveIntegerField(default=0)
+    streak_threshold = models.PositiveIntegerField(default=0)
+    lesson_threshold = models.PositiveIntegerField(default=0)
+    is_published = models.BooleanField(default=True, db_index=True)
+
+    class Meta:
+        db_table = "learning_achievements"
+        ordering = ("xp_threshold", "streak_threshold", "lesson_threshold", "title")
+
+
+class LearningUserAchievement(AuditableBaseModel):
+    user = models.ForeignKey(NexoraUser, on_delete=models.CASCADE, related_name="learning_achievements")
+    achievement = models.ForeignKey(LearningAchievement, on_delete=models.PROTECT, related_name="user_awards")
+    earned_at = models.DateTimeField()
+
+    class Meta:
+        db_table = "learning_user_achievements"
+        constraints = [
+            models.UniqueConstraint(fields=("user", "achievement"), name="learning_user_achievement_unique"),
+        ]
