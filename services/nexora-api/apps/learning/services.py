@@ -18,6 +18,7 @@ from .models import (
     LearningLessonCompletion,
     LearningProgress,
     LearningQuizQuestion,
+    LearningQuizAttempt,
     LearningAchievement,
     LearningUserAchievement,
 )
@@ -68,6 +69,70 @@ class LearningService:
                 lesson__course__is_published=True,
             ).order_by("sort_order")
         )
+
+    @staticmethod
+    @transaction.atomic
+    def complete_quiz(user: NexoraUser, lesson_key: str, answers: list[int]) -> dict:
+        lesson = (
+            LearningLesson.objects.select_for_update()
+            .filter(
+                key=lesson_key,
+                is_published=True,
+                course__is_published=True,
+            )
+            .first()
+        )
+        if lesson is None:
+            raise LearningLesson.DoesNotExist
+
+        questions = list(
+            LearningQuizQuestion.objects.filter(
+                lesson=lesson,
+            ).order_by("sort_order")
+        )
+        if not questions:
+            raise ValueError("Quiz not found.")
+
+        if len(answers) != len(questions):
+            raise ValueError("Answer count does not match the quiz.")
+
+        correct = sum(
+            1
+            for question, answer in zip(questions, answers)
+            if answer == question.correct_option_index
+        )
+        total = len(questions)
+        score = round((correct / total) * 100)
+        passed = score >= 70
+        completed_at = timezone.now()
+        attempt = LearningQuizAttempt.objects.create(
+            user=user,
+            lesson=lesson,
+            correct_answers=correct,
+            total_questions=total,
+            score_percent=score,
+            passed=passed,
+            completed_at=completed_at,
+        )
+        GamificationService.record_activity(
+            user=user,
+            source="learning",
+            action="quiz_completed",
+            source_key=f"{lesson.key}:{attempt.id}",
+            xp_earned=0,
+            occurred_at=completed_at,
+        )
+        return {
+            "attemptId": str(attempt.id),
+            "lessonId": lesson.key,
+            "correctAnswers": correct,
+            "totalQuestions": total,
+            "scorePercent": score,
+            "passed": passed,
+            "xpEarned": 0,
+            "completedAt": completed_at.isoformat(),
+        }
+
 
     @staticmethod
     @transaction.atomic
