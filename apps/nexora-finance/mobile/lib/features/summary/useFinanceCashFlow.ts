@@ -48,7 +48,7 @@ export function useFinanceCashFlow(period?: { startDate?: string; endDate?: stri
   const [error, setError] = useState<Error | null>(null);
 
   const load = useCallback(async () => {
-    if (initializing || !user || !tenantApi.isReady) {
+    if (initializing || !user || !tenantApi.ready) {
       setCashFlow(null);
       return;
     }
