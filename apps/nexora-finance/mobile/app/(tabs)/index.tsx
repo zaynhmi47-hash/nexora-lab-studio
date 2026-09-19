@@ -6,7 +6,7 @@ import { AdaptiveHeader, ResponsiveContainer, ResponsiveGrid, ResponsiveScaffold
 import { useResponsive } from '@/lib/responsive';
 import { theme } from '@/lib/theme';
 import { useGoals } from '@/lib/features/goals';
-import { useFinanceBudgetSummary, useFinanceCategoryBreakdown, useFinanceCashFlow, useFinanceComparison, useFinanceInsights, useFinanceProfitLoss, useFinanceSummary, useFinanceTrend } from '@/lib/features/summary';
+import { useFinanceBudgetSummary, useFinanceCategoryBreakdown, useFinanceCashFlow, useFinanceComparison, useFinanceInsights, useFinancePlanning, useFinanceProfitLoss, useFinanceSummary, useFinanceTrend } from '@/lib/features/summary';
 import { useTransactions } from '@/lib/features/transactions';
 
 type PeriodKey = 'this_month' | 'last_month' | 'three_months';
