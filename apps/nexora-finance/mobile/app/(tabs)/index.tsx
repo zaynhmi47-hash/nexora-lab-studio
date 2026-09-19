@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { AdaptiveHeader, ResponsiveContainer, ResponsiveGrid, ResponsiveScaffold } from '@/components/layout';
 import { useResponsive } from '@/lib/responsive';
 import { theme } from '@/lib/theme';
-import { useFinanceCategoryBreakdown, useFinanceSummary, useFinanceTrend } from '@/lib/features/summary';
+import { useFinanceCategoryBreakdown, useFinanceComparison, useFinanceSummary, useFinanceTrend } from '@/lib/features/summary';
 import { useTransactions } from '@/lib/features/transactions';
 
 type PeriodKey = 'this_month' | 'last_month' | 'three_months';
@@ -72,13 +72,14 @@ export default function HomeScreen() {
   const period = useMemo(() => getPeriodDates(periodKey), [periodKey]);
 
   const { summary, loading: summaryLoading, error: summaryError } = useFinanceSummary(period);
+  const { comparison, loading: comparisonLoading, error: comparisonError } = useFinanceComparison(period);
   const { breakdown, loading: breakdownLoading, error: breakdownError } = useFinanceCategoryBreakdown(period);
   const { points: trend, loading: trendLoading, error: trendError } = useFinanceTrend(period, granularity);
   const { transactions, loading: transactionsLoading, error: transactionsError } =
     useTransactions({ status: 'posted', startDate: period.startDate, endDate: period.endDate, page: 1, pageSize: 8 });
 
-  const loading = summaryLoading || breakdownLoading || trendLoading || transactionsLoading;
-  const error = summaryError ?? breakdownError ?? trendError ?? transactionsError;
+  const loading = summaryLoading || breakdownLoading || trendLoading || transactionsLoading || comparisonLoading;
+  const error = summaryError ?? breakdownError ?? trendError ?? transactionsError ?? comparisonError;
 
   const incomeBreakdown = useMemo(() => breakdown.filter((item) => item.direction === 'income'), [breakdown]);
   const expenseBreakdown = useMemo(() => breakdown.filter((item) => item.direction === 'expense'), [breakdown]);
@@ -214,6 +215,53 @@ export default function HomeScreen() {
 
           {renderTrend()}
 
+          {comparison ? (
+            <View style={styles.comparisonCard}>
+              <View style={styles.comparisonHeader}>
+                <View style={styles.trendTitleBlock}>
+                  <Text style={styles.sectionTitle}>Period comparison</Text>
+                  <Text style={styles.hint}>
+                    Current period compared with the immediately preceding period of the same length
+                  </Text>
+                </View>
+                <Text style={styles.hint}>
+                  {comparison.previousStartDate} → {comparison.previousEndDate}
+                </Text>
+              </View>
+              <View style={styles.comparisonGrid}>
+                {[
+                  ['Income', comparison.income],
+                  ['Expenses', comparison.expense],
+                  ['Net cash flow', comparison.netCashFlow],
+                  ['Transactions', comparison.transactionCount],
+                ].map(([label, metric]) => {
+                  const item = metric as typeof comparison.income;
+                  const percentage = item.percentageChange;
+                  const percentageLabel = percentage === null
+                    ? '—'
+                    : (percentage > 0 ? '+' : '') + percentage.toFixed(1) + '%';
+                  return (
+                    <View key={label as string} style={styles.comparisonItem}>
+                      <Text style={styles.label}>{label as string}</Text>
+                      <Text style={styles.comparisonCurrent}>
+                        {label === 'Transactions' ? String(item.current) : formatIdr(item.current)}
+                      </Text>
+                      <Text style={styles.hint}>
+                        {percentageLabel} · {item.delta > 0 ? '+' : item.delta < 0 ? '−' : ''}
+                        {label === 'Transactions' ? Math.abs(item.delta) : formatIdr(Math.abs(item.delta))}
+                      </Text>
+                      <Text style={styles.comparisonPrevious}>
+                        Previous: {label === 'Transactions' ? String(item.previous) : formatIdr(item.previous)}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          ) : comparisonLoading ? (
+            <View style={styles.comparisonCard}><Text style={styles.hint}>Loading period comparison…</Text></View>
+          ) : null}
+
           <ResponsiveGrid gap={12}>
             {renderBreakdown('Income by category', incomeBreakdown, summary?.totalIncomeMinor ?? 0)}
             {renderBreakdown('Expenses by category', expenseBreakdown, summary?.totalExpenseMinor ?? 0)}
@@ -249,6 +297,12 @@ const styles = StyleSheet.create({
   alertTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
   section: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 12 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.text },
+  comparisonCard: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 16 },
+  comparisonHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 },
+  comparisonGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  comparisonItem: { flex: 1, minWidth: 190, padding: theme.spacing.lg, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border, gap: 4 },
+  comparisonCurrent: { fontSize: 20, fontWeight: '800', color: theme.colors.text },
+  comparisonPrevious: { fontSize: 12, color: theme.colors.muted },
   trendCard: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 16 },
   trendHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 },
   trendTitleBlock: { flex: 1, gap: 4 },
