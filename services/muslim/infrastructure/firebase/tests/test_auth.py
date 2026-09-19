@@ -2,6 +2,7 @@ from typing import Mapping
 
 from services.muslim.infrastructure.firebase.auth import (
     FirebaseAdminInitializationError,
+    FirebaseAdminTokenVerificationError,
     FirebaseAdminTokenVerifier,
 )
 
@@ -72,3 +73,20 @@ def test_verifier_rejects_both_app_sources() -> None:
         pass
     else:
         raise AssertionError("app and app_factory must be mutually exclusive")
+
+
+def test_verifier_classifies_token_rejection_as_verification_error() -> None:
+    verifier = FirebaseAdminTokenVerifier()
+
+    class RejectingAuth:
+        def verify_id_token(self, token: str):
+            raise ValueError("invalid or expired token")
+
+    verifier._auth_module = RejectingAuth()
+
+    try:
+        verifier.verify_id_token("bad-token")
+    except FirebaseAdminTokenVerificationError as exc:
+        assert str(exc) == "Firebase ID token verification failed"
+    else:
+        raise AssertionError("expected FirebaseAdminTokenVerificationError")
