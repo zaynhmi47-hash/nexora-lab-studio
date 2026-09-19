@@ -35,6 +35,7 @@ urlpatterns = [
     path("zakat/", include("apps.zakat.urls")),
     path("reminders/", include("apps.reminders.urls")),
     path("places/", include("apps.places.urls")),\n    path("ramadan/", include("apps.ramadan.urls")),
+    path("search/", include("api.v1.urls_search")),
     path("organizations/", include("api.v1.urls_organizations")),
     path("products/", include("apps.products.api.urls")),
     path("products/", include("apps.capabilities.api.urls_products")),
