@@ -47,6 +47,7 @@ export type LearningHub = {
   progressPercent: number;
   currentStreak: number;
   rewards: LearningReward[];
+  achievements: LearningAchievement[];
   domains: {
     learning: LearningHubDomain;
     tajwid: LearningHubDomain;
