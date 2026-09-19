@@ -27,6 +27,7 @@ export interface GamificationProfile {
     date: string | null;
   };
   streakMilestones: number[];
+  timezone: string;
 }
 
 export interface GamificationEventResponse {
@@ -104,5 +105,15 @@ export async function claimDailyReward(
 ): Promise<GamificationEventResponse> {
   return request("/gamification/daily-reward/claim/", accessToken, {
     method: "POST",
+  });
+}
+
+export async function setGamificationTimezone(
+  timezoneName: string,
+  accessToken: string,
+): Promise<{ success: true; timezone: string }> {
+  return request("/gamification/timezone/", accessToken, {
+    method: "POST",
+    body: JSON.stringify({ timezone: timezoneName }),
   });
 }
