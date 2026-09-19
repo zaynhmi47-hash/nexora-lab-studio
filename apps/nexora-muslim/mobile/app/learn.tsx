@@ -92,6 +92,21 @@ export default function LearnScreen() {
           </Card>
         )}
 
+        {hub && (
+          <Card style={styles.rewardCard}>
+            <Text style={styles.progressTitle}>Unified Rewards</Text>
+            {hub.rewards.map((reward) => (
+              <View key={reward.key} style={styles.rewardRow}>
+                <Text style={[styles.rewardIcon, !reward.earned && styles.rewardLocked]}>{reward.earned ? '✓' : '○'}</Text>
+                <View style={styles.lessonInfo}>
+                  <Text style={styles.title}>{reward.title}</Text>
+                  <Text style={styles.muted}>{reward.description}</Text>
+                </View>
+              </View>
+            ))}
+          </Card>
+        )}
+
         <Card style={styles.achievementCard}>
           <View style={styles.row}><View><Text style={styles.progressTitle}>Achievements</Text><Text style={styles.muted}>{achievements.length} earned</Text></View><Text style={styles.xp}>🏆</Text></View>
           {achievements.length === 0 ? <Text style={[styles.muted, { marginTop: spacing.sm }]}>Complete lessons to unlock your first badge.</Text> : achievements.slice(0, 3).map((item) => <View key={item.id} style={styles.achievement}><Text style={styles.badge}>✓</Text><View style={styles.lessonInfo}><Text style={styles.title}>{item.title}</Text><Text style={styles.muted}>{item.description}</Text></View></View>)}
@@ -179,6 +194,10 @@ const styles = StyleSheet.create({
   domainCard: { backgroundColor: colors.surfaceMuted, borderRadius: 12, flex: 1, padding: spacing.sm },
   domainLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '800' },
   domainXp: { color: colors.text, fontSize: 17, fontWeight: '900', marginTop: 4 },
+  rewardCard: { marginTop: spacing.md },
+  rewardRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md },
+  rewardIcon: { alignItems: 'center', backgroundColor: colors.primarySoft, borderRadius: 16, color: colors.primary, fontSize: 18, fontWeight: '900', height: 32, paddingTop: 5, textAlign: 'center', width: 32 },
+  rewardLocked: { backgroundColor: colors.surfaceMuted, color: colors.textMuted },
   achievementCard: { marginTop: spacing.md },
   achievement: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md },
   badge: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.primarySoft, color: colors.primary, textAlign: 'center', textAlignVertical: 'center', fontWeight: '800', paddingTop: 7 },
