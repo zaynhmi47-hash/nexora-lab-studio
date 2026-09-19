@@ -50,7 +50,7 @@ class TajwidAssessmentView(TajwidBaseView):
         try:
             correct = int(request.data.get("correctAnswers", 0))
             total = int(request.data.get("totalQuestions", 0))
-            progress = TajwidService().complete_assessment(request.user, correct, total)
+            result = TajwidService().complete_assessment(request.user, correct, total)
         except (TypeError, ValueError) as exc:
             return Response({"detail": str(exc)}, status=400)
-        return Response(progress)
+        return Response(result)
