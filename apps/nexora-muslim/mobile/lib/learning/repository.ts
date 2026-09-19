@@ -7,6 +7,7 @@ import type {
   LearningAchievement,
   LearningHub,
   QuizQuestion,
+  QuizResult,
 } from './types';
 
 function apiUrl(path: string) {
@@ -40,6 +41,12 @@ export function nexoraCoreLearningRepository(session: AuthSession): LearningPort
       return request<LearningProgress>(session, 'progress/');
     },
     getQuiz: (lessonId) => request<QuizQuestion[]>(session, `lessons/${encodeURIComponent(lessonId)}/quiz/`),
+    completeQuiz: (lessonId, answers) =>
+      request<QuizResult>(session, `lessons/${encodeURIComponent(lessonId)}/quiz/complete/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers }),
+      }),
     getAchievements: () => request<LearningAchievement[]>(session, 'achievements/'),
     completeLesson: (userId, lessonId) => {
       if (session.user.id !== userId) {
