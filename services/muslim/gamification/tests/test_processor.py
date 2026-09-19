@@ -54,3 +54,33 @@ def test_duplicate_event_does_not_add_xp_or_streak_again() -> None:
     assert second.snapshot.xp == 20
     assert second.snapshot.streak.current == 1
     assert state.get("user-1").xp == 20
+
+
+def test_first_learning_activity_completes_daily_learning_quest() -> None:
+    processor, state = build_processor()
+
+    result = processor.process(make_event())
+
+    quest = next(item for item in result.snapshot.quests if item.key == "daily_learn")
+    assert quest.completed is True
+    assert quest.reward_claimed is True
+    assert any(bonus.xp == 25 and bonus.awarded for bonus in result.bonus_rewards)
+    assert result.snapshot.xp == 45
+    assert "daily_learn" in state.get("user-1").claimed_quest_keys
+
+
+def test_seventh_activity_awards_streak_milestone_once() -> None:
+    processor, state = build_processor()
+
+    for index in range(7):
+        event = make_event(f"lesson-{index}")
+        processor.process(event)
+
+    current = state.get("user-1")
+    assert current.current_streak == 7
+    assert 7 in current.rewarded_streak_milestones
+    assert current.xp == 7 * 20 + 25 + 50
+
+    processor.process(make_event("lesson-7"))
+    current = state.get("user-1")
+    assert current.xp == 8 * 20 + 25 + 50
