@@ -6,6 +6,7 @@ from apps.identity.authentication import FirebaseIdentityAuthentication
 from .services import TajwidService
 
 
+
 class TajwidBaseView(APIView):
     authentication_classes = [FirebaseIdentityAuthentication]
     permission_classes = [IsAuthenticated]
@@ -25,6 +26,15 @@ class TajwidPracticeView(TajwidBaseView):
     def get(self, request, topic_key):
         payload = TajwidService.practice(topic_key)
         return Response(payload or {"detail": "Tajwid topic not found."}, status=200 if payload else 404)
+
+
+class TajwidCompletePracticeView(TajwidBaseView):
+    def post(self, request, practice_key):
+        try:
+            correct = bool(request.data.get("correct", False))
+            return Response(TajwidService().complete_practice(request.user, practice_key, correct))
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=404)
 
 
 class TajwidCompleteTopicView(TajwidBaseView):
