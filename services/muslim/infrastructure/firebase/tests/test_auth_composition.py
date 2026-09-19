@@ -21,18 +21,18 @@ class FakeAdapter:
         )
 
 
-def test_composition_builds_complete_authentication_boundary() -> None:
-    repository = InMemoryIdentityRepository()
-    transaction_manager = InMemoryIdentityTransactionManager()
-    composition = FirebaseAuthenticationComposition(
-        identity_repository=repository,
-        transaction_manager=transaction_manager,
+def build_test_composition() -> FirebaseAuthenticationComposition:
+    return FirebaseAuthenticationComposition(
+        identity_repository=InMemoryIdentityRepository(),
+        transaction_manager=InMemoryIdentityTransactionManager(),
         gamification_adapter=FakeAdapter(),
         config=FirebaseAdminConfig(project_id="nexora-73cfa"),
-        app_factory=lambda: object(),
+        token_verifier=FakeVerifier(),
     )
 
-    components = composition.build()
+
+def test_composition_builds_complete_authentication_boundary() -> None:
+    components = build_test_composition().build()
 
     assert isinstance(
         components.gamification_adapter,
@@ -43,17 +43,7 @@ def test_composition_builds_complete_authentication_boundary() -> None:
 
 
 def test_composed_resolver_provisions_and_reuses_internal_identity() -> None:
-    repository = InMemoryIdentityRepository()
-    transaction_manager = InMemoryIdentityTransactionManager()
-    composition = FirebaseAuthenticationComposition(
-        identity_repository=repository,
-        transaction_manager=transaction_manager,
-        gamification_adapter=FakeAdapter(),
-        app_factory=lambda: object(),
-    )
-
-    components = composition.build()
-    components.verifier._auth_module = FakeVerifier()
+    components = build_test_composition().build()
 
     first = components.identity_resolver.resolve_firebase_token("token")
     second = components.identity_resolver.resolve_firebase_token("token")
@@ -64,17 +54,7 @@ def test_composed_resolver_provisions_and_reuses_internal_identity() -> None:
 
 
 def test_composed_http_adapter_only_uses_server_resolved_identity() -> None:
-    repository = InMemoryIdentityRepository()
-    transaction_manager = InMemoryIdentityTransactionManager()
-    composition = FirebaseAuthenticationComposition(
-        identity_repository=repository,
-        transaction_manager=transaction_manager,
-        gamification_adapter=FakeAdapter(),
-        app_factory=lambda: object(),
-    )
-
-    components = composition.build()
-    components.verifier._auth_module = FakeVerifier()
+    components = build_test_composition().build()
 
     response = components.gamification_adapter.handle(
         method="GET",
