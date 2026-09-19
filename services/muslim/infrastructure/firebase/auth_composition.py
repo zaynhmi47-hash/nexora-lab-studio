@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Any
+from typing import Any, Callable
 
-from services.muslim.gamification.auth import UserIdentityResolver
+from services.muslim.gamification.auth import (
+    FirebaseTokenVerifier,
+    UserIdentityResolver,
+)
 from services.muslim.gamification.auth_http import AuthenticatedGamificationHTTPAdapter
 from services.muslim.identity.provisioning import (
     IdentityProvisioningService,
@@ -20,7 +23,7 @@ from .identity import FirebaseNexoraIdentityResolver
 class FirebaseAuthenticationComponents:
     """Composed authentication dependencies for the host Muslim service."""
 
-    verifier: FirebaseAdminTokenVerifier
+    verifier: FirebaseTokenVerifier
     identity_resolver: UserIdentityResolver
     gamification_adapter: AuthenticatedGamificationHTTPAdapter
 
@@ -41,19 +44,23 @@ class FirebaseAuthenticationComposition:
         gamification_adapter: Any,
         config: FirebaseAdminConfig | None = None,
         app_factory: Callable[[], Any] | None = None,
+        token_verifier: FirebaseTokenVerifier | None = None,
     ) -> None:
         self.identity_repository = identity_repository
         self.transaction_manager = transaction_manager
         self.gamification_adapter = gamification_adapter
         self.config = config or FirebaseAdminConfig.from_env()
         self.app_factory = app_factory
+        self.token_verifier = token_verifier
 
     def build(self) -> FirebaseAuthenticationComponents:
-        admin_app_factory = self.app_factory or FirebaseAdminAppFactory(
-            self.config
-        ).create
+        verifier = self.token_verifier
+        if verifier is None:
+            admin_app_factory = self.app_factory or FirebaseAdminAppFactory(
+                self.config
+            ).create
+            verifier = FirebaseAdminTokenVerifier(app_factory=admin_app_factory)
 
-        verifier = FirebaseAdminTokenVerifier(app_factory=admin_app_factory)
         provisioning_service = IdentityProvisioningService(
             repository=self.identity_repository,
             transaction_manager=self.transaction_manager,
