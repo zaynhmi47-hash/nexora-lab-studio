@@ -61,6 +61,7 @@ class XPLedgerEntry:
     user_id: str
     event_id: str
     event_type: GamificationEventType
+    reward_key: str
     amount: int
     created_at: datetime
     activity_id: str | None = None
