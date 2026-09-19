@@ -59,8 +59,7 @@ class InMemoryPersistentXPLedgerRepository(XPLedgerRepository):
                 return False
 
             self._entries[entry.event_id] = entry
-            reward_key = f"event:{entry.event_id}"
-            self._reward_keys[reward_key] = entry.event_id
+            self._reward_keys[entry.reward_key] = entry.event_id
 
             current = self._balances.get(entry.user_id)
             previous_xp = current.xp if current else 0
