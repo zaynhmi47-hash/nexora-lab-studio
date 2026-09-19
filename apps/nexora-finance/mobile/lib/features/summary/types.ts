@@ -48,3 +48,21 @@ export interface FinanceProfitLoss {
   incomeLines: FinanceProfitLossLine[];
   expenseLines: FinanceProfitLossLine[];
 }
+
+export interface FinanceCashFlowLine {
+  category: string;
+  amountMinor: number;
+  transactionCount: number;
+}
+
+export interface FinanceCashFlow {
+  startDate: string;
+  endDate: string;
+  currency: 'IDR';
+  cashInflowMinor: number;
+  cashOutflowMinor: number;
+  netCashFlowMinor: number;
+  transactionCount: number;
+  inflowLines: FinanceCashFlowLine[];
+  outflowLines: FinanceCashFlowLine[];
+}
