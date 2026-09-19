@@ -11,6 +11,7 @@ class IslamicPlacesView(APIView):
             latitude = float(request.query_params["lat"]) if "lat" in request.query_params else None
             longitude = float(request.query_params["lng"]) if "lng" in request.query_params else None
             radius_km = float(request.query_params.get("radiusKm", 25))
+            place_type = request.query_params.get("type")
         except (TypeError, ValueError):
             return Response({"detail": "lat, lng, and radiusKm must be valid numbers."}, status=400)
         if radius_km <= 0 or radius_km > 100:
@@ -19,6 +20,8 @@ class IslamicPlacesView(APIView):
             return Response({"detail": "lat and lng must be provided together."}, status=400)
         if latitude is not None and not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
             return Response({"detail": "Coordinates are out of range."}, status=400)
+        if place_type and place_type not in {"mosque", "musalla", "islamic_center"}:
+            return Response({"detail": "type must be mosque, musalla, or islamic_center."}, status=400)
         return Response([
             {
                 "id": str(place.id),
@@ -31,5 +34,5 @@ class IslamicPlacesView(APIView):
                 "description": place.description,
                 "distanceKm": round(distance, 2) if distance is not None else None,
             }
-            for place, distance in IslamicPlacesService.list_places(latitude, longitude, radius_km)
+            for place, distance in IslamicPlacesService.list_places(latitude, longitude, radius_km, place_type)
         ])
