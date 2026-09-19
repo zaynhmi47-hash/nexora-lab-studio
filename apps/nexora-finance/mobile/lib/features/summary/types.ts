@@ -7,3 +7,10 @@ export interface FinanceSummary {
   netCashFlowMinor: number;
   transactionCount: number;
 }
+
+export interface FinanceCategoryBreakdown {
+  category: string;
+  direction: 'income' | 'expense';
+  amountMinor: number;
+  transactionCount: number;
+}
