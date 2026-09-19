@@ -13,6 +13,8 @@ from .models import (
     LearningLessonCompletion,
     LearningProgress,
     LearningQuizQuestion,
+    LearningAchievement,
+    LearningUserAchievement,
 )
 
 
@@ -90,3 +92,25 @@ class LearningService:
         progress.last_completed_at = now
         progress.save(update_fields=["xp", "level", "current_streak", "last_completed_at", "updated_at"])
         return progress
+
+
+    @staticmethod
+    def achievements(user: NexoraUser):
+        progress = LearningService.progress(user)
+        completed = len(LearningService.completed_lesson_ids(user))
+        eligible = LearningAchievement.objects.filter(
+            is_published=True
+        ).filter(
+            xp_threshold__lte=progress.xp,
+            streak_threshold__lte=progress.current_streak,
+            lesson_threshold__lte=completed,
+        )
+        for achievement in eligible:
+            LearningUserAchievement.objects.get_or_create(
+                user=user,
+                achievement=achievement,
+                defaults={"earned_at": timezone.now()},
+            )
+        return LearningUserAchievement.objects.filter(
+            user=user, deleted_at__isnull=True, achievement__is_published=True
+        ).select_related("achievement").order_by("-earned_at")
