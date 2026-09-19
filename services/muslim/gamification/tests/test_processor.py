@@ -102,3 +102,30 @@ def test_daily_reward_does_not_create_learning_streak() -> None:
     current = state.get("user-1")
     assert current.current_streak == 0
     assert current.xp == 30
+
+
+def test_processor_uses_user_timezone_for_activity_date() -> None:
+    processor, state = build_processor()
+    state.save(
+        type(state.get("user-1"))(
+            user_id="user-1",
+            xp=0,
+            current_streak=0,
+            longest_streak=0,
+            last_activity_date=None,
+            timezone_name="Asia/Jakarta",
+        )
+    )
+
+    result = processor.process(
+        GamificationEvent(
+            event_id="late-utc-lesson",
+            user_id="user-1",
+            event_type=GamificationEventType.LESSON_COMPLETED,
+            occurred_at=datetime(2026, 9, 19, 23, 30, tzinfo=timezone.utc),
+            activity_id="late-utc-lesson",
+        )
+    )
+
+    assert result.snapshot.streak.current == 1
+    assert state.get("user-1").quest_date.isoformat() == "2026-09-20"
