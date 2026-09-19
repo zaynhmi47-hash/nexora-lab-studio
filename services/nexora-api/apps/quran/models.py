@@ -62,3 +62,25 @@ class QuranRecitation(AuditableBaseModel):
     class Meta:
         db_table = "quran_recitations"
         ordering = ("name",)
+
+
+class QuranReadingGoal(AuditableBaseModel):
+    user = models.OneToOneField(NexoraUser, on_delete=models.CASCADE, related_name="quran_reading_goal")
+    daily_target_pages = models.PositiveSmallIntegerField(default=4, validators=[MinValueValidator(1), MaxValueValidator(604)])
+    daily_target_minutes = models.PositiveSmallIntegerField(default=15, validators=[MinValueValidator(1), MaxValueValidator(1440)])
+
+    class Meta:
+        db_table = "quran_reading_goals"
+
+
+class QuranReadingLog(AuditableBaseModel):
+    user = models.ForeignKey(NexoraUser, on_delete=models.CASCADE, related_name="quran_reading_logs")
+    date = models.DateField()
+    pages = models.PositiveSmallIntegerField(default=0, validators=[MaxValueValidator(604)])
+    minutes = models.PositiveSmallIntegerField(default=0, validators=[MaxValueValidator(1440)])
+
+    class Meta:
+        db_table = "quran_reading_logs"
+        ordering = ("-date",)
+        constraints = [models.UniqueConstraint(fields=("user", "date"), name="quran_user_reading_date_unique")]
+        indexes = [models.Index(fields=("user", "-date"), name="quran_reading_user_date_idx")]
