@@ -20,7 +20,7 @@ ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 
 INSTALLED_APPS = [
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes", "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
-    "rest_framework", "apps.core", "apps.identity", "apps.organizations", "apps.access", "apps.products", "apps.capabilities", "apps.learning", "apps.quran", "apps.dhikr", "apps.umrah", "apps.profile", "apps.knowledge", "apps.tajwid", "apps.arabic", "apps.fasting", "apps.dua", "apps.calendar", "apps.zakat", "apps.reminders", "apps.places", "apps.finance",
+    "rest_framework", "apps.core", "apps.identity", "apps.organizations", "apps.access", "apps.products", "apps.capabilities", "apps.learning", "apps.quran", "apps.dhikr", "apps.umrah", "apps.profile", "apps.knowledge", "apps.tajwid", "apps.arabic", "apps.fasting", "apps.dua", "apps.calendar", "apps.zakat", "apps.reminders", "apps.places", "apps.ramadan", "apps.finance",
 ]
 
 MIDDLEWARE = [
