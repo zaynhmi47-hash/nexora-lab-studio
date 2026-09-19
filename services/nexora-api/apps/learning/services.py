@@ -118,26 +118,86 @@ class LearningService:
         ).select_related("achievement").order_by("-earned_at")
 
 
+class UnifiedLearningEngine:
+    XP_PER_LEVEL = 50
+    REWARD_THRESHOLDS = (
+        (100, "Learning Momentum", "Reach 100 total learning XP."),
+        (250, "Dedicated Learner", "Reach 250 total learning XP."),
+        (500, "Learning Mastery", "Reach 500 total learning XP."),
+    )
+
+    @classmethod
+    def level(cls, total_xp: int) -> int:
+        return max(1, (total_xp // cls.XP_PER_LEVEL) + 1)
+
+    @classmethod
+    def level_progress(cls, total_xp: int) -> dict:
+        level = cls.level(total_xp)
+        current = total_xp % cls.XP_PER_LEVEL
+        return {
+            "level": level,
+            "xpIntoLevel": current,
+            "xpToNextLevel": cls.XP_PER_LEVEL - current if current else cls.XP_PER_LEVEL,
+            "xpPerLevel": cls.XP_PER_LEVEL,
+            "progressPercent": round((current / cls.XP_PER_LEVEL) * 100),
+        }
+
+    @classmethod
+    def rewards(cls, total_xp: int) -> list[dict]:
+        return [
+            {"key": key, "title": title, "description": description, "earned": total_xp >= threshold}
+            for threshold, title, description in cls.REWARD_THRESHOLDS
+            for key in [f"xp-{threshold}"]
+        ]
+
+    @classmethod
+    def snapshot(cls, user: NexoraUser) -> dict:
+        learning = LearningService.progress(user)
+        tajwid = TajwidService.progress(user)
+        arabic = ArabicService.progress(user)
+
+        domains = {
+            "learning": learning.xp,
+            "tajwid": tajwid["xpEarned"],
+            "arabic": arabic["xpEarned"],
+        }
+        total_xp = sum(domains.values())
+        level_data = cls.level_progress(total_xp)
+
+        streaks = [
+            learning.current_streak,
+            tajwid.get("currentStreak", 0),
+            arabic.get("currentStreak", 0),
+        ]
+
+        return {
+            "userId": str(user.id),
+            "totalXp": total_xp,
+            **level_data,
+            "currentStreak": max(streaks),
+            "domains": domains,
+            "rewards": cls.rewards(total_xp),
+        }
+
+
 def learning_hub(user: NexoraUser):
     learning = LearningService.progress(user)
     tajwid = TajwidService.progress(user)
     arabic = ArabicService.progress(user)
+    engine = UnifiedLearningEngine.snapshot(user)
 
-    total_xp = learning.xp + tajwid["xpEarned"] + arabic["xpEarned"]
     return {
-        "userId": str(user.id),
-        "totalXp": total_xp,
-        "level": level_for_xp(total_xp),
+        **engine,
         "domains": {
             "learning": {
                 "xp": learning.xp,
                 "level": learning.level,
                 "streak": learning.current_streak,
-                "completedCount": len(learning.completed_lesson_ids(user)),
+                "completedCount": len(LearningService.completed_lesson_ids(user)),
             },
             "tajwid": {
                 "xp": tajwid["xpEarned"],
-                "streak": 0,
+                "streak": tajwid.get("currentStreak", 0),
                 "completedCount": len(tajwid["completedTopicIds"]),
                 "practiceCompleted": tajwid["practiceCompleted"],
                 "assessmentCompleted": tajwid["assessmentCompleted"],
@@ -149,3 +209,4 @@ def learning_hub(user: NexoraUser):
             },
         },
     }
+\n
