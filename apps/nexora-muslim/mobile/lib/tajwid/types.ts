@@ -52,5 +52,5 @@ export interface TajwidPort {
     userId: string,
     correctAnswers: number,
     totalQuestions: number,
-  ): Promise<TajwidProgress>;
+  ): Promise<TajwidAssessmentResult>;
 }
