@@ -55,7 +55,7 @@ class InMemoryPersistentXPLedgerRepository(XPLedgerRepository):
 
     def append_if_absent(self, entry: XPLedgerEntry) -> bool:
         with self._lock:
-            if entry.event_id in self._entries:
+            if entry.event_id in self._entries or entry.reward_key in self._reward_keys:
                 return False
 
             self._entries[entry.event_id] = entry
