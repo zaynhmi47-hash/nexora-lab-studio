@@ -84,6 +84,22 @@ class LearningQuizQuestion(AuditableBaseModel):
         ]
 
 
+class LearningQuizAttempt(AuditableBaseModel):
+    user = models.ForeignKey(NexoraUser, on_delete=models.CASCADE, related_name="learning_quiz_attempts")
+    lesson = models.ForeignKey(LearningLesson, on_delete=models.PROTECT, related_name="quiz_attempts")
+    correct_answers = models.PositiveIntegerField(default=0)
+    total_questions = models.PositiveIntegerField(default=0)
+    score_percent = models.PositiveIntegerField(default=0)
+    passed = models.BooleanField(default=False)
+    completed_at = models.DateTimeField()
+
+    class Meta:
+        db_table = "learning_quiz_attempts"
+        indexes = [
+            models.Index(fields=("user", "-completed_at"), name="learning_quiz_attempt_user_date_idx"),
+        ]
+
+
 class LearningAchievement(AuditableBaseModel):
     key = models.SlugField(max_length=100, unique=True)
     title = models.CharField(max_length=255)
