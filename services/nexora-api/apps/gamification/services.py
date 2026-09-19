@@ -168,7 +168,17 @@ class GamificationService:
     def sync_milestones(user: NexoraUser):
         from apps.learning.services import UnifiedLearningEngine
 
-        UnifiedLearningEngine.achievement_snapshot(user)
+        engine = UnifiedLearningEngine
+        streak = engine.current_streak(user)
+        streak_key = XPRewardRules.streak_milestone(streak)
+        if streak_key:
+            GamificationService.record_milestone(
+                user=user,
+                key=streak_key,
+                occurred_at=timezone.now(),
+            )
+
+        engine.achievement_snapshot(user)
 
     @staticmethod
     def list_recent(user: NexoraUser, limit: int = 50):
