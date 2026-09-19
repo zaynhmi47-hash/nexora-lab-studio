@@ -1,40 +1,33 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from services.muslim.identity.provisioning import IdentityProvisioningService
 from services.muslim.identity.repository import InMemoryIdentityRepository
+from services.muslim.identity.transaction import InMemoryIdentityTransactionManager
 
 from ..identity import FirebaseNexoraIdentityResolver
 from ..provisioning import FirebaseIdentityProvisioner
-from ...firebase.auth import FirebaseTokenVerifier
 
 
-@dataclass
-class FakeVerifier(FirebaseTokenVerifier):
-    claims: dict[str, object]
+class FakeVerifier:
+    def __init__(self, claims: dict[str, object]) -> None:
+        self.claims = claims
 
     def verify_id_token(self, id_token: str) -> dict[str, object]:
         return self.claims
 
 
-def build_resolver(claims: dict[str, object]) -> FirebaseNexoraIdentityResolver:
-    repository = InMemoryIdentityRepository()
-    provisioning = IdentityProvisioningService(
-        repository=repository,
-        transaction_manager=__import__(
-            "services.muslim.identity.transaction",
-            fromlist=["InMemoryIdentityTransactionManager"],
-        ).InMemoryIdentityTransactionManager(),
-    )
-    return FirebaseNexoraIdentityResolver(
-        verifier=FakeVerifier(claims),
-        provisioning_service=provisioning,
+def build_provisioning() -> IdentityProvisioningService:
+    return IdentityProvisioningService(
+        repository=InMemoryIdentityRepository(),
+        transaction_manager=InMemoryIdentityTransactionManager(),
     )
 
 
 def test_first_firebase_login_provisions_internal_identity() -> None:
-    resolver = build_resolver({"uid": "firebase-user-1", "email": "user@example.com"})
+    resolver = FirebaseNexoraIdentityResolver(
+        verifier=FakeVerifier({"uid": "firebase-user-1", "email": "user@example.com"}),
+        provisioning_service=build_provisioning(),
+    )
 
     identity = resolver.resolve_firebase_token("valid-token")
 
@@ -44,7 +37,10 @@ def test_first_firebase_login_provisions_internal_identity() -> None:
 
 
 def test_repeated_firebase_login_reuses_internal_identity() -> None:
-    resolver = build_resolver({"uid": "firebase-user-1"})
+    resolver = FirebaseNexoraIdentityResolver(
+        verifier=FakeVerifier({"uid": "firebase-user-1"}),
+        provisioning_service=build_provisioning(),
+    )
 
     first = resolver.resolve_firebase_token("valid-token")
     second = resolver.resolve_firebase_token("valid-token")
@@ -53,15 +49,7 @@ def test_repeated_firebase_login_reuses_internal_identity() -> None:
 
 
 def test_provisioner_requires_uid_in_verified_claims() -> None:
-    repository = InMemoryIdentityRepository()
-    provisioning = IdentityProvisioningService(
-        repository=repository,
-        transaction_manager=__import__(
-            "services.muslim.identity.transaction",
-            fromlist=["InMemoryIdentityTransactionManager"],
-        ).InMemoryIdentityTransactionManager(),
-    )
-    provisioner = FirebaseIdentityProvisioner(provisioning)
+    provisioner = FirebaseIdentityProvisioner(build_provisioning())
 
     try:
         provisioner.provision_verified_claims({"email": "user@example.com"})
