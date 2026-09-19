@@ -1,0 +1,1 @@
+"""Provider-neutral Nexora identity contracts for the Muslim service."""
