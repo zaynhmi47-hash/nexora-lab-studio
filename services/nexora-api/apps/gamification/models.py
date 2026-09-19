@@ -9,6 +9,7 @@ class GamificationActivity(AuditableBaseModel):
         LEARNING = "learning", "Learning"
         TAJWID = "tajwid", "Tajwid"
         ARABIC = "arabic", "Arabic"
+        GAMIFICATION = "gamification", "Gamification"
 
     user = models.ForeignKey(
         NexoraUser,
