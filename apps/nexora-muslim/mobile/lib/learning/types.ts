@@ -21,6 +21,26 @@ export type LearningCourse = {
   lessons: LearningLesson[];
 };
 
+export type LearningHubDomain = {
+  xp: number;
+  streak: number;
+  completedCount: number;
+  level?: number;
+  practiceCompleted?: number;
+  assessmentCompleted?: boolean;
+};
+
+export type LearningHub = {
+  userId: string;
+  totalXp: number;
+  level: number;
+  domains: {
+    learning: LearningHubDomain;
+    tajwid: LearningHubDomain;
+    arabic: LearningHubDomain;
+  };
+};
+
 export type LearningProgress = {
   userId: string;
   xp: number;
@@ -51,6 +71,7 @@ export type QuizResult = {
 export interface LearningPort {
   getCourses(): Promise<LearningCourse[]>;
   getProgress(userId: string): Promise<LearningProgress>;
+  getHub(): Promise<LearningHub>;
   getQuiz(lessonId: string): Promise<QuizQuestion[]>;
   completeLesson(userId: string, lessonId: string): Promise<LearningProgress>;
   getAchievements(): Promise<LearningAchievement[]>;
