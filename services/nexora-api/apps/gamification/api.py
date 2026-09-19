@@ -1,10 +1,12 @@
+from django.utils import timezone
+
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.identity.authentication import FirebaseIdentityAuthentication
 
-from .services import GamificationService, XPRewardRules
+from .services import GamificationService
 
 
 class GamificationActivityView(APIView):
@@ -49,7 +51,7 @@ class GamificationDailyRewardView(APIView):
         activity = GamificationService.claim_daily_reward(request.user)
         return Response({
             "id": str(activity.id),
-            "claimed": activity.occurred_at.date() == __import__("django").utils.timezone.localdate(),
+            "claimed": activity.occurred_at.date() == timezone.localdate(),
             "xpEarned": activity.xp_earned,
             "occurredAt": activity.occurred_at.isoformat(),
         })
