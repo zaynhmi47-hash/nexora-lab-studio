@@ -30,10 +30,23 @@ export type LearningHubDomain = {
   assessmentCompleted?: boolean;
 };
 
+export type LearningReward = {
+  key: string;
+  title: string;
+  description: string;
+  earned: boolean;
+};
+
 export type LearningHub = {
   userId: string;
   totalXp: number;
   level: number;
+  xpIntoLevel: number;
+  xpToNextLevel: number;
+  xpPerLevel: number;
+  progressPercent: number;
+  currentStreak: number;
+  rewards: LearningReward[];
   domains: {
     learning: LearningHubDomain;
     tajwid: LearningHubDomain;
