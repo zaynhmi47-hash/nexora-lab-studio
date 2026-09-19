@@ -8,7 +8,7 @@ from rest_framework import status
 from apps.identity.authentication import FirebaseIdentityAuthentication
 
 from .models import LearningLesson
-from .services import LearningService
+from .services import LearningService, learning_hub
 
 
 def progress_payload(progress):
@@ -97,6 +97,14 @@ class LearningCompleteLessonView(APIView):
         except LearningLesson.DoesNotExist:
             return Response({"detail": "Lesson not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(progress_payload(progress))
+
+
+class LearningHubView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response(learning_hub(request.user))
 
 
 class LearningAchievementsView(APIView):
