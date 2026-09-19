@@ -2,7 +2,12 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from services.muslim.identity.db_repository import SQLIdentityRepository
+from services.muslim.identity.provisioning import (
+    IdentityProvisioningService,
+    ProviderAccountAlreadyLinked,
+)
 from services.muslim.identity.repository import IdentityConflict
+from services.muslim.identity.transaction import DatabaseIdentityTransactionManager
 
 
 class Result:
@@ -191,22 +196,18 @@ def test_sql_repository_simulates_two_transactions_same_first_login() -> None:
     user_b = str(uuid4())
 
     def first_login(repository, user_id):
-        transaction = repository.connection
+        service = IdentityProvisioningService(
+            repository,
+            DatabaseIdentityTransactionManager(repository.connection),
+        )
         try:
-            account = repository.link_provider_account(
+            result = service.provision_or_resolve(
                 provider="firebase",
                 provider_subject="firebase-race-user",
-                user_id=user_id,
             )
-        except IdentityConflict:
-            transaction.rollback()
+        except ProviderAccountAlreadyLinked:
             return ("conflict", user_id)
-        except Exception:
-            transaction.rollback()
-            raise
-        else:
-            transaction.commit()
-            return ("success", account.user_id)
+        return ("success", result.identity.user_id)
 
     with ThreadPoolExecutor(max_workers=2) as executor:
         results = list(
