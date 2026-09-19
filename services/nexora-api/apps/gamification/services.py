@@ -148,6 +148,34 @@ class GamificationService:
             )
 
     @staticmethod
+    @transaction.atomic
+    def claim_daily_reward(user: NexoraUser) -> GamificationActivity:
+        today = timezone.localdate().isoformat()
+        return GamificationService.record_activity(
+            user=user,
+            source=GamificationActivity.Source.GAMIFICATION,
+            action="daily_reward",
+            source_key=f"daily:{today}",
+            xp_earned=10,
+            occurred_at=timezone.now(),
+        )
+
+    @staticmethod
+    def quiz_xp_allowed(user: NexoraUser, lesson_key: str, passed: bool) -> int:
+        if not passed:
+            return 0
+        # Quiz XP is intentionally non-repeatable per lesson/day policy.
+        today = timezone.localdate().isoformat()
+        already_awarded = GamificationActivity.objects.filter(
+            user=user,
+            source=GamificationActivity.Source.LEARNING,
+            action="quiz_reward",
+            source_key=f"{lesson_key}:{today}",
+            deleted_at__isnull=True,
+        ).exists()
+        return XPRewardRules.quiz(True) if not already_awarded else 0
+
+    @staticmethod
     def milestone_key_for_streak(streak: int) -> str | None:
         return XPRewardRules.streak_milestone(streak)
 
