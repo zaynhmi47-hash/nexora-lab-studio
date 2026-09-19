@@ -1,5 +1,7 @@
 from django.db import IntegrityError, transaction
 from django.utils import timezone
+from django.db.models import Sum
+from datetime import timedelta
 
 from apps.identity.models import NexoraUser
 
@@ -42,3 +44,38 @@ class GamificationService:
             user=user,
             deleted_at__isnull=True,
         ).order_by("-occurred_at")[:limit]
+
+
+    @staticmethod
+    def statistics(user: NexoraUser, days: int = 30) -> dict:
+        days = min(max(days, 1), 90)
+        since = timezone.now() - timedelta(days=days - 1)
+        activities = GamificationActivity.objects.filter(
+            user=user,
+            deleted_at__isnull=True,
+            occurred_at__gte=since,
+        )
+        total_xp = activities.aggregate(total=Sum("xp_earned"))["total"] or 0
+        by_source = {
+            source: activities.filter(source=source).aggregate(total=Sum("xp_earned"))["total"] or 0
+            for source in (
+                GamificationActivity.Source.LEARNING,
+                GamificationActivity.Source.TAJWID,
+                GamificationActivity.Source.ARABIC,
+            )
+        }
+        daily = {}
+        for activity in activities:
+            key = timezone.localtime(activity.occurred_at).date().isoformat()
+            daily[key] = daily.get(key, 0) + activity.xp_earned
+
+        return {
+            "days": days,
+            "totalXp": total_xp,
+            "activityCount": activities.count(),
+            "bySource": by_source,
+            "dailyXp": [
+                {"date": date, "xp": xp}
+                for date, xp in sorted(daily.items())
+            ],
+        }
