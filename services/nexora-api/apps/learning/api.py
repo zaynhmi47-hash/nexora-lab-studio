@@ -8,7 +8,7 @@ from rest_framework import status
 from apps.identity.authentication import FirebaseIdentityAuthentication
 
 from .models import LearningLesson
-from .services import LearningService, learning_hub
+from .services import LearningService, UnifiedLearningEngine, learning_hub
 
 
 def progress_payload(progress):
@@ -112,14 +112,4 @@ class LearningAchievementsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        awards = LearningService.achievements(request.user)
-        return Response([
-            {
-                "id": str(item.achievement_id),
-                "key": item.achievement.key,
-                "title": item.achievement.title,
-                "description": item.achievement.description,
-                "earnedAt": item.earned_at.isoformat(),
-            }
-            for item in awards
-        ])
+        return Response(UnifiedLearningEngine.achievement_snapshot(request.user))
