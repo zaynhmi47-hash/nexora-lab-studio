@@ -4,6 +4,7 @@ from django.urls import path
 from api.v1.app_state import CurrentAppStateView
 from api.v1.health import HealthView, LivenessView, ReadinessView
 from api.v1.identity import CurrentIdentityView
+from apps.finance.api.reporting_views import FinanceCategoryBreakdownView
 from apps.finance.api.summary_views import FinanceSummaryView
 
 urlpatterns = [
@@ -32,4 +33,9 @@ urlpatterns = [
     path("capabilities/", include("apps.capabilities.api.urls")),
     path("organizations/<uuid:organization_id>/finance/transactions/", include("apps.finance.api.urls")),
     path("organizations/<uuid:organization_id>/finance/summary/", FinanceSummaryView.as_view(), name="finance-summary"),
+    path(
+        "organizations/<uuid:organization_id>/finance/reporting/category-breakdown/",
+        FinanceCategoryBreakdownView.as_view(),
+        name="finance-category-breakdown",
+    ),
 ]
