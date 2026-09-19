@@ -8,6 +8,7 @@ from apps.finance.api.reporting_views import FinanceCategoryBreakdownView
 from apps.finance.api.summary_views import FinanceSummaryView
 from apps.finance.api.comparison_views import FinancePeriodComparisonView
 from apps.finance.api.profit_loss_views import FinanceProfitLossView
+from apps.finance.api.cash_flow_views import FinanceCashFlowView
 from apps.finance.api.trend_views import FinanceTrendView
 
 urlpatterns = [
@@ -55,5 +56,10 @@ urlpatterns = [
         "organizations/<uuid:organization_id>/finance/reporting/profit-loss/",
         FinanceProfitLossView.as_view(),
         name="finance-profit-loss",
+    ),
+    path(
+        "organizations/<uuid:organization_id>/finance/reporting/cash-flow/",
+        FinanceCashFlowView.as_view(),
+        name="finance-cash-flow",
     ),
 ]
