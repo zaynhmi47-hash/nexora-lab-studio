@@ -12,6 +12,7 @@ from apps.finance.api.budget_summary_views import FinanceBudgetSummaryView
 from apps.finance.api.budget_views import FinanceBudgetDetailView, FinanceBudgetListView
 from apps.finance.api.goal_views import (\n    FinanceGoalContributionDetailView, FinanceGoalContributionListView,\n    FinanceGoalDetailView, FinanceGoalListView, FinanceGoalSummaryView,\n)\nfrom apps.finance.api.cash_flow_views import FinanceCashFlowView
 from apps.finance.api.insights_views import FinanceInsightsView
+from apps.finance.api.planning_views import FinancePlanningSummaryView
 from apps.finance.api.trend_views import FinanceTrendView
 
 urlpatterns = [
