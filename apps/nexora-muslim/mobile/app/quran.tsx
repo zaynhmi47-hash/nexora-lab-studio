@@ -135,7 +135,9 @@ export default function QuranScreen() {
           {!selectedRecitation?.audioUrl && <Text style={styles.audioNote}>Audio source is not configured yet. Add a verified recitation URL before production use.</Text>}
         </Card>
 
-<Text style={styles.sectionHeading}>Explore</Text>
+<Pressable style={styles.item} onPress={() => router.push('/quran-goals')}><View style={styles.itemIcon}><Ionicons name="stats-chart-outline" size={21} color={colors.primary} /></View><View style={styles.itemBody}><Text style={styles.itemText}>Reading Goals</Text><Text style={styles.itemDescription}>Track daily pages, time, and streak</Text></View><Ionicons name="chevron-forward" size={18} color={colors.textMuted} /></Pressable>
+
+        <Text style={styles.sectionHeading}>Explore</Text>
         <Pressable style={styles.item} onPress={() => setShowSurahs(true)}><View style={styles.itemIcon}><Ionicons name="book-outline" size={21} color={colors.primary} /></View><View style={styles.itemBody}><Text style={styles.itemText}>Surah</Text><Text style={styles.itemDescription}>Browse the Quran</Text></View><Ionicons name="chevron-forward" size={18} color={colors.textMuted} /></Pressable>
         <Pressable style={styles.item} onPress={() => router.push('/quran-bookmarks')}><View style={styles.itemIcon}><Ionicons name="bookmark-outline" size={21} color={colors.primary} /></View><View style={styles.itemBody}><Text style={styles.itemText}>Bookmarks</Text><Text style={styles.itemDescription}>{bookmarks.length} saved</Text></View><Ionicons name="chevron-forward" size={18} color={colors.textMuted} /></Pressable>
       </ScrollView>
