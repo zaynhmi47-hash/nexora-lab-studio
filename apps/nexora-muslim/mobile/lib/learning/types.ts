@@ -76,10 +76,14 @@ export type QuizQuestion = {
 export type LearningAchievement = { id:string; key:string; title:string; description:string; earnedAt:string; };
 
 export type QuizResult = {
+  attemptId?: string;
   lessonId: string;
   correctAnswers: number;
   totalQuestions: number;
+  scorePercent?: number;
+  passed?: boolean;
   xpEarned: number;
+  completedAt?: string;
 };
 
 export interface LearningPort {
@@ -87,6 +91,7 @@ export interface LearningPort {
   getProgress(userId: string): Promise<LearningProgress>;
   getHub(): Promise<LearningHub>;
   getQuiz(lessonId: string): Promise<QuizQuestion[]>;
+  completeQuiz(lessonId: string, answers: number[]): Promise<QuizResult>;
   completeLesson(userId: string, lessonId: string): Promise<LearningProgress>;
   getAchievements(): Promise<LearningAchievement[]>;
 }
