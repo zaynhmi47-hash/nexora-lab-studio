@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 
 from apps.identity.authentication import FirebaseIdentityAuthentication
 
-from .services import GamificationService
+from .services import GamificationService, XPRewardRules
 
 
 class GamificationActivityView(APIView):
@@ -40,3 +40,18 @@ class GamificationStatisticsView(APIView):
         except (TypeError, ValueError):
             days = 30
         return Response(GamificationService.statistics(request.user, days))
+
+class GamificationDailyRewardView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        activity = GamificationService.claim_daily_reward(request.user)
+        return Response({
+            "id": str(activity.id),
+            "claimed": activity.occurred_at.date() == __import__("django").utils.timezone.localdate(),
+            "xpEarned": activity.xp_earned,
+            "occurredAt": activity.occurred_at.isoformat(),
+        })
+
+
