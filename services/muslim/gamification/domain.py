@@ -42,6 +42,18 @@ class GamificationEvent:
     activity_id: str | None = None
     metadata: Mapping[str, object] | None = None
 
+    def reward_key(self, *, repeatable: bool) -> str:
+        if repeatable:
+            return f"event:{self.event_id}"
+        if self.event_type is GamificationEventType.STREAK_MILESTONE:
+            milestone = (self.metadata or {}).get("milestone")
+            if milestone is None:
+                raise ValueError("streak milestone requires metadata.milestone")
+            return f"milestone:{self.event_type.value}:{milestone}"
+        if not self.activity_id:
+            raise ValueError("non-repeatable event requires activity_id")
+        return f"activity:{self.event_type.value}:{self.activity_id}"
+
 
 @dataclass(frozen=True, slots=True)
 class XPLedgerEntry:
