@@ -67,6 +67,9 @@ export default function TajwidAssessmentScreen() {
         <Card>
           <Text style={styles.score}>{result?.totalQuestions ? Math.round((result.correctAnswers / result.totalQuestions) * 100) : 0}%</Text>
           <Text style={styles.result}>{result?.correctAnswers ?? correct} dari {result?.totalQuestions ?? items.length} jawaban benar</Text>
+          <View style={styles.xpBadge}>
+            <Text style={styles.xpText}>+{result?.xpEarned ?? 0} XP</Text>
+          </View>
           <Text style={styles.explanation}>
             {result?.passed ? 'Kamu memenuhi batas kelulusan 70%.' : 'Batas kelulusan adalah 70%. Ulangi latihan topik yang masih terasa sulit.'}
           </Text>
@@ -153,4 +156,6 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.45 },
   score: { color: colors.primaryDark, fontSize: 42, fontWeight: '900', textAlign: 'center' },
   result: { color: colors.text, fontSize: typography.body, fontWeight: '700', marginTop: spacing.sm, textAlign: 'center' },
+  xpBadge: { alignSelf: 'center', backgroundColor: colors.primarySoft, borderRadius: radius.pill, marginTop: spacing.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  xpText: { color: colors.primaryDark, fontSize: typography.body, fontWeight: '900' },
 });
