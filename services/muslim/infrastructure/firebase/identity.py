@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from typing import Mapping
-
 from services.muslim.gamification.auth import (
-    AuthenticatedIdentity,
     FirebaseIdentityResolver,
     FirebaseTokenVerifier,
 )
@@ -36,16 +33,3 @@ class FirebaseNexoraIdentityResolver(FirebaseIdentityResolver):
     def resolve_user_id(self, firebase_uid: str) -> str:
         result = self.provisioner.provision_verified_claims({"uid": firebase_uid})
         return result.identity.user_id
-
-    def resolve_firebase_token(
-        self,
-        id_token: str,
-    ) -> AuthenticatedIdentity:
-        return super().resolve_firebase_token(id_token)
-
-
-def firebase_identity_claims(
-    identity: AuthenticatedIdentity,
-) -> Mapping[str, object]:
-    """Expose verified claims without coupling callers to the resolver internals."""
-    return identity.claims
