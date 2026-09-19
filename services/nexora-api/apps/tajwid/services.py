@@ -156,13 +156,14 @@ class TajwidService:
             progress.assessment_completed = True
             progress.xp_earned += assessment_xp
             progress.save(update_fields=["assessment_completed", "xp_earned", "updated_at"])
-            GamificationService.record_activity(
-                user=user,
-                source="tajwid",
-                action="assessment_completed",
-                source_key="tajwid-assessment",
-                xp_earned=assessment_xp,
-            )
+            if assessment_xp > 0:
+                GamificationService.record_activity(
+                    user=user,
+                    source="tajwid",
+                    action="assessment_completed",
+                    source_key="tajwid-assessment-pass",
+                    xp_earned=assessment_xp,
+                )
 
         return {
             "correctAnswers": correct,
