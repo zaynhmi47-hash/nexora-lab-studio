@@ -45,6 +45,14 @@ class GamificationAPIService:
             )
 
         body = serialize_result(result)
+        body["rewards"] = [
+            {
+                "awarded": bonus.awarded,
+                "xp": bonus.xp,
+                "reason": bonus.reason.value if bonus.reason else None,
+            }
+            for bonus in result.bonus_rewards
+        ]
         body["gamification"] = {
             "xp": result.snapshot.xp,
             "level": result.snapshot.level,
@@ -57,6 +65,16 @@ class GamificationAPIService:
                     else None
                 ),
             },
+            "quests": [
+                {
+                    "key": quest.key,
+                    "progress": quest.progress,
+                    "target": quest.target,
+                    "completed": quest.completed,
+                    "rewardClaimed": quest.reward_claimed,
+                }
+                for quest in result.snapshot.quests
+            ],
             "newAchievements": [
                 {
                     "key": achievement.key,
