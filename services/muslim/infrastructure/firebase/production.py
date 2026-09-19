@@ -3,13 +3,12 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from services.muslim.gamification.auth import FirebaseTokenVerifier
-from services.muslim.identity.db_repository import DBConnection, SQLIdentityRepository
-from services.muslim.identity.transaction import (
-    DBTransactionConnection,
-    DatabaseIdentityTransactionManager,
+from services.muslim.identity.db_repository import (
+    IdentityDatabaseConnection,
+    SQLIdentityRepository,
 )
+from services.muslim.identity.transaction import DatabaseIdentityTransactionManager
 
-from .auth import FirebaseAdminAppFactory, FirebaseAdminTokenVerifier
 from .auth_composition import (
     FirebaseAuthenticationComponents,
     FirebaseAuthenticationComposition,
@@ -28,7 +27,7 @@ class ProductionFirebaseAuthenticationFactory:
     def __init__(
         self,
         *,
-        connection: DBConnection & DBTransactionConnection,
+        connection: IdentityDatabaseConnection,
         gamification_adapter: Any,
         config: FirebaseAdminConfig | None = None,
         app_factory: Callable[[], Any] | None = None,
