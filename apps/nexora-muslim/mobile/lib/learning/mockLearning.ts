@@ -142,6 +142,16 @@ export const mockLearning: LearningPort = {
       userId: progress.userId,
       totalXp: progress.xp + 45 + 80,
       level: Math.floor((progress.xp + 45 + 80) / 50) + 1,
+      xpIntoLevel: (progress.xp + 45 + 80) % 50,
+      xpToNextLevel: 50 - ((progress.xp + 45 + 80) % 50),
+      xpPerLevel: 50,
+      progressPercent: Math.round((((progress.xp + 45 + 80) % 50) / 50) * 100),
+      currentStreak: progress.currentStreak,
+      rewards: [
+        { key: 'xp-100', title: 'Learning Momentum', description: 'Reach 100 total learning XP.', earned: progress.xp + 125 >= 100 },
+        { key: 'xp-250', title: 'Dedicated Learner', description: 'Reach 250 total learning XP.', earned: progress.xp + 125 >= 250 },
+        { key: 'xp-500', title: 'Learning Mastery', description: 'Reach 500 total learning XP.', earned: progress.xp + 125 >= 500 },
+      ],
       domains: {
         learning: { xp: progress.xp, level: progress.level, streak: progress.currentStreak, completedCount: progress.completedLessonIds.length },
         tajwid: { xp: 45, streak: 0, completedCount: 1, practiceCompleted: 2, assessmentCompleted: false },
