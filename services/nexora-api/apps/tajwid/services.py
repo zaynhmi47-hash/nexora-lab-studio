@@ -136,7 +136,7 @@ class TajwidService:
                 source="tajwid",
                 action="topic_completed",
                 source_key=topic.key,
-                xp_earned=topic.xp_reward,
+                xp_earned=XPRewardRules.lesson("tajwid", topic.xp_reward),
                 occurred_at=completion.completed_at,
             )
         return self.progress(user)
