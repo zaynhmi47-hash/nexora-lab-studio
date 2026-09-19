@@ -6,6 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.identity.models import NexoraUser
+from apps.gamification.services import GamificationService
 
 from .models import ArabicLesson, ArabicLessonCompletion, ArabicPath, ArabicProgress, ArabicPracticeItem
 
@@ -56,4 +57,12 @@ class ArabicService:
         progress.current_streak = streak
         progress.last_completed_at = now
         progress.save(update_fields=["xp_earned", "current_streak", "last_completed_at", "updated_at"])
+        GamificationService.record_activity(
+            user=user,
+            source="arabic",
+            action="lesson_completed",
+            source_key=lesson.key,
+            xp_earned=lesson.xp_reward,
+            occurred_at=now,
+        )
         return ArabicService.progress(user)
