@@ -101,3 +101,40 @@ class QuranRecitationListView(QuranBaseView):
             {"id": str(item.id), "name": item.name, "language": item.language, "audioUrl": item.audio_url}
             for item in QuranService().list_recitations()
         ])
+
+
+class QuranReadingGoalView(QuranBaseView):
+    def get(self, request):
+        goal = QuranService().get_or_create_reading_goal(request.user)
+        return Response({"dailyTargetPages": goal.daily_target_pages, "dailyTargetMinutes": goal.daily_target_minutes})
+
+    def put(self, request):
+        try:
+            goal = QuranService().update_reading_goal(
+                request.user,
+                int(request.data["dailyTargetPages"]),
+                int(request.data["dailyTargetMinutes"]),
+            )
+        except (KeyError, TypeError, ValueError):
+            return Response({"detail": "Invalid reading goal."}, status=400)
+        return Response({"dailyTargetPages": goal.daily_target_pages, "dailyTargetMinutes": goal.daily_target_minutes})
+
+
+class QuranReadingStatisticsView(QuranBaseView):
+    def get(self, request):
+        return Response(QuranService().get_reading_statistics(request.user))
+
+
+class QuranReadingLogView(QuranBaseView):
+    def post(self, request):
+        try:
+            reading_date = date.fromisoformat(str(request.data.get("date") or date.today().isoformat()))
+            log = QuranService().log_reading(
+                request.user,
+                reading_date,
+                int(request.data.get("pages", 0)),
+                int(request.data.get("minutes", 0)),
+            )
+        except (TypeError, ValueError):
+            return Response({"detail": "Invalid reading log."}, status=400)
+        return Response({"date": log.date.isoformat(), "pages": log.pages, "minutes": log.minutes})
