@@ -172,9 +172,16 @@ class LearningService:
             source="learning",
             action="lesson_completed",
             source_key=lesson.key,
-            xp_earned=lesson.xp_reward,
+            xp_earned=XPRewardRules.lesson("learning", lesson.xp_reward),
             occurred_at=now,
         )
+        streak_milestone = XPRewardRules.streak_milestone(progress.current_streak)
+        if streak_milestone:
+            GamificationService.record_milestone(
+                user=user,
+                key=streak_milestone,
+                occurred_at=now,
+            )
         return progress
 
 
