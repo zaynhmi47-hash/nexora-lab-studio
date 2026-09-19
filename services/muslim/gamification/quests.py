@@ -69,3 +69,30 @@ def build_quest_progress(
         )
 
     return result
+
+
+EVENT_TO_QUEST_KEYS: dict[str, tuple[str, ...]] = {
+    "LESSON_COMPLETED": ("daily_learn",),
+    "QUIZ_COMPLETED": ("daily_learn", "daily_quiz"),
+    "TAJWID_PRACTICE_COMPLETED": ("daily_learn", "daily_tajwid"),
+    "TAJWID_ASSESSMENT_COMPLETED": ("daily_learn",),
+    "ARABIC_LESSON_COMPLETED": ("daily_learn",),
+}
+
+
+def advance_daily_quests(
+    *,
+    activity_counts: dict[str, int],
+    event_type: str,
+) -> tuple[dict[str, int], tuple[str, ...]]:
+    """Advance only server-defined quest mappings and return newly completed keys."""
+    next_counts = dict(activity_counts)
+    newly_completed: list[str] = []
+
+    for quest_key in EVENT_TO_QUEST_KEYS.get(event_type, ()):
+        previous = next_counts.get(quest_key, 0)
+        next_counts[quest_key] = min(previous + 1, 1)
+        if previous < 1 and next_counts[quest_key] == 1:
+            newly_completed.append(quest_key)
+
+    return next_counts, tuple(newly_completed)
