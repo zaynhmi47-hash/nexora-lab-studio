@@ -4,7 +4,10 @@ from services.muslim.gamification.api_service import GamificationAPIService
 from services.muslim.gamification.application import XPRewardApplicationService
 from services.muslim.gamification.processor import GamificationEventProcessor
 from services.muslim.gamification.state_repository import InMemoryGamificationStateRepository
+from services.muslim.gamification.transaction import InMemoryGamificationTransactionManager
 from services.muslim.gamification.storage import InMemoryPersistentXPLedgerRepository
+from services.muslim.gamification.transaction import InMemoryGamificationTransactionManager
+from services.muslim.gamification.transaction import InMemoryGamificationTransactionManager
 
 
 def build_api() -> GamificationAPIService:
@@ -14,6 +17,7 @@ def build_api() -> GamificationAPIService:
         GamificationEventProcessor(
             XPRewardApplicationService(ledger),
             state,
+            InMemoryGamificationTransactionManager(),
         )
     )
 
