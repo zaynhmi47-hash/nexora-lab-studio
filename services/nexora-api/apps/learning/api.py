@@ -99,6 +99,23 @@ class LearningCompleteLessonView(APIView):
         return Response(progress_payload(progress))
 
 
+class LearningCompleteQuizView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, lesson_key: str):
+        answers = request.data.get("answers")
+        if not isinstance(answers, list) or not all(isinstance(answer, int) for answer in answers):
+            return Response({"detail": "answers must be an array of integers."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            result = LearningService.complete_quiz(request.user, lesson_key, answers)
+        except LearningLesson.DoesNotExist:
+            return Response({"detail": "Lesson not found."}, status=status.HTTP_404_NOT_FOUND)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result)
+
+
 class LearningHubView(APIView):
     authentication_classes = [FirebaseIdentityAuthentication]
     permission_classes = [IsAuthenticated]
