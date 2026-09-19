@@ -54,7 +54,7 @@ export function useFinanceComparison(period?: { startDate?: string; endDate?: st
   const [error, setError] = useState<Error | null>(null);
 
   const load = useCallback(async () => {
-    if (initializing || !user || !tenantApi.isReady) {
+    if (initializing || !user || !tenantApi.ready) {
       setComparison(null);
       return;
     }
