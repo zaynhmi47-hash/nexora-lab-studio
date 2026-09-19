@@ -113,6 +113,18 @@ class GamificationService:
             )
 
     @staticmethod
+    @transaction.atomic
+    def record_milestone(user: NexoraUser, key: str, occurred_at=None) -> GamificationActivity:
+        return GamificationService.record_activity(
+            user=user,
+            source=GamificationActivity.Source.GAMIFICATION,
+            action="milestone_unlocked",
+            source_key=key,
+            xp_earned=0,
+            occurred_at=occurred_at or timezone.now(),
+        )
+
+    @staticmethod
     def list_recent(user: NexoraUser, limit: int = 50):
         GamificationService.sync_from_domains(user)
         limit = min(max(limit, 1), 100)
@@ -138,6 +150,7 @@ class GamificationService:
                 GamificationActivity.Source.LEARNING,
                 GamificationActivity.Source.TAJWID,
                 GamificationActivity.Source.ARABIC,
+                GamificationActivity.Source.GAMIFICATION,
             )
         }
         daily = {}
