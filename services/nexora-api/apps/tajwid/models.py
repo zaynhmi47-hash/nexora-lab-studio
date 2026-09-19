@@ -31,6 +31,18 @@ class TajwidPracticeItem(AuditableBaseModel):
         ordering = ("topic", "sort_order")
 
 
+class TajwidPracticeCompletion(AuditableBaseModel):
+    user = models.ForeignKey(NexoraUser, on_delete=models.CASCADE, related_name="tajwid_practice_completions")
+    practice_item = models.ForeignKey(TajwidPracticeItem, on_delete=models.PROTECT, related_name="user_completions")
+    completed_at = models.DateTimeField()
+
+    class Meta:
+        db_table = "tajwid_practice_completions"
+        constraints = [
+            models.UniqueConstraint(fields=("user", "practice_item"), name="tajwid_user_practice_unique"),
+        ]
+
+
 class TajwidProgress(AuditableBaseModel):
     user = models.OneToOneField(NexoraUser, on_delete=models.CASCADE, related_name="tajwid_progress")
     practice_completed = models.PositiveIntegerField(default=0)
