@@ -316,6 +316,7 @@ class UnifiedLearningEngine:
             "currentStreak": cls.current_streak(user),
             "domains": domains,
             "rewards": cls.rewards(total_xp),
+            "achievements": cls.achievement_snapshot(user),
         }
 
 
