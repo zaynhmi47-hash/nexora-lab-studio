@@ -93,6 +93,18 @@ export default function LearnScreen() {
         )}
 
         {hub && (
+          <Pressable onPress={() => router.push('/gamification')} accessibilityRole="button">
+            <Card style={styles.activityCard}>
+              <View style={styles.activityCopy}>
+                <Text style={styles.progressTitle}>XP & Activity</Text>
+                <Text style={styles.muted}>Lihat statistik XP dan riwayat aktivitas belajar.</Text>
+              </View>
+              <Text style={styles.activityArrow}>→</Text>
+            </Card>
+          </Pressable>
+        )}
+
+        {hub && (
           <Card style={styles.rewardCard}>
             <Text style={styles.progressTitle}>Unified Rewards</Text>
             {hub.rewards.map((reward) => (
@@ -194,6 +206,9 @@ const styles = StyleSheet.create({
   domainCard: { backgroundColor: colors.surfaceMuted, borderRadius: 12, flex: 1, padding: spacing.sm },
   domainLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '800' },
   domainXp: { color: colors.text, fontSize: 17, fontWeight: '900', marginTop: 4 },
+  activityCard: { marginTop: spacing.md, flexDirection: 'row', alignItems: 'center' },
+  activityCopy: { flex: 1 },
+  activityArrow: { color: colors.primary, fontSize: 22, fontWeight: '900', marginLeft: spacing.md },
   rewardCard: { marginTop: spacing.md },
   rewardRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md },
   rewardIcon: { alignItems: 'center', backgroundColor: colors.primarySoft, borderRadius: 16, color: colors.primary, fontSize: 18, fontWeight: '900', height: 32, paddingTop: 5, textAlign: 'center', width: 32 },
