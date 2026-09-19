@@ -7,6 +7,8 @@ import type {
   LearningAchievement,
   LearningHub,
   QuizQuestion,
+  GamificationActivity,
+  GamificationStatistics,
 } from './types';
 
 function apiUrl(path: string) {
@@ -47,5 +49,27 @@ export function nexoraCoreLearningRepository(session: AuthSession): LearningPort
       }
       return request<LearningProgress>(session, `lessons/${encodeURIComponent(lessonId)}/complete/`, { method: 'POST' });
     },
+  };
+}
+
+
+export function nexoraCoreGamificationRepository(session: AuthSession) {
+  const base = env.nexoraCoreUrl.replace(/\/$/, '');
+  const request = async <T>(path: string): Promise<T> => {
+    const response = await fetch(`${base}/api/v1/gamification/${path}`, {
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${session.accessToken}`,
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`Nexora Core gamification request failed (${response.status}).`);
+    }
+    return (await response.json()) as T;
+  };
+
+  return {
+    getActivities: () => request<GamificationActivity[]>('activities/'),
+    getStatistics: (days = 30) => request<GamificationStatistics>(`statistics/?days=${days}`),
   };
 }
