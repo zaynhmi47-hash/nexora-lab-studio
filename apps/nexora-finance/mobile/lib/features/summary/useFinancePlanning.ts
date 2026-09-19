@@ -4,6 +4,33 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useTenantApi } from '@/lib/api/tenant';
 import type { FinancePlanningSummary } from './types';
 
+interface ApiPlanningBudgetItem {
+  budget_id: string;
+  name: string;
+  category: string;
+  budget_minor: number;
+  actual_minor: number;
+  remaining_minor: number;
+  utilization_percentage: number | null;
+  status: FinancePlanningSummary['budgetItems'][number]['status'];
+  transaction_count: number;
+}
+
+interface ApiPlanningGoalItem {
+  goal_id: string;
+  name: string;
+  target_amount_minor: number;
+  current_amount_minor: number;
+  remaining_amount_minor: number;
+  progress_percentage: number | null;
+  start_date: string;
+  target_date: string;
+  planned_saving_minor: number;
+  saving_gap_minor: number;
+  days_remaining: number;
+  status: FinancePlanningSummary['goalItems'][number]['status'];
+}
+
 interface ApiPlanningSummary {
   start_date: string;
   end_date: string;
@@ -20,6 +47,8 @@ interface ApiPlanningSummary {
   active_goal_count: number;
   over_budget_count: number;
   planning_status: FinancePlanningSummary['planningStatus'];
+  budget_items: ApiPlanningBudgetItem[];
+  goal_items: ApiPlanningGoalItem[];
 }
 
 const mapSummary = (item: ApiPlanningSummary): FinancePlanningSummary => ({
@@ -38,6 +67,31 @@ const mapSummary = (item: ApiPlanningSummary): FinancePlanningSummary => ({
   activeGoalCount: item.active_goal_count,
   overBudgetCount: item.over_budget_count,
   planningStatus: item.planning_status,
+  budgetItems: item.budget_items.map((budget) => ({
+    budgetId: budget.budget_id,
+    name: budget.name,
+    category: budget.category,
+    budgetMinor: budget.budget_minor,
+    actualMinor: budget.actual_minor,
+    remainingMinor: budget.remaining_minor,
+    utilizationPercentage: budget.utilization_percentage,
+    status: budget.status,
+    transactionCount: budget.transaction_count,
+  })),
+  goalItems: item.goal_items.map((goal) => ({
+    goalId: goal.goal_id,
+    name: goal.name,
+    targetAmountMinor: goal.target_amount_minor,
+    currentAmountMinor: goal.current_amount_minor,
+    remainingAmountMinor: goal.remaining_amount_minor,
+    progressPercentage: goal.progress_percentage,
+    startDate: goal.start_date,
+    targetDate: goal.target_date,
+    plannedSavingMinor: goal.planned_saving_minor,
+    savingGapMinor: goal.saving_gap_minor,
+    daysRemaining: goal.days_remaining,
+    status: goal.status,
+  })),
 });
 
 export function useFinancePlanning(period?: { startDate?: string; endDate?: string }) {
