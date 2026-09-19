@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { AdaptiveHeader, ResponsiveContainer, ResponsiveGrid, ResponsiveScaffold } from '@/components/layout';
 import { useResponsive } from '@/lib/responsive';
 import { theme } from '@/lib/theme';
+import { useGoals } from '@/lib/features/goals';
 import { useFinanceBudgetSummary, useFinanceCategoryBreakdown, useFinanceCashFlow, useFinanceComparison, useFinanceInsights, useFinanceProfitLoss, useFinanceSummary, useFinanceTrend } from '@/lib/features/summary';
 import { useTransactions } from '@/lib/features/transactions';
 
@@ -72,6 +73,7 @@ export default function HomeScreen() {
   const period = useMemo(() => getPeriodDates(periodKey), [periodKey]);
 
   const { summary, loading: summaryLoading, error: summaryError } = useFinanceSummary(period);
+  const { goals, loading: goalsLoading, error: goalsError } = useGoals();
   const { summary: budgetSummary, loading: budgetLoading, error: budgetError } = useFinanceBudgetSummary(period);
   const { comparison, loading: comparisonLoading, error: comparisonError } = useFinanceComparison(period);
   const { report: profitLoss, loading: profitLossLoading, error: profitLossError } = useFinanceProfitLoss(period);
@@ -82,8 +84,8 @@ export default function HomeScreen() {
   const { transactions, loading: transactionsLoading, error: transactionsError } =
     useTransactions({ status: 'posted', startDate: period.startDate, endDate: period.endDate, page: 1, pageSize: 8 });
 
-  const loading = summaryLoading || breakdownLoading || trendLoading || transactionsLoading || comparisonLoading || profitLossLoading || cashFlowLoading || insightsLoading || budgetLoading;
-  const error = summaryError ?? breakdownError ?? trendError ?? transactionsError ?? comparisonError ?? profitLossError ?? cashFlowError ?? insightsError ?? budgetError;
+  const loading = summaryLoading || goalsLoading || breakdownLoading || trendLoading || transactionsLoading || comparisonLoading || profitLossLoading || cashFlowLoading || insightsLoading || budgetLoading;
+  const error = summaryError ?? goalsError ?? breakdownError ?? trendError ?? transactionsError ?? comparisonError ?? profitLossError ?? cashFlowError ?? insightsError ?? budgetError;
 
   const incomeBreakdown = useMemo(() => breakdown.filter((item) => item.direction === 'income'), [breakdown]);
   const expenseBreakdown = useMemo(() => breakdown.filter((item) => item.direction === 'expense'), [breakdown]);
@@ -218,6 +220,29 @@ export default function HomeScreen() {
           </ResponsiveGrid>
 
           {renderTrend()}
+          <View style={styles.goalsCard}>
+            <View style={styles.trendHeader}>
+              <View style={styles.trendTitleBlock}>
+                <Text style={styles.sectionTitle}>Financial Goals</Text>
+                <Text style={styles.hint}>Your active savings targets</Text>
+              </View>
+              <Pressable onPress={() => { /* navigation is handled by the Goals tab */ }}>
+                <Text style={styles.linkText}>Goals</Text>
+              </Pressable>
+            </View>
+            {goalsLoading && goals.length === 0 ? <Text style={styles.hint}>Loading goals…</Text> :
+             goals.length === 0 ? <Text style={styles.hint}>No active goals yet. Create one from the Goals tab.</Text> :
+             <ResponsiveGrid gap={12}>
+               {goals.slice(0, 4).map((goal) => (
+                 <View key={goal.id} style={styles.goalSummaryItem}>
+                   <Text style={styles.goalName} numberOfLines={1}>{goal.name}</Text>
+                   <Text style={styles.goalTarget}>{formatIdr(goal.targetAmountMinor)}</Text>
+                   <Text style={styles.hint}>{goal.startDate} → {goal.targetDate}</Text>
+                 </View>
+               ))}
+             </ResponsiveGrid>}
+          </View>
+
 
           {comparison ? (
             <View style={styles.comparisonCard}>
@@ -452,6 +477,12 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  goalsCard: { padding: 20, borderRadius: 16, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 14 },
+  goalSummaryItem: { padding: 16, borderRadius: 14, borderWidth: 1, borderColor: theme.colors.border, gap: 5 },
+  goalName: { fontSize: 15, fontWeight: '800', color: theme.colors.text },
+  goalTarget: { fontSize: 18, fontWeight: '900', color: theme.colors.text },
+  linkText: { color: theme.colors.primary, fontWeight: '700' },
+
   content: { paddingTop: 20, paddingBottom: 40, gap: 20 },
   periodSection: { padding: theme.spacing.lg, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 10 },
   periodLabel: { fontSize: 14, fontWeight: '700', color: theme.colors.text },
