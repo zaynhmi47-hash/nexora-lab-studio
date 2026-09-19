@@ -6,6 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.identity.models import NexoraUser
+from apps.gamification.services import GamificationService
 from apps.tajwid.services import TajwidService
 from apps.arabic.services import ArabicService
 from apps.tajwid.models import TajwidPracticeCompletion, TajwidTopicCompletion
@@ -95,6 +96,14 @@ class LearningService:
         progress.current_streak = _streak_after_completion(progress, now)
         progress.last_completed_at = now
         progress.save(update_fields=["xp", "level", "current_streak", "last_completed_at", "updated_at"])
+        GamificationService.record_activity(
+            user=user,
+            source="learning",
+            action="lesson_completed",
+            source_key=lesson.key,
+            xp_earned=lesson.xp_reward,
+            occurred_at=now,
+        )
         return progress
 
 
