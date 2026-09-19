@@ -4,16 +4,18 @@ from services.muslim.gamification.application import XPRewardApplicationService
 from services.muslim.gamification.domain import GamificationEvent, GamificationEventType
 from services.muslim.gamification.processor import GamificationEventProcessor
 from services.muslim.gamification.state_repository import InMemoryGamificationStateRepository
-from services.muslim.gamification.transaction import InMemoryGamificationTransactionManager
 from services.muslim.gamification.storage import InMemoryPersistentXPLedgerRepository
-from services.muslim.gamification.transaction import InMemoryGamificationTransactionManager
 from services.muslim.gamification.transaction import InMemoryGamificationTransactionManager
 
 
 def build_processor():
     ledger = InMemoryPersistentXPLedgerRepository()
     state = InMemoryGamificationStateRepository()
-    return GamificationEventProcessor(XPRewardApplicationService(ledger), state), state
+    return GamificationEventProcessor(
+        XPRewardApplicationService(ledger),
+        state,
+        InMemoryGamificationTransactionManager(),
+    ), state
 
 
 def make_event(event_id: str = "lesson-1") -> GamificationEvent:
