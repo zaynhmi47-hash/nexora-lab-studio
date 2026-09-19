@@ -5,6 +5,7 @@ import type {
   LearningPort,
   LearningProgress,
   LearningAchievement,
+  LearningHub,
   QuizQuestion,
 } from './types';
 
@@ -31,6 +32,7 @@ async function request<T>(session: AuthSession, path: string, init?: RequestInit
 export function nexoraCoreLearningRepository(session: AuthSession): LearningPort {
   return {
     getCourses: () => request<LearningCourse[]>(session, 'courses/'),
+    getHub: () => request<LearningHub>(session, 'hub/'),
     getProgress: (userId) => {
       if (session.user.id !== userId) {
         return Promise.reject(new Error('Learning user does not match the authenticated NEXORA identity.'));
