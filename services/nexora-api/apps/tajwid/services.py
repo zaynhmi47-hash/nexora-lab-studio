@@ -2,7 +2,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.identity.models import NexoraUser
-from apps.gamification.services import GamificationService, XPRewardRules
+from apps.gamification.services import GamificationService, XPRewardRules, XPRewardRules
 
 from .models import (
     TajwidPracticeCompletion,
@@ -150,7 +150,7 @@ class TajwidService:
 
         progress, _ = TajwidProgress.objects.get_or_create(user=user)
         passed = correct / total >= 0.7
-        assessment_xp = 100 if passed and not progress.assessment_completed else 0
+        assessment_xp = XPRewardRules.tajwid_assessment(passed) if not progress.assessment_completed else 0
 
         if passed and not progress.assessment_completed:
             progress.assessment_completed = True
