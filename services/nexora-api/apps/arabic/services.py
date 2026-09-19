@@ -6,7 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.identity.models import NexoraUser
-from apps.gamification.services import GamificationService
+from apps.gamification.services import GamificationService, XPRewardRules
 
 from .models import ArabicLesson, ArabicLessonCompletion, ArabicPath, ArabicProgress, ArabicPracticeItem
 
@@ -68,7 +68,7 @@ class ArabicService:
             source="arabic",
             action="lesson_completed",
             source_key=lesson.key,
-            xp_earned=lesson.xp_reward,
+            xp_earned=XPRewardRules.lesson("arabic", lesson.xp_reward),
             occurred_at=now,
         )
         return ArabicService.progress(user)
