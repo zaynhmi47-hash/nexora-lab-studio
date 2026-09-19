@@ -28,6 +28,11 @@ export function nexoraCoreTajwidRepository(session: AuthSession): TajwidPort {
     getProgress: () => request<TajwidProgress>(session, '/progress/'),
     getPractice: (topicId: TajwidTopicId) =>
       request<TajwidPracticeItem[]>(session, `/topics/${encodeURIComponent(topicId)}/practice/`),
+    completePractice: (_userId, practiceId, correct) =>
+      request<TajwidProgress>(session, `/practice/${encodeURIComponent(practiceId)}/complete/`, {
+        method: 'POST',
+        body: JSON.stringify({ correct }),
+      }),
     completeTopic: (_userId, topicId) =>
       request<TajwidProgress>(session, `/topics/${encodeURIComponent(topicId)}/complete/`, { method: 'POST' }),
     completeAssessment: (_userId, correctAnswers, totalQuestions) =>
