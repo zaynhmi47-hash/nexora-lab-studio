@@ -7,3 +7,4 @@ export * from './useFinanceComparison';
 export * from './useFinanceProfitLoss';
 export * from './useFinanceCashFlow';
 export * from './useFinanceInsights';
+export * from './useFinanceBudgetSummary';
