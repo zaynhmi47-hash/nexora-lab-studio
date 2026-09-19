@@ -6,6 +6,46 @@ import type {
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? "";
 
+export interface GamificationProfile {
+  xp: number;
+  level: number;
+  streak: {
+    current: number;
+    longest: number;
+    lastActivityDate: string | null;
+  };
+  quests: Array<{
+    key: string;
+    progress: number;
+    target: number;
+    completed: boolean;
+    rewardClaimed: boolean;
+  }>;
+  achievements: string[];
+  dailyReward: {
+    claimed: boolean;
+    date: string | null;
+  };
+  streakMilestones: number[];
+}
+
+export interface GamificationEventResponse {
+  success: boolean;
+  reward: XPRewardResult;
+  gamification: GamificationProfile & {
+    newAchievements: Array<{
+      key: string;
+      name: string;
+      description: string;
+    }>;
+  };
+  rewards: Array<{
+    awarded: boolean;
+    xp: number;
+    reason: string | null;
+  }>;
+}
+
 function requireApiBaseUrl(): string {
   if (!API_BASE_URL) {
     throw new Error(
@@ -13,21 +53,21 @@ function requireApiBaseUrl(): string {
     );
   }
 
-  return API_BASE_URL.replace(/\\/$/, "");
+  return API_BASE_URL.replace(/\/$/, "");
 }
 
-export async function awardXP(
-  event: GamificationEvent,
+async function request<T>(
+  path: string,
   accessToken: string,
-): Promise<{ reward: XPRewardResult; balance: XPBalance }> {
-  const response = await fetch(`${requireApiBaseUrl()}/gamification/events/`, {
-    method: "POST",
+  init?: RequestInit,
+): Promise<T> {
+  const response = await fetch(`${requireApiBaseUrl()}${path}`, {
+    ...init,
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
-      "Idempotency-Key": event.eventId,
+      ...(init?.headers ?? {}),
     },
-    body: JSON.stringify(event),
   });
 
   if (!response.ok) {
@@ -37,5 +77,32 @@ export async function awardXP(
     );
   }
 
-  return response.json();
+  return response.json() as Promise<T>;
+}
+
+export async function awardXP(
+  event: GamificationEvent,
+  accessToken: string,
+): Promise<GamificationEventResponse> {
+  return request<GamificationEventResponse>("/gamification/events/", accessToken, {
+    method: "POST",
+    headers: {
+      "Idempotency-Key": event.eventId,
+    },
+    body: JSON.stringify(event),
+  });
+}
+
+export async function getGamificationProfile(
+  accessToken: string,
+): Promise<{ success: true; gamification: GamificationProfile }> {
+  return request("/gamification/profile/", accessToken);
+}
+
+export async function claimDailyReward(
+  accessToken: string,
+): Promise<GamificationEventResponse> {
+  return request("/gamification/daily-reward/claim/", accessToken, {
+    method: "POST",
+  });
 }
