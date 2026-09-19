@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from datetime import date
 
-from django.db.models import Count, Sum
+from django.db.models import BigIntegerField, Count, Q, Sum, Value
 from django.db.models.functions import Coalesce
-from django.db.models import BigIntegerField, Value
 
 from apps.finance.models import FinanceBudget, FinanceTransaction
 
@@ -30,6 +29,19 @@ def get_finance_budget_summary(*, organization_id, start_date: date, end_date: d
     total_actual = 0
     over_budget_count = 0
     zero = Value(0, output_field=BigIntegerField())
+    category_totals = {}
+    if budgets:
+        category_totals = {
+            row["category"]: row["amount_minor"]
+            for row in FinanceTransaction.objects.active().filter(
+                organization_id=organization_id,
+                status=FinanceTransaction.Status.POSTED,
+                direction=FinanceTransaction.Direction.EXPENSE,
+                category__in={budget.category for budget in budgets},
+                occurred_at__date__gte=start_date,
+                occurred_at__date__lte=end_date,
+            ).values("category").annotate(amount_minor=Coalesce(Sum("amount_minor"), zero))
+        }
 
     for budget in budgets:
         overlap_days = _overlap_days(budget.start_date, budget.end_date, start_date, end_date)
