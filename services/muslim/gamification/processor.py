@@ -6,7 +6,7 @@ from typing import Mapping
 
 from .achievements import AchievementDefinition, unlocked_achievements
 from .application import XPRewardApplicationService
-from .domain import GamificationEvent, RewardResult
+from .domain import GamificationEvent, RewardReason, RewardResult
 from .leveling import level_for_xp
 from .streaks import StreakState, apply_daily_activity
 
@@ -48,10 +48,13 @@ class GamificationEventProcessor:
         reward = self.reward_service.process(event)
 
         next_xp = current_xp + reward.xp if reward.awarded else current_xp
-        next_streak = apply_daily_activity(
-            current_streak,
-            activity_date or event.occurred_at.astimezone(timezone.utc).date(),
-        )
+        # A replayed event must not advance the streak a second time.
+        next_streak = current_streak
+        if reward.reason is not RewardReason.ALREADY_PROCESSED:
+            next_streak = apply_daily_activity(
+                current_streak,
+                activity_date or event.occurred_at.astimezone(timezone.utc).date(),
+            )
 
         new_achievements = tuple(
             unlocked_achievements(
