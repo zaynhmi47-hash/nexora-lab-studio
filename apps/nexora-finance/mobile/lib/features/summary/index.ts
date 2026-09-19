@@ -5,3 +5,4 @@ export * from './useFinanceCategoryBreakdown';
 export * from './useFinanceTrend';
 export * from './useFinanceComparison';
 export * from './useFinanceProfitLoss';
+export * from './useFinanceCashFlow';
