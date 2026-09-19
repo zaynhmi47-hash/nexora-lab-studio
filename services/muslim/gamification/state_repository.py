@@ -14,6 +14,11 @@ class UserGamificationState:
     longest_streak: int
     last_activity_date: date | None
     unlocked_achievement_keys: tuple[str, ...] = ()
+    quest_date: date | None = None
+    quest_activity_counts: tuple[tuple[str, int], ...] = ()
+    claimed_quest_keys: tuple[str, ...] = ()
+    daily_reward_date: date | None = None
+    rewarded_streak_milestones: tuple[int, ...] = ()
     updated_at: datetime = field(
         default_factory=lambda: datetime.now(timezone.utc)
     )
