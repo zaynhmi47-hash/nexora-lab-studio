@@ -8,3 +8,4 @@ export * from './useFinanceProfitLoss';
 export * from './useFinanceCashFlow';
 export * from './useFinanceInsights';
 export * from './useFinanceBudgetSummary';
+export * from './useFinancePlanning';
