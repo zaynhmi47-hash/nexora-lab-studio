@@ -24,12 +24,18 @@ class InMemoryPersistentXPLedgerRepository(XPLedgerRepository):
 
     def __init__(self) -> None:
         self._entries: dict[str, XPLedgerEntry] = {}
+        self._reward_keys: dict[str, str] = {}
         self._balances: dict[str, XPBalanceRecord] = {}
         self._lock = RLock()
 
     def get_by_event_id(self, event_id: str) -> XPLedgerEntry | None:
         with self._lock:
             return self._entries.get(event_id)
+
+    def get_by_reward_key(self, reward_key: str) -> XPLedgerEntry | None:
+        with self._lock:
+            event_id = self._reward_keys.get(reward_key)
+            return self._entries.get(event_id) if event_id else None
 
     def count_events(
         self,
@@ -53,6 +59,9 @@ class InMemoryPersistentXPLedgerRepository(XPLedgerRepository):
                 return False
 
             self._entries[entry.event_id] = entry
+            reward_key = f"event:{entry.event_id}"
+            self._reward_keys[reward_key] = entry.event_id
+
             current = self._balances.get(entry.user_id)
             previous_xp = current.xp if current else 0
             self._balances[entry.user_id] = XPBalanceRecord(
