@@ -12,7 +12,11 @@ class GamificationActivityView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        activities = GamificationService.list_recent(request.user)
+        try:
+            limit = int(request.query_params.get("limit", 50))
+        except (TypeError, ValueError):
+            limit = 50
+        activities = GamificationService.list_recent(request.user, limit=limit)
         return Response([
             {
                 "id": str(activity.id),
