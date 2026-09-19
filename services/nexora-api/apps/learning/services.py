@@ -6,6 +6,8 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.identity.models import NexoraUser
+from apps.tajwid.services import TajwidService
+from apps.arabic.services import ArabicService
 
 from .models import (
     LearningCourse,
@@ -118,8 +120,8 @@ class LearningService:
 
 def learning_hub(user: NexoraUser):
     learning = LearningService.progress(user)
-    tajwid = __import__("apps.tajwid.services", fromlist=["TajwidService"]).TajwidService.progress(user)
-    arabic = __import__("apps.arabic.services", fromlist=["ArabicService"]).ArabicService.progress(user)
+    tajwid = TajwidService.progress(user)
+    arabic = ArabicService.progress(user)
 
     total_xp = learning.xp + tajwid["xpEarned"] + arabic["xpEarned"]
     return {
