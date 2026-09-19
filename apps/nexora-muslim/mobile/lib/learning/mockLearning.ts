@@ -152,6 +152,11 @@ export const mockLearning: LearningPort = {
         { key: 'xp-250', title: 'Dedicated Learner', description: 'Reach 250 total learning XP.', earned: progress.xp + 125 >= 250 },
         { key: 'xp-500', title: 'Learning Mastery', description: 'Reach 500 total learning XP.', earned: progress.xp + 125 >= 500 },
       ],
+      achievements: [
+        { id: 'first-activity', key: 'first-activity', title: 'First Activity', description: 'Complete your first activity in any learning domain.', earnedAt: new Date().toISOString() },
+        { id: 'streak-7', key: 'streak-7', title: 'Seven Day Streak', description: 'Maintain a seven day learning streak.', earnedAt: new Date().toISOString() },
+        { id: 'xp-100', key: 'xp-100', title: '100 Total XP', description: 'Reach 100 XP across all learning domains.', earnedAt: new Date().toISOString() },
+      ],
       domains: {
         learning: { xp: progress.xp, level: progress.level, streak: progress.currentStreak, completedCount: progress.completedLessonIds.length },
         tajwid: { xp: 45, streak: 0, completedCount: 1, practiceCompleted: 2, assessmentCompleted: false },
