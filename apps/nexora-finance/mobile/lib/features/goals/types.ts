@@ -1,0 +1,9 @@
+export type FinanceGoalLifecycleStatus = 'active' | 'paused' | 'archived';
+export type FinanceGoalProgressStatus = 'active' | 'paused' | 'completed' | 'overdue' | 'archived';
+export interface FinanceGoal { id:string; organizationId:string; name:string; targetAmountMinor:number; currency:'IDR'; startDate:string; targetDate:string; status:FinanceGoalLifecycleStatus; metadata:Record<string,unknown>; createdAt:string; updatedAt:string; }
+export interface FinanceGoalProgress { goalId:string; name:string; targetAmountMinor:number; currentAmountMinor:number; remainingAmountMinor:number; progressPercentage:number|null; startDate:string; targetDate:string; status:FinanceGoalProgressStatus; configuredStatus:FinanceGoalLifecycleStatus; currency:'IDR'; contributionCount:number; daysRemaining:number; }
+export interface FinanceGoalSummary { currency:'IDR'; goalCount:number; activeCount:number; completedCount:number; overdueCount:number; totalTargetAmountMinor:number; totalCurrentAmountMinor:number; goals:FinanceGoalProgress[]; }
+export interface CreateGoalInput { name:string; targetAmountMinor:number; currency?:'IDR'; startDate:string; targetDate:string; metadata?:Record<string,unknown>; }
+export interface UpdateGoalInput { name?:string; targetAmountMinor?:number; currency?:'IDR'; startDate?:string; targetDate?:string; status?:'active'|'paused'; metadata?:Record<string,unknown>; }
+export interface CreateGoalContributionInput { amountMinor:number; currency?:'IDR'; contributedAt:string; note?:string; reference?:string; idempotencyKey?:string; metadata?:Record<string,unknown>; }
+export interface FinanceGoalContribution { id:string; organizationId:string; goalId:string; amountMinor:number; currency:'IDR'; contributedAt:string; status:'posted'|'void'; note:string; reference:string; idempotencyKey:string; metadata:Record<string,unknown>; createdAt:string; updatedAt:string; }
