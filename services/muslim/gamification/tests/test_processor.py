@@ -3,27 +3,30 @@ from datetime import datetime, timezone
 from services.muslim.gamification.application import XPRewardApplicationService
 from services.muslim.gamification.domain import GamificationEvent, GamificationEventType
 from services.muslim.gamification.processor import GamificationEventProcessor
+from services.muslim.gamification.state_repository import InMemoryGamificationStateRepository
 from services.muslim.gamification.storage import InMemoryPersistentXPLedgerRepository
-from services.muslim.gamification.streaks import StreakState
+
+
+def build_processor():
+    ledger = InMemoryPersistentXPLedgerRepository()
+    state = InMemoryGamificationStateRepository()
+    return GamificationEventProcessor(XPRewardApplicationService(ledger), state), state
+
+
+def make_event(event_id: str = "lesson-1") -> GamificationEvent:
+    return GamificationEvent(
+        event_id=event_id,
+        user_id="user-1",
+        event_type=GamificationEventType.LESSON_COMPLETED,
+        occurred_at=datetime(2026, 9, 19, tzinfo=timezone.utc),
+        activity_id=event_id,
+    )
 
 
 def test_processor_updates_xp_level_streak_and_achievements() -> None:
-    repository = InMemoryPersistentXPLedgerRepository()
-    processor = GamificationEventProcessor(
-        XPRewardApplicationService(repository)
-    )
+    processor, _ = build_processor()
 
-    result = processor.process(
-        GamificationEvent(
-            event_id="lesson-1",
-            user_id="user-1",
-            event_type=GamificationEventType.LESSON_COMPLETED,
-            occurred_at=datetime(2026, 9, 19, tzinfo=timezone.utc),
-            activity_id="lesson-1",
-        ),
-        current_xp=0,
-        current_streak=StreakState(0, 0, None),
-    )
+    result = processor.process(make_event())
 
     assert result.reward.awarded is True
     assert result.snapshot.xp == 20
@@ -35,33 +38,14 @@ def test_processor_updates_xp_level_streak_and_achievements() -> None:
     )
 
 
-def test_duplicate_event_does_not_add_xp_again() -> None:
-    repository = InMemoryPersistentXPLedgerRepository()
-    processor = GamificationEventProcessor(
-        XPRewardApplicationService(repository)
-    )
+def test_duplicate_event_does_not_add_xp_or_streak_again() -> None:
+    processor, state = build_processor()
+    event = make_event()
 
-    event = GamificationEvent(
-        event_id="lesson-1",
-        user_id="user-1",
-        event_type=GamificationEventType.LESSON_COMPLETED,
-        occurred_at=datetime(2026, 9, 19, tzinfo=timezone.utc),
-        activity_id="lesson-1",
-    )
-
-    first = processor.process(
-        event,
-        current_xp=0,
-        current_streak=StreakState(0, 0, None),
-    )
-    second = processor.process(
-        event,
-        current_xp=first.snapshot.xp,
-        current_streak=first.snapshot.streak,
-        already_unlocked=tuple(
-            item.key for item in first.snapshot.unlocked_achievements
-        ),
-    )
+    first = processor.process(event)
+    second = processor.process(event)
 
     assert first.snapshot.xp == 20
     assert second.snapshot.xp == 20
+    assert second.snapshot.streak.current == 1
+    assert state.get("user-1").xp == 20
