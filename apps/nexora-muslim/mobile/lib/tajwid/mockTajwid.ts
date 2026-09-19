@@ -172,6 +172,22 @@ export const mockTajwid: TajwidPort = {
     }));
   },
 
+  async completePractice(userId, practiceId, correct) {
+    if (userId !== progress.userId) progress = { ...progress, userId };
+    if (progress.practiceCompleted < 0) progress.practiceCompleted = 0;
+    const alreadyCompleted = practice[Object.keys(practice).find((key) =>
+      practice[key as TajwidTopicId]?.some((item) => item.id === practiceId),
+    ) as TajwidTopicId]?.some((item) => item.id === practiceId) === false;
+    if (!alreadyCompleted) {
+      progress = {
+        ...progress,
+        practiceCompleted: progress.practiceCompleted + 1,
+        xpEarned: progress.xpEarned + (correct ? 5 : 0),
+      };
+    }
+    return cloneProgress();
+  },
+
   async completeTopic(userId, topicId) {
     if (userId !== progress.userId) progress = { ...progress, userId };
 
