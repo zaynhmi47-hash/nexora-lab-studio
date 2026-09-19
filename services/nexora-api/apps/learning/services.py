@@ -6,7 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.identity.models import NexoraUser
-from apps.gamification.services import GamificationService
+from apps.gamification.services import GamificationService, XPRewardRules
 from apps.tajwid.services import TajwidService
 from apps.arabic.services import ArabicService
 from apps.tajwid.models import TajwidPracticeCompletion, TajwidTopicCompletion
@@ -119,7 +119,7 @@ class LearningService:
             source="learning",
             action="quiz_completed",
             source_key=f"{lesson.key}:{attempt.id}",
-            xp_earned=0,
+            xp_earned=XPRewardRules.quiz(passed),
             occurred_at=completed_at,
         )
         return {
