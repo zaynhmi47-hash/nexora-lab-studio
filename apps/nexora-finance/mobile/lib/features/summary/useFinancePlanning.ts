@@ -26,6 +26,7 @@ interface ApiPlanningGoalItem {
   start_date: string;
   target_date: string;
   planned_saving_minor: number;
+  actual_contribution_minor: number;
   saving_gap_minor: number;
   days_remaining: number;
   status: FinancePlanningSummary['goalItems'][number]['status'];
@@ -88,6 +89,7 @@ const mapSummary = (item: ApiPlanningSummary): FinancePlanningSummary => ({
     startDate: goal.start_date,
     targetDate: goal.target_date,
     plannedSavingMinor: goal.planned_saving_minor,
+    actualContributionMinor: goal.actual_contribution_minor,
     savingGapMinor: goal.saving_gap_minor,
     daysRemaining: goal.days_remaining,
     status: goal.status,
