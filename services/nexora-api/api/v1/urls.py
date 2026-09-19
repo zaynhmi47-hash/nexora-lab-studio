@@ -8,6 +8,7 @@ from apps.finance.api.reporting_views import FinanceCategoryBreakdownView
 from apps.finance.api.summary_views import FinanceSummaryView
 from apps.finance.api.comparison_views import FinancePeriodComparisonView
 from apps.finance.api.profit_loss_views import FinanceProfitLossView
+from apps.finance.api.budget_views import FinanceBudgetDetailView, FinanceBudgetListView
 from apps.finance.api.cash_flow_views import FinanceCashFlowView
 from apps.finance.api.insights_views import FinanceInsightsView
 from apps.finance.api.trend_views import FinanceTrendView
@@ -37,6 +38,8 @@ urlpatterns = [
     path("products/", include("apps.capabilities.api.urls_products")),
     path("capabilities/", include("apps.capabilities.api.urls")),
     path("organizations/<uuid:organization_id>/finance/transactions/", include("apps.finance.api.urls")),
+    path("organizations/<uuid:organization_id>/finance/budgets/", FinanceBudgetListView.as_view(), name="finance-budget-list"),
+    path("organizations/<uuid:organization_id>/finance/budgets/<uuid:budget_id>/", FinanceBudgetDetailView.as_view(), name="finance-budget-detail"),
     path("organizations/<uuid:organization_id>/finance/summary/", FinanceSummaryView.as_view(), name="finance-summary"),
     path(
         "organizations/<uuid:organization_id>/finance/reporting/category-breakdown/",
