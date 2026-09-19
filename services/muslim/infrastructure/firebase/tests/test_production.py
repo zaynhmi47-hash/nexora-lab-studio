@@ -75,6 +75,14 @@ class FakeConnection:
         self.rollbacks += 1
 
 
+class FailingConnection(FakeConnection):
+    def execute(self, query, params=()):
+        normalized = " ".join(query.split()).upper()
+        if normalized.startswith("INSERT INTO NEXORA_PROVIDER_ACCOUNTS"):
+            raise RuntimeError("simulated provider persistence failure")
+        return super().execute(query, params)
+
+
 class FakeVerifier:
     def verify_id_token(self, token: str):
         assert token == "firebase-token"
@@ -183,7 +191,26 @@ def test_production_authentication_boundary_reaches_real_gamification_endpoint()
     )
 
     assert second_response.status_code == 200
-    assert second_response.body["gamification"]["xp"] == 0
+    assert second_response.body["gamification"]["xp"] == 20
     assert str(connection.identity[0]) == first_user_id
     assert connection.commits == 2
     assert connection.rollbacks == 0
+
+
+def test_production_identity_failure_rolls_back_database_transaction() -> None:
+    connection = FailingConnection()
+    components = ProductionFirebaseAuthenticationFactory(
+        connection=connection,
+        gamification_adapter=FakeGamificationAdapter(),
+        token_verifier=FakeVerifier(),
+    ).build()
+
+    try:
+        components.identity_resolver.resolve_firebase_token("firebase-token")
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("expected database failure")
+
+    assert connection.commits == 0
+    assert connection.rollbacks == 1
