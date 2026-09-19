@@ -32,3 +32,19 @@ export interface FinanceComparison {
   netCashFlow: FinanceComparisonMetric;
   transactionCount: FinanceComparisonMetric;
 }
+export interface FinanceProfitLossLine {
+  category: string;
+  amountMinor: number;
+  transactionCount: number;
+}
+
+export interface FinanceProfitLoss {
+  startDate: string;
+  endDate: string;
+  currency: 'IDR';
+  totalIncomeMinor: number;
+  totalExpenseMinor: number;
+  netProfitMinor: number;
+  incomeLines: FinanceProfitLossLine[];
+  expenseLines: FinanceProfitLossLine[];
+}
