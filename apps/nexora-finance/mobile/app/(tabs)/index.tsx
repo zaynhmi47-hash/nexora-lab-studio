@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { AdaptiveHeader, ResponsiveContainer, ResponsiveGrid, ResponsiveScaffold } from '@/components/layout';
 import { useResponsive } from '@/lib/responsive';
 import { theme } from '@/lib/theme';
-import { useFinanceCategoryBreakdown, useFinanceComparison, useFinanceSummary, useFinanceTrend } from '@/lib/features/summary';
+import { useFinanceCategoryBreakdown, useFinanceComparison, useFinanceProfitLoss, useFinanceSummary, useFinanceTrend } from '@/lib/features/summary';
 import { useTransactions } from '@/lib/features/transactions';
 
 type PeriodKey = 'this_month' | 'last_month' | 'three_months';
@@ -73,13 +73,14 @@ export default function HomeScreen() {
 
   const { summary, loading: summaryLoading, error: summaryError } = useFinanceSummary(period);
   const { comparison, loading: comparisonLoading, error: comparisonError } = useFinanceComparison(period);
+  const { report: profitLoss, loading: profitLossLoading, error: profitLossError } = useFinanceProfitLoss(period);
   const { breakdown, loading: breakdownLoading, error: breakdownError } = useFinanceCategoryBreakdown(period);
   const { points: trend, loading: trendLoading, error: trendError } = useFinanceTrend(period, granularity);
   const { transactions, loading: transactionsLoading, error: transactionsError } =
     useTransactions({ status: 'posted', startDate: period.startDate, endDate: period.endDate, page: 1, pageSize: 8 });
 
-  const loading = summaryLoading || breakdownLoading || trendLoading || transactionsLoading || comparisonLoading;
-  const error = summaryError ?? breakdownError ?? trendError ?? transactionsError ?? comparisonError;
+  const loading = summaryLoading || breakdownLoading || trendLoading || transactionsLoading || comparisonLoading || profitLossLoading;
+  const error = summaryError ?? breakdownError ?? trendError ?? transactionsError ?? comparisonError ?? profitLossError;
 
   const incomeBreakdown = useMemo(() => breakdown.filter((item) => item.direction === 'income'), [breakdown]);
   const expenseBreakdown = useMemo(() => breakdown.filter((item) => item.direction === 'expense'), [breakdown]);
@@ -262,6 +263,65 @@ export default function HomeScreen() {
             <View style={styles.comparisonCard}><Text style={styles.hint}>Loading period comparison…</Text></View>
           ) : null}
 
+          <View style={styles.profitLossCard}>
+            <View style={styles.trendTitleBlock}>
+              <Text style={styles.sectionTitle}>Profit &amp; Loss</Text>
+              <Text style={styles.hint}>
+                Posted income minus posted expenses for the selected period
+              </Text>
+            </View>
+            {profitLossLoading && !profitLoss ? (
+              <Text style={styles.hint}>Loading profit &amp; loss report…</Text>
+            ) : profitLoss ? (
+              <>
+                <View style={styles.profitLossMetrics}>
+                  <View style={styles.profitLossMetric}>
+                    <Text style={styles.label}>Total income</Text>
+                    <Text style={styles.profitLossValue}>{formatIdr(profitLoss.totalIncomeMinor)}</Text>
+                  </View>
+                  <View style={styles.profitLossMetric}>
+                    <Text style={styles.label}>Total expenses</Text>
+                    <Text style={styles.profitLossValue}>{formatIdr(profitLoss.totalExpenseMinor)}</Text>
+                  </View>
+                  <View style={styles.profitLossMetric}>
+                    <Text style={styles.label}>Net profit</Text>
+                    <Text style={styles.profitLossValue}>{formatIdr(profitLoss.netProfitMinor)}</Text>
+                  </View>
+                </View>
+                <View style={styles.profitLossColumns}>
+                  <View style={styles.profitLossColumn}>
+                    <Text style={styles.subsectionTitle}>Income</Text>
+                    {profitLoss.incomeLines.length === 0 ? (
+                      <Text style={styles.hint}>No posted income.</Text>
+                    ) : profitLoss.incomeLines.slice(0, 8).map((line) => (
+                      <View key={'income:' + line.category} style={styles.profitLossLine}>
+                        <View style={styles.profitLossLineMain}>
+                          <Text style={styles.profitLossCategory} numberOfLines={1}>{line.category}</Text>
+                          <Text style={styles.hint}>{line.transactionCount} transaction{line.transactionCount === 1 ? '' : 's'}</Text>
+                        </View>
+                        <Text style={styles.breakdownAmount}>{formatIdr(line.amountMinor)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  <View style={styles.profitLossColumn}>
+                    <Text style={styles.subsectionTitle}>Expenses</Text>
+                    {profitLoss.expenseLines.length === 0 ? (
+                      <Text style={styles.hint}>No posted expenses.</Text>
+                    ) : profitLoss.expenseLines.slice(0, 8).map((line) => (
+                      <View key={'expense:' + line.category} style={styles.profitLossLine}>
+                        <View style={styles.profitLossLineMain}>
+                          <Text style={styles.profitLossCategory} numberOfLines={1}>{line.category}</Text>
+                          <Text style={styles.hint}>{line.transactionCount} transaction{line.transactionCount === 1 ? '' : 's'}</Text>
+                        </View>
+                        <Text style={styles.breakdownAmount}>{formatIdr(line.amountMinor)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              </>
+            ) : null}
+          </View>
+
           <ResponsiveGrid gap={12}>
             {renderBreakdown('Income by category', incomeBreakdown, summary?.totalIncomeMinor ?? 0)}
             {renderBreakdown('Expenses by category', expenseBreakdown, summary?.totalExpenseMinor ?? 0)}
@@ -298,6 +358,16 @@ const styles = StyleSheet.create({
   section: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 12 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.text },
   comparisonCard: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 16 },
+  profitLossCard: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 16 },
+  profitLossMetrics: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  profitLossMetric: { flex: 1, minWidth: 190, padding: theme.spacing.lg, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border, gap: 4 },
+  profitLossValue: { fontSize: 20, fontWeight: '800', color: theme.colors.text },
+  profitLossColumns: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  profitLossColumn: { flex: 1, minWidth: 320, gap: 8 },
+  subsectionTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
+  profitLossLine: { minHeight: 58, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  profitLossLineMain: { flex: 1, gap: 2 },
+  profitLossCategory: { fontSize: 14, fontWeight: '700', color: theme.colors.text },
   comparisonHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 },
   comparisonGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   comparisonItem: { flex: 1, minWidth: 190, padding: theme.spacing.lg, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border, gap: 4 },
