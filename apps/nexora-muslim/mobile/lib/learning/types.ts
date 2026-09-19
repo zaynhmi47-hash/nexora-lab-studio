@@ -39,6 +39,8 @@ export type QuizQuestion = {
   explanation?: string;
 };
 
+export type LearningAchievement = { id:string; key:string; title:string; description:string; earnedAt:string; };
+
 export type QuizResult = {
   lessonId: string;
   correctAnswers: number;
@@ -51,4 +53,5 @@ export interface LearningPort {
   getProgress(userId: string): Promise<LearningProgress>;
   getQuiz(lessonId: string): Promise<QuizQuestion[]>;
   completeLesson(userId: string, lessonId: string): Promise<LearningProgress>;
+  getAchievements(): Promise<LearningAchievement[]>;
 }
