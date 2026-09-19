@@ -12,7 +12,7 @@ from .domain import (
     RewardResult,
 )
 from .leveling import level_for_xp
-from .quests import advance_daily_quests, build_quest_progress
+from .quests import QuestProgress, advance_daily_quests, build_quest_progress
 from .state_repository import GamificationStateRepository
 from .streaks import StreakState, apply_daily_activity
 from .transaction import GamificationTransactionManager
@@ -24,7 +24,7 @@ class GamificationSnapshot:
     level: int
     streak: StreakState
     unlocked_achievements: tuple[AchievementDefinition, ...]
-    quests: tuple[object, ...] = ()
+    quests: tuple[QuestProgress, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,10 +110,11 @@ class GamificationEventProcessor:
                     next_xp += quest_reward.xp
                     claimed_quests.add(quest_key)
 
+            rewarded_milestones = set(state.rewarded_streak_milestones)
             for milestone in STREAK_MILESTONES:
                 if (
                     next_streak.current >= milestone
-                    and milestone not in state.rewarded_streak_milestones
+                    and milestone not in rewarded_milestones
                 ):
                     milestone_event = GamificationEvent(
                         event_id=f"streak-milestone:{event.user_id}:{milestone}",
@@ -127,26 +128,7 @@ class GamificationEventProcessor:
                     bonus_rewards.append(milestone_reward)
                     if milestone_reward.awarded:
                         next_xp += milestone_reward.xp
-
-            rewarded_milestones = tuple(
-                sorted(
-                    {
-                        *state.rewarded_streak_milestones,
-                        *(
-                            reward_milestone
-                            for reward_milestone, bonus in (
-                                (m, bonus_rewards[i])
-                                for i, m in enumerate(
-                                    [m for m in STREAK_MILESTONES
-                                     if next_streak.current >= m
-                                     and m not in state.rewarded_streak_milestones]
-                                )
-                            )
-                            if bonus.awarded
-                        ),
-                    }
-                )
-            )
+                        rewarded_milestones.add(milestone)
 
             new_achievements = tuple(
                 unlocked_achievements(
@@ -184,7 +166,7 @@ class GamificationEventProcessor:
                         )
                         else state.daily_reward_date
                     ),
-                    rewarded_streak_milestones=rewarded_milestones,
+                    rewarded_streak_milestones=tuple(sorted(rewarded_milestones)),
                 )
             )
 
