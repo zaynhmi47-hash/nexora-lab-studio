@@ -8,7 +8,11 @@ from apps.core.api.pagination import CorePageNumberPagination
 from apps.core.api.response import error_response, success_response
 from apps.core.exceptions import AuthenticationException, NexoraException, PermissionDeniedException
 from apps.identity.authentication import FirebaseIdentityAuthentication
-from apps.finance.api.serializers import FinanceTransactionSerializer, FinanceTransactionUpdateSerializer
+from apps.finance.api.serializers import (
+    FinanceTransactionListQuerySerializer,
+    FinanceTransactionSerializer,
+    FinanceTransactionUpdateSerializer,
+)
 from apps.finance.selectors import get_transaction_by_id, list_transactions
 from apps.finance.services import FinanceTransactionService
 from apps.organizations.selectors import get_active_membership
@@ -36,11 +40,9 @@ class FinanceTransactionAPIView(APIView):
 
 class FinanceTransactionListView(FinanceTransactionAPIView):
     def get(self, request, organization_id):
-        queryset = list_transactions(
-            organization_id=organization_id,
-            direction=request.query_params.get("direction"),
-            status=request.query_params.get("status"),
-        )
+        query = FinanceTransactionListQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        queryset = list_transactions(organization_id=organization_id, **query.validated_data)
         page = CorePageNumberPagination()
         page_results = page.paginate_queryset(queryset, request, view=self)
         if page_results is not None:
