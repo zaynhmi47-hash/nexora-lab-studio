@@ -5,7 +5,7 @@ from services.muslim.identity.repository import IdentityRepository
 
 
 class FirebaseNexoraIdentityResolver(FirebaseIdentityResolver):
-    """Resolve verified Firebase users through Nexora's provider-account port."""
+    """Resolve verified Firebase users through Nexora's identity repository."""
 
     PROVIDER = "firebase"
 
@@ -22,5 +22,7 @@ class FirebaseNexoraIdentityResolver(FirebaseIdentityResolver):
             provider_subject=firebase_uid,
         )
         if user_id is None:
-            raise LookupError("Firebase account is not linked to a Nexora identity")
+            raise LookupError(
+                "Firebase account is not linked to a Nexora identity"
+            )
         return user_id
