@@ -2,7 +2,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.identity.models import NexoraUser
-from apps.gamification.services import GamificationService, XPRewardRules, XPRewardRules
+from apps.gamification.services import GamificationService, XPRewardRules
 
 from .models import (
     TajwidPracticeCompletion,
