@@ -9,6 +9,7 @@ from apps.finance.api.summary_views import FinanceSummaryView
 from apps.finance.api.comparison_views import FinancePeriodComparisonView
 from apps.finance.api.profit_loss_views import FinanceProfitLossView
 from apps.finance.api.cash_flow_views import FinanceCashFlowView
+from apps.finance.api.insights_views import FinanceInsightsView
 from apps.finance.api.trend_views import FinanceTrendView
 
 urlpatterns = [
@@ -61,5 +62,10 @@ urlpatterns = [
         "organizations/<uuid:organization_id>/finance/reporting/cash-flow/",
         FinanceCashFlowView.as_view(),
         name="finance-cash-flow",
+    ),
+    path(
+        "organizations/<uuid:organization_id>/finance/reporting/insights/",
+        FinanceInsightsView.as_view(),
+        name="finance-insights",
     ),
 ]
