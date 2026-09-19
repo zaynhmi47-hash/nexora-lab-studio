@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AdaptiveHeader, ResponsiveContainer, ResponsiveGrid, ResponsiveScaffold } from '@/components/layout';
 import { theme } from '@/lib/theme';
 import { useGoals } from '@/lib/features/goals';
-import type { CreateGoalInput, FinanceGoal, FinanceGoalProgress } from '@/lib/features/goals';
+import type { CreateGoalInput, FinanceGoal } from '@/lib/features/goals';
 
 const todayInput=()=>new Date().toISOString().slice(0,10);
 const formatIdr=(v:number)=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(v);
@@ -15,7 +15,6 @@ export default function GoalsScreen(){
  const [mode,setMode]=useState<'detail'|'add'|'edit'>('detail');
  const [name,setName]=useState(''); const [target,setTarget]=useState(''); const [startDate,setStartDate]=useState(todayInput()); const [targetDate,setTargetDate]=useState(todayInput());
  const [formError,setFormError]=useState<string|null>(null); const [submitting,setSubmitting]=useState(false);
- const progressById=useMemo(()=>new Map<string,FinanceGoalProgress>(),[]);
  const reset=(g?:FinanceGoal)=>{setName(g?.name??'');setTarget(g?String(g.targetAmountMinor):'');setStartDate(g?.startDate??todayInput());setTargetDate(g?.targetDate??todayInput());setFormError(null);};
  const openAdd=()=>{reset();setSelected(null);setMode('add');};
  const openDetail=(g:FinanceGoal)=>{setSelected(g);setMode('detail');setFormError(null);};
