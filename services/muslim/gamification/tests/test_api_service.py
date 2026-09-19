@@ -132,16 +132,35 @@ def test_profile_returns_server_owned_gamification_state() -> None:
 def test_daily_reward_is_server_generated_and_idempotent() -> None:
     api = build_api()
 
-    first = api.handle_daily_reward(
-        authenticated_user_id="user-1",
-        claim_date=datetime(2026, 9, 19, tzinfo=timezone.utc).date(),
-    )
-    second = api.handle_daily_reward(
-        authenticated_user_id="user-1",
-        claim_date=datetime(2026, 9, 19, tzinfo=timezone.utc).date(),
-    )
+    first = api.handle_daily_reward(authenticated_user_id="user-1")
+    second = api.handle_daily_reward(authenticated_user_id="user-1")
 
     assert first.status_code == 200
     assert first.body["reward"]["xp"] == 30
     assert second.body["reward"]["xp"] == 0
     assert second.body["reward"]["reason"] == "ALREADY_PROCESSED"
+
+
+def test_api_can_set_valid_user_timezone() -> None:
+    api = build_api()
+
+    result = api.handle_set_timezone(
+        authenticated_user_id="user-1",
+        timezone_name="Asia/Jakarta",
+    )
+
+    assert result.status_code == 200
+    assert result.body["timezone"] == "Asia/Jakarta"
+    profile = api.handle_profile(authenticated_user_id="user-1")
+    assert profile.body["gamification"]["timezone"] == "Asia/Jakarta"
+
+
+def test_api_rejects_invalid_user_timezone() -> None:
+    api = build_api()
+
+    result = api.handle_set_timezone(
+        authenticated_user_id="user-1",
+        timezone_name="Not/A-Timezone",
+    )
+
+    assert result.status_code == 400
