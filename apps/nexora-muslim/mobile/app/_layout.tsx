@@ -46,6 +46,7 @@ export default function RootLayout() {
               <Tabs.Screen name="worship" options={{ href: null }} />
               <Tabs.Screen name="reminders" options={{ href: null }} />
               <Tabs.Screen name="places" options={{ href: null }} />\n              <Tabs.Screen name="ramadan" options={{ href: null }} />
+              <Tabs.Screen name="tajwid" options={{ href: null }} />
               <Tabs.Screen name="search" options={{ href: null }} />
               <Tabs.Screen name="dua-favorites" options={{ href: null }} />
               <Tabs.Screen name="hadith-favorites" options={{ href: null }} />
