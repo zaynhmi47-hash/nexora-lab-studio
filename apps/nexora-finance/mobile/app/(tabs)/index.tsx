@@ -244,6 +244,44 @@ export default function HomeScreen() {
                   <View style={styles.planningDetail}><Text style={styles.hint}>Active goals in plan</Text><Text style={styles.planningDetailValue}>{String(planningSummary.activeGoalCount)}</Text></View>
                   <View style={styles.planningBadge}><Text style={styles.planningBadgeText}>{planningSummary.planningStatus === 'on_track' ? 'On track' : planningSummary.planningStatus === 'saving_gap' ? 'Saving gap' : planningSummary.planningStatus === 'budget_overage' ? 'Budget overage' : 'Plans exceed income'}</Text></View>
                 </View>
+                <View style={styles.planningColumns}>
+                  <View style={styles.planningColumn}>
+                    <Text style={styles.subsectionTitle}>Budget pressure</Text>
+                    {planningSummary.budgetItems.length === 0 ? (
+                      <Text style={styles.hint}>No active budgets overlap this period.</Text>
+                    ) : planningSummary.budgetItems.slice(0, 6).map((budget) => (
+                      <View key={budget.budgetId} style={styles.planningRow}>
+                        <View style={styles.planningRowMain}>
+                          <Text style={styles.profitLossCategory} numberOfLines={1}>{budget.name}</Text>
+                          <Text style={styles.hint}>{budget.category} · {budget.transactionCount} transaction{budget.transactionCount === 1 ? '' : 's'}</Text>
+                          <View style={styles.progressTrack}><View style={[styles.progressFill, { width: Math.min(100, budget.utilizationPercentage ?? 0) + '%' }]} /></View>
+                        </View>
+                        <View style={styles.planningRowAmount}>
+                          <Text style={styles.breakdownAmount}>{formatIdr(budget.actualMinor)}</Text>
+                          <Text style={styles.hint}>of {formatIdr(budget.budgetMinor)}</Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                  <View style={styles.planningColumn}>
+                    <Text style={styles.subsectionTitle}>Savings goals</Text>
+                    {planningSummary.goalItems.length === 0 ? (
+                      <Text style={styles.hint}>No active savings goal requires allocation in this period.</Text>
+                    ) : planningSummary.goalItems.slice(0, 6).map((goal) => (
+                      <View key={goal.goalId} style={styles.planningRow}>
+                        <View style={styles.planningRowMain}>
+                          <Text style={styles.profitLossCategory} numberOfLines={1}>{goal.name}</Text>
+                          <Text style={styles.hint}>{goal.daysRemaining} day{goal.daysRemaining === 1 ? '' : 's'} remaining · {goal.progressPercentage === null ? '—' : goal.progressPercentage.toFixed(0) + '%'} complete</Text>
+                          <View style={styles.progressTrack}><View style={[styles.progressFill, { width: Math.min(100, goal.progressPercentage ?? 0) + '%' }]} /></View>
+                        </View>
+                        <View style={styles.planningRowAmount}>
+                          <Text style={styles.breakdownAmount}>{formatIdr(goal.plannedSavingMinor)}</Text>
+                          <Text style={styles.hint}>planned</Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                </View>
                 <Text style={styles.hint}>Projected after plans is a planning calculation, not a bank balance or available cash figure.</Text>
               </>
             ) : null}
@@ -540,6 +578,11 @@ const styles = StyleSheet.create({
   insightCategory: { fontSize: 12, fontWeight: '700', color: theme.colors.text },
   cashFlowAnalysisCard: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 16 },
   planningCard: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 16 },
+  planningColumns: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  planningColumn: { flex: 1, minWidth: 320, gap: 8 },
+  planningRow: { minHeight: 72, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  planningRowMain: { flex: 1, gap: 4 },
+  planningRowAmount: { minWidth: 90, alignItems: 'flex-end', gap: 2 },
   planningDetails: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignItems: 'center' },
   planningDetail: { minWidth: 150, padding: theme.spacing.md, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border, gap: 3 },
   planningDetailValue: { fontSize: 15, fontWeight: '800', color: theme.colors.text },
