@@ -312,6 +312,11 @@ class UnifiedLearningEngine:
                 "domains": domain_activity >= threshold,
             }[kind]
             if is_earned:
+                GamificationService.record_milestone(
+                    user=user,
+                    key=achievement["key"],
+                    occurred_at=latest_activity,
+                )
                 earned.append({
                     "id": achievement["key"],
                     "key": achievement["key"],
