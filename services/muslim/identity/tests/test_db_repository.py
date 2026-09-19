@@ -21,12 +21,21 @@ class FakeConnection:
 
     def execute(self, query, params=()):
         self.calls.append((query, params))
+        if "INSERT INTO nexora_provider_accounts" in query:
+            if self.provider_row is None:
+                account_id, _provider, _subject, user_id, created_at, updated_at = params
+                self.provider_row = (account_id, user_id, created_at, updated_at)
+            return Result([])
         if "FROM nexora_provider_accounts" in query and "FOR UPDATE" in query:
             return Result([self.provider_row] if self.provider_row else [])
         if "FROM nexora_provider_accounts" in query:
             return Result([self.provider_row] if self.provider_row else [])
         if "FROM nexora_identities" in query:
             return Result([self.identity_row] if self.identity_row else [])
+        if "INSERT INTO nexora_identities" in query:
+            user_id, created_at, updated_at = params
+            self.identity_row = (user_id, created_at, updated_at)
+            return Result([])
         return Result([])
 
 
