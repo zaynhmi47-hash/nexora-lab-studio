@@ -33,6 +33,15 @@ class XPRewardRules:
     def tajwid_assessment(cls, passed: bool) -> int:
         return cls.TAJWID_ASSESSMENT_PASS if passed else 0
 
+    @classmethod
+    def streak_milestone(cls, streak: int) -> str | None:
+        milestones = {
+            3: "streak-3",
+            7: "streak-7",
+            30: "streak-30",
+        }
+        return milestones.get(streak)
+
 
 class GamificationService:
     @staticmethod
