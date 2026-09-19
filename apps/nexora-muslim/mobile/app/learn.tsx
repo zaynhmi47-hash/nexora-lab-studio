@@ -17,15 +17,17 @@ export default function LearnScreen() {
   const [courses, setCourses] = useState<LearningCourse[]>([]);
   const [progress, setProgress] = useState<LearningProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [achievements, setAchievements] = useState<import('@/lib/learning').LearningAchievement[]>([]);
 
   useEffect(() => {
     let active = true;
     setError(null);
-    Promise.all([repository.getCourses(), repository.getProgress(userId)])
-      .then(([nextCourses, nextProgress]) => {
+    Promise.all([repository.getCourses(), repository.getProgress(userId), repository.getAchievements()])
+      .then(([nextCourses, nextProgress, nextAchievements]) => {
         if (!active) return;
         setCourses(nextCourses);
         setProgress(nextProgress);
+        setAchievements(nextAchievements);
       })
       .catch(() => {
         if (active) setError('Unable to load learning progress. Please try again.');
@@ -58,6 +60,11 @@ export default function LearnScreen() {
             <Text style={styles.xp}>{xpIntoLevel}/100</Text>
           </View>
           <View style={styles.bar}><View style={[styles.fill, { width: xpPercent }]} /></View>
+        </Card>
+
+        <Card style={styles.achievementCard}>
+          <View style={styles.row}><View><Text style={styles.progressTitle}>Achievements</Text><Text style={styles.muted}>{achievements.length} earned</Text></View><Text style={styles.xp}>🏆</Text></View>
+          {achievements.length === 0 ? <Text style={[styles.muted, { marginTop: spacing.sm }]}>Complete lessons to unlock your first badge.</Text> : achievements.slice(0, 3).map((item) => <View key={item.id} style={styles.achievement}><Text style={styles.badge}>✓</Text><View style={styles.lessonInfo}><Text style={styles.title}>{item.title}</Text><Text style={styles.muted}>{item.description}</Text></View></View>)}
         </Card>
 
         {currentLesson && (
@@ -136,6 +143,9 @@ const styles = StyleSheet.create({
   bar: { height: 8, backgroundColor: colors.border, borderRadius: 8, marginTop: spacing.md, overflow: 'hidden' },
   fill: { height: 8, backgroundColor: colors.primary, borderRadius: 8 },
   sectionTitle: { fontSize: 19, fontWeight: '800', color: colors.text, marginTop: spacing.xl, marginBottom: spacing.md },
+  achievementCard: { marginTop: spacing.md },
+  achievement: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md },
+  badge: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.primarySoft, color: colors.primary, textAlign: 'center', textAlignVertical: 'center', fontWeight: '800', paddingTop: 7 },
   continueCard: { borderColor: colors.primary },
   kicker: { fontSize: 10, fontWeight: '800', color: colors.primary },
   lessonTitle: { fontSize: 20, fontWeight: '800', color: colors.text, marginTop: 5 },
