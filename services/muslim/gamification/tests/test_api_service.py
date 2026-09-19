@@ -111,3 +111,37 @@ def test_api_exposes_quest_progress_and_bonus_rewards() -> None:
     assert result.status_code == 200
     assert result.body["gamification"]["quests"][0]["completed"] is True
     assert result.body["rewards"][0]["xp"] == 25
+
+
+def test_profile_returns_server_owned_gamification_state() -> None:
+    api = build_api()
+    api.handle_event(
+        authenticated_user_id="user-1",
+        payload=payload(),
+    )
+
+    result = api.handle_profile(authenticated_user_id="user-1")
+
+    assert result.status_code == 200
+    assert result.body["gamification"]["xp"] == 45
+    assert result.body["gamification"]["level"] == 1
+    assert result.body["gamification"]["streak"]["current"] == 1
+    assert result.body["gamification"]["quests"][0]["rewardClaimed"] is True
+
+
+def test_daily_reward_is_server_generated_and_idempotent() -> None:
+    api = build_api()
+
+    first = api.handle_daily_reward(
+        authenticated_user_id="user-1",
+        claim_date=datetime(2026, 9, 19, tzinfo=timezone.utc).date(),
+    )
+    second = api.handle_daily_reward(
+        authenticated_user_id="user-1",
+        claim_date=datetime(2026, 9, 19, tzinfo=timezone.utc).date(),
+    )
+
+    assert first.status_code == 200
+    assert first.body["reward"]["xp"] == 30
+    assert second.body["reward"]["xp"] == 0
+    assert second.body["reward"]["reason"] == "ALREADY_PROCESSED"
