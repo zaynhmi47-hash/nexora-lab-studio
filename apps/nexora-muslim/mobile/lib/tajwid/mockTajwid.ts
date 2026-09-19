@@ -140,6 +140,8 @@ const practice: Record<TajwidTopicId, TajwidPracticeItem[]> = {
   ],
 };
 
+const completedPracticeIds = new Set<string>(['makharij-1']);
+
 let progress: TajwidProgress = {
   userId: DEMO_USER_ID,
   completedTopicIds: ['makharij'],
@@ -174,11 +176,8 @@ export const mockTajwid: TajwidPort = {
 
   async completePractice(userId, practiceId, correct) {
     if (userId !== progress.userId) progress = { ...progress, userId };
-    if (progress.practiceCompleted < 0) progress.practiceCompleted = 0;
-    const alreadyCompleted = practice[Object.keys(practice).find((key) =>
-      practice[key as TajwidTopicId]?.some((item) => item.id === practiceId),
-    ) as TajwidTopicId]?.some((item) => item.id === practiceId) === false;
-    if (!alreadyCompleted) {
+    if (!completedPracticeIds.has(practiceId)) {
+      completedPracticeIds.add(practiceId);
       progress = {
         ...progress,
         practiceCompleted: progress.practiceCompleted + 1,
