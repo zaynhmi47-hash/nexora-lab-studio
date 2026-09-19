@@ -128,10 +128,21 @@ class TajwidService:
     def complete_assessment(self, user: NexoraUser, correct, total):
         if total <= 0:
             raise ValueError("Total questions must be greater than zero.")
+        if correct < 0 or correct > total:
+            raise ValueError("Correct answers must be between zero and total questions.")
+
         progress, _ = TajwidProgress.objects.get_or_create(user=user)
         passed = correct / total >= 0.7
+        assessment_xp = 100 if passed and not progress.assessment_completed else 0
+
         if passed and not progress.assessment_completed:
             progress.assessment_completed = True
-            progress.xp_earned += 100
-        progress.save(update_fields=["assessment_completed", "xp_earned", "updated_at"])
-        return self.progress(user)
+            progress.xp_earned += assessment_xp
+            progress.save(update_fields=["assessment_completed", "xp_earned", "updated_at"])
+
+        return {
+            "correctAnswers": correct,
+            "totalQuestions": total,
+            "passed": passed,
+            "xpEarned": assessment_xp,
+        }
