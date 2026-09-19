@@ -12,7 +12,7 @@ import { useAppState } from '@/lib/app-state';
 type QuickAction = {
   label: string;
   icon: React.ComponentProps<typeof Ionicons>['name'];
-  route: '/quran' | '/learn' | '/prayer' | '/qibla' | '/dhikr' | '/knowledge' | '/umrah';
+  route: '/quran' | '/learn' | '/prayer' | '/qibla' | '/dhikr' | '/knowledge' | '/umrah' | '/ramadan';
 };
 
 const quickActions: QuickAction[] = [
@@ -22,6 +22,7 @@ const quickActions: QuickAction[] = [
   { label: 'Dhikr', icon: 'repeat-outline', route: '/dhikr' },
   { label: 'Knowledge', icon: 'library-outline', route: '/knowledge' },
   { label: 'Umrah', icon: 'airplane-outline', route: '/umrah' },
+  { label: 'Ramadan', icon: 'moon-outline', route: '/ramadan' },
 ];
 
 export default function HomeScreen() {
