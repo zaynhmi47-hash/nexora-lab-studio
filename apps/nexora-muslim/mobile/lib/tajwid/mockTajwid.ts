@@ -1,4 +1,5 @@
 import type {
+  TajwidAssessmentResult,
   TajwidPort,
   TajwidPracticeItem,
   TajwidProgress,
@@ -202,9 +203,9 @@ export const mockTajwid: TajwidPort = {
     return cloneProgress();
   },
 
-  async completeAssessment(userId, correctAnswers, totalQuestions) {
+  async completeAssessment(userId, correctAnswers, totalQuestions): Promise<TajwidAssessmentResult> {
     if (userId !== progress.userId) progress = { ...progress, userId };
-    const passed = totalQuestions > 0 && correctAnswers / totalQuestions >= 0.7;
+    const passed = totalQuestions > 0 && correctAnswers >= 0 && correctAnswers <= totalQuestions && correctAnswers / totalQuestions >= 0.7;
     const reward = passed && !progress.assessmentCompleted ? 100 : 0;
 
     progress = {
@@ -213,6 +214,11 @@ export const mockTajwid: TajwidPort = {
       xpEarned: progress.xpEarned + reward,
     };
 
-    return cloneProgress();
+    return {
+      correctAnswers,
+      totalQuestions,
+      passed,
+      xpEarned: reward,
+    };
   },
 };
