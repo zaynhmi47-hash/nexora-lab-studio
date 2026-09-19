@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { AdaptiveHeader, ResponsiveContainer, ResponsiveGrid, ResponsiveScaffold } from '@/components/layout';
 import { useResponsive } from '@/lib/responsive';
 import { theme } from '@/lib/theme';
-import { useFinanceCategoryBreakdown, useFinanceComparison, useFinanceProfitLoss, useFinanceSummary, useFinanceTrend } from '@/lib/features/summary';
+import { useFinanceCategoryBreakdown, useFinanceCashFlow, useFinanceComparison, useFinanceProfitLoss, useFinanceSummary, useFinanceTrend } from '@/lib/features/summary';
 import { useTransactions } from '@/lib/features/transactions';
 
 type PeriodKey = 'this_month' | 'last_month' | 'three_months';
@@ -74,13 +74,14 @@ export default function HomeScreen() {
   const { summary, loading: summaryLoading, error: summaryError } = useFinanceSummary(period);
   const { comparison, loading: comparisonLoading, error: comparisonError } = useFinanceComparison(period);
   const { report: profitLoss, loading: profitLossLoading, error: profitLossError } = useFinanceProfitLoss(period);
+  const { cashFlow, loading: cashFlowLoading, error: cashFlowError } = useFinanceCashFlow(period);
   const { breakdown, loading: breakdownLoading, error: breakdownError } = useFinanceCategoryBreakdown(period);
   const { points: trend, loading: trendLoading, error: trendError } = useFinanceTrend(period, granularity);
   const { transactions, loading: transactionsLoading, error: transactionsError } =
     useTransactions({ status: 'posted', startDate: period.startDate, endDate: period.endDate, page: 1, pageSize: 8 });
 
-  const loading = summaryLoading || breakdownLoading || trendLoading || transactionsLoading || comparisonLoading || profitLossLoading;
-  const error = summaryError ?? breakdownError ?? trendError ?? transactionsError ?? comparisonError ?? profitLossError;
+  const loading = summaryLoading || breakdownLoading || trendLoading || transactionsLoading || comparisonLoading || profitLossLoading || cashFlowLoading;
+  const error = summaryError ?? breakdownError ?? trendError ?? transactionsError ?? comparisonError ?? profitLossError ?? cashFlowError;
 
   const incomeBreakdown = useMemo(() => breakdown.filter((item) => item.direction === 'income'), [breakdown]);
   const expenseBreakdown = useMemo(() => breakdown.filter((item) => item.direction === 'expense'), [breakdown]);
@@ -263,6 +264,43 @@ export default function HomeScreen() {
             <View style={styles.comparisonCard}><Text style={styles.hint}>Loading period comparison…</Text></View>
           ) : null}
 
+          <View style={styles.cashFlowAnalysisCard}>
+            <View style={styles.trendTitleBlock}>
+              <Text style={styles.sectionTitle}>Cash Flow Analysis</Text>
+              <Text style={styles.hint}>Cash inflows and outflows from posted transactions in the selected period</Text>
+            </View>
+            {cashFlowLoading && !cashFlow ? <Text style={styles.hint}>Loading cash flow analysis…</Text> : cashFlow ? (
+              <>
+                <View style={styles.profitLossMetrics}>
+                  <View style={styles.profitLossMetric}><Text style={styles.label}>Cash inflow</Text><Text style={styles.profitLossValue}>{formatIdr(cashFlow.cashInflowMinor)}</Text></View>
+                  <View style={styles.profitLossMetric}><Text style={styles.label}>Cash outflow</Text><Text style={styles.profitLossValue}>{formatIdr(cashFlow.cashOutflowMinor)}</Text></View>
+                  <View style={styles.profitLossMetric}><Text style={styles.label}>Net cash flow</Text><Text style={styles.profitLossValue}>{formatIdr(cashFlow.netCashFlowMinor)}</Text></View>
+                  <View style={styles.profitLossMetric}><Text style={styles.label}>Transactions</Text><Text style={styles.profitLossValue}>{String(cashFlow.transactionCount)}</Text></View>
+                </View>
+                <View style={styles.profitLossColumns}>
+                  <View style={styles.profitLossColumn}>
+                    <Text style={styles.subsectionTitle}>Inflows by category</Text>
+                    {cashFlow.inflowLines.length === 0 ? <Text style={styles.hint}>No posted cash inflows.</Text> : cashFlow.inflowLines.slice(0, 8).map((line) => (
+                      <View key={'inflow:' + line.category} style={styles.profitLossLine}>
+                        <View style={styles.profitLossLineMain}><Text style={styles.profitLossCategory} numberOfLines={1}>{line.category}</Text><Text style={styles.hint}>{line.transactionCount} transaction{line.transactionCount === 1 ? '' : 's'}</Text></View>
+                        <Text style={styles.breakdownAmount}>{formatIdr(line.amountMinor)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  <View style={styles.profitLossColumn}>
+                    <Text style={styles.subsectionTitle}>Outflows by category</Text>
+                    {cashFlow.outflowLines.length === 0 ? <Text style={styles.hint}>No posted cash outflows.</Text> : cashFlow.outflowLines.slice(0, 8).map((line) => (
+                      <View key={'outflow:' + line.category} style={styles.profitLossLine}>
+                        <View style={styles.profitLossLineMain}><Text style={styles.profitLossCategory} numberOfLines={1}>{line.category}</Text><Text style={styles.hint}>{line.transactionCount} transaction{line.transactionCount === 1 ? '' : 's'}</Text></View>
+                        <Text style={styles.breakdownAmount}>{formatIdr(line.amountMinor)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              </>
+            ) : null}
+          </View>
+
           <View style={styles.profitLossCard}>
             <View style={styles.trendTitleBlock}>
               <Text style={styles.sectionTitle}>Profit &amp; Loss</Text>
@@ -358,6 +396,7 @@ const styles = StyleSheet.create({
   section: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 12 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.text },
   comparisonCard: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 16 },
+  cashFlowAnalysisCard: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 16 },
   profitLossCard: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 16 },
   profitLossMetrics: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   profitLossMetric: { flex: 1, minWidth: 190, padding: theme.spacing.lg, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border, gap: 4 },
