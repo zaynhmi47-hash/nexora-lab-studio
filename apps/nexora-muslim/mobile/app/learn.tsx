@@ -36,8 +36,8 @@ export default function LearnScreen() {
   }, [repository, userId]);
 
   const currentLesson = useMemo(() => courses.flatMap((course) => course.lessons).find((lesson) => lesson.status === 'in_progress' || lesson.status === 'available'), [courses]);
-  const xpIntoLevel = (progress?.xp ?? 0) % 100;
-  const xpPercent = `${Math.min(xpIntoLevel, 100)}%` as `${number}%`;
+  const xpIntoLevel = (progress?.xp ?? 0) % 50;
+  const xpPercent = `${Math.min((xpIntoLevel / 50) * 100, 100)}%` as `${number}%`;
 
   const openLesson = (lesson: LearningLesson) => {
     if (lesson.status !== 'locked') router.push(`/lesson/${lesson.id}`);
@@ -57,7 +57,7 @@ export default function LearnScreen() {
               <Text style={styles.progressTitle}>Level {progress?.level ?? 1}</Text>
               <Text style={styles.muted}>{progress?.xp ?? 0} XP · {progress?.currentStreak ?? 0} day streak</Text>
             </View>
-            <Text style={styles.xp}>{xpIntoLevel}/100</Text>
+            <Text style={styles.xp}>{xpIntoLevel}/50 XP</Text>
           </View>
           <View style={styles.bar}><View style={[styles.fill, { width: xpPercent }]} /></View>
         </Card>
