@@ -43,7 +43,12 @@ def test_sql_repository_resolves_provider_account() -> None:
 
 def test_sql_repository_rejects_reassignment() -> None:
     connection = FakeConnection()
-    connection.provider_row = (uuid4(), uuid4(), datetime.now(timezone.utc), datetime.now(timezone.utc))
+    connection.provider_row = (
+        uuid4(),
+        uuid4(),
+        datetime.now(timezone.utc),
+        datetime.now(timezone.utc),
+    )
     repository = SQLIdentityRepository(connection)
 
     try:
@@ -56,3 +61,29 @@ def test_sql_repository_rejects_reassignment() -> None:
         pass
     else:
         raise AssertionError("expected IdentityConflict")
+
+
+def test_sql_repository_uses_conflict_safe_provider_insert() -> None:
+    connection = FakeConnection()
+    repository = SQLIdentityRepository(connection)
+
+    # The fake has no provider row, so the method eventually raises because it
+    # cannot simulate the database result. The important contract here is that
+    # the provider INSERT uses ON CONFLICT DO NOTHING rather than surfacing a
+    # raw unique-constraint exception during concurrent first login.
+    try:
+        repository.link_provider_account(
+            provider="firebase",
+            provider_subject="uid-1",
+            user_id=str(uuid4()),
+        )
+    except Exception:
+        pass
+
+    provider_inserts = [
+        query
+        for query, _params in connection.calls
+        if "INSERT INTO nexora_provider_accounts" in query
+    ]
+    assert len(provider_inserts) == 1
+    assert "ON CONFLICT (provider, provider_subject) DO NOTHING" in provider_inserts[0]
