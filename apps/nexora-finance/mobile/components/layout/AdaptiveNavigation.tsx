@@ -8,6 +8,7 @@ import { theme } from '@/lib/theme';
 const items = [
   { name: 'index', title: 'Home', icon: 'home-outline' as const },
   { name: 'transactions', title: 'Finance', icon: 'swap-horizontal-outline' as const },
+  { name: 'budgets', title: 'Budgets', icon: 'pie-chart-outline' as const },
   { name: 'profile', title: 'Profile', icon: 'person-outline' as const },
 ];
 
