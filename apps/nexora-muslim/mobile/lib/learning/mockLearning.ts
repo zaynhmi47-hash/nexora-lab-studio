@@ -4,6 +4,7 @@ import type {
   LearningProgress,
   QuizQuestion,
   LearningAchievement,
+  LearningHub,
 } from './types';
 
 const courses: LearningCourse[] = [
@@ -134,6 +135,19 @@ export const mockLearning: LearningPort = {
       ...course,
       lessons: course.lessons.map((lesson) => ({ ...lesson })),
     }));
+  },
+  async getHub(): Promise<LearningHub> {
+    const progress = await this.getProgress(initialProgress.userId);
+    return {
+      userId: progress.userId,
+      totalXp: progress.xp + 45 + 80,
+      level: Math.floor((progress.xp + 45 + 80) / 50) + 1,
+      domains: {
+        learning: { xp: progress.xp, level: progress.level, streak: progress.currentStreak, completedCount: progress.completedLessonIds.length },
+        tajwid: { xp: 45, streak: 0, completedCount: 1, practiceCompleted: 2, assessmentCompleted: false },
+        arabic: { xp: 80, streak: 5, completedCount: 2 },
+      },
+    };
   },
   async getProgress(userId) {
     const existing = progressByUser.get(userId);
