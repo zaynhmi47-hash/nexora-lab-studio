@@ -87,3 +87,32 @@ export interface FinanceInsights {
   currency: 'IDR';
   insights: FinanceInsight[];
 }
+
+
+export type FinanceBudgetStatus = 'on_track' | 'near_limit' | 'over_budget';
+
+export interface FinanceBudgetSummaryItem {
+  budgetId: string;
+  name: string;
+  category: string;
+  startDate: string;
+  endDate: string;
+  budgetMinor: number;
+  actualMinor: number;
+  remainingMinor: number;
+  utilizationPercentage: number | null;
+  status: FinanceBudgetStatus;
+  transactionCount: number;
+}
+
+export interface FinanceBudgetSummary {
+  startDate: string;
+  endDate: string;
+  currency: 'IDR';
+  totalBudgetMinor: number;
+  totalActualMinor: number;
+  totalRemainingMinor: number;
+  overallUtilizationPercentage: number | null;
+  overBudgetCount: number;
+  budgets: FinanceBudgetSummaryItem[];
+}
