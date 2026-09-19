@@ -94,3 +94,47 @@ def test_authenticated_http_adapter_passes_internal_user_id() -> None:
 
     assert response.status_code == 200
     assert response.body["userId"] == "nexora:firebase-123"
+
+
+def test_firebase_identity_resolver_hides_verification_error_details() -> None:
+    from services.muslim.infrastructure.firebase.auth import (
+        FirebaseAdminTokenVerificationError,
+    )
+
+    resolver = FirebaseIdentityResolver(
+        FakeVerifier(error=FirebaseAdminTokenVerificationError("token expired")),
+        FakeUserResolver(),
+    )
+
+    try:
+        resolver.resolve_firebase_token("expired-token")
+    except InvalidCredentials as exc:
+        assert str(exc) == "invalid Firebase ID token"
+        assert "token expired" not in str(exc)
+    else:
+        raise AssertionError("expected InvalidCredentials")
+
+
+def test_authenticated_http_adapter_returns_401_for_firebase_verification_failure() -> None:
+    from services.muslim.infrastructure.firebase.auth import (
+        FirebaseAdminTokenVerificationError,
+    )
+
+    adapter = AuthenticatedGamificationHTTPAdapter(
+        identity_resolver=FirebaseIdentityResolver(
+            FakeVerifier(
+                error=FirebaseAdminTokenVerificationError("invalid signature"),
+            ),
+            FakeUserResolver(),
+        ),
+        gamification_adapter=FakeAdapter(),
+    )
+
+    response = adapter.handle(
+        method="GET",
+        path="/gamification/profile/",
+        authorization="Bearer invalid-token",
+    )
+
+    assert response.status_code == 401
+    assert response.body["error"] == "unauthorized"
