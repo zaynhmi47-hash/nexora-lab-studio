@@ -10,7 +10,7 @@ from apps.finance.api.comparison_views import FinancePeriodComparisonView
 from apps.finance.api.profit_loss_views import FinanceProfitLossView
 from apps.finance.api.budget_summary_views import FinanceBudgetSummaryView
 from apps.finance.api.budget_views import FinanceBudgetDetailView, FinanceBudgetListView
-from apps.finance.api.cash_flow_views import FinanceCashFlowView
+from apps.finance.api.goal_views import (\n    FinanceGoalContributionDetailView, FinanceGoalContributionListView,\n    FinanceGoalDetailView, FinanceGoalListView, FinanceGoalSummaryView,\n)\nfrom apps.finance.api.cash_flow_views import FinanceCashFlowView
 from apps.finance.api.insights_views import FinanceInsightsView
 from apps.finance.api.trend_views import FinanceTrendView
 
@@ -42,6 +42,11 @@ urlpatterns = [
     path("organizations/<uuid:organization_id>/finance/budgets/summary/", FinanceBudgetSummaryView.as_view(), name="finance-budget-summary"),
     path("organizations/<uuid:organization_id>/finance/budgets/", FinanceBudgetListView.as_view(), name="finance-budget-list"),
     path("organizations/<uuid:organization_id>/finance/budgets/<uuid:budget_id>/", FinanceBudgetDetailView.as_view(), name="finance-budget-detail"),
+    path("organizations/<uuid:organization_id>/finance/goals/summary/", FinanceGoalSummaryView.as_view(), name="finance-goal-summary"),
+    path("organizations/<uuid:organization_id>/finance/goals/", FinanceGoalListView.as_view(), name="finance-goal-list"),
+    path("organizations/<uuid:organization_id>/finance/goals/<uuid:goal_id>/", FinanceGoalDetailView.as_view(), name="finance-goal-detail"),
+    path("organizations/<uuid:organization_id>/finance/goals/<uuid:goal_id>/contributions/", FinanceGoalContributionListView.as_view(), name="finance-goal-contribution-list"),
+    path("organizations/<uuid:organization_id>/finance/goals/<uuid:goal_id>/contributions/<uuid:contribution_id>/", FinanceGoalContributionDetailView.as_view(), name="finance-goal-contribution-detail"),
     path("organizations/<uuid:organization_id>/finance/summary/", FinanceSummaryView.as_view(), name="finance-summary"),
     path(
         "organizations/<uuid:organization_id>/finance/reporting/category-breakdown/",
