@@ -1,4 +1,6 @@
-from .models import HadithEntry, KnowledgeTopic
+from django.db import transaction
+from apps.identity.models import NexoraUser
+from .models import HadithEntry, HadithFavorite, KnowledgeTopic
 
 class KnowledgeService:
     @staticmethod
@@ -26,3 +28,26 @@ class KnowledgeService:
     def hadith_detail(cls, key):
         item = HadithEntry.objects.select_related("source").filter(key=key, deleted_at__isnull=True, source__deleted_at__isnull=True).first()
         return cls._hadith(item) if item else None
+
+class HadithFavoriteService:
+    @staticmethod
+    def list_favorites(user: NexoraUser):
+        return HadithFavorite.objects.select_related("hadith__source").filter(
+            user=user, deleted_at__isnull=True, hadith__deleted_at__isnull=True, hadith__source__deleted_at__isnull=True
+        )
+
+    @staticmethod
+    @transaction.atomic
+    def toggle(user: NexoraUser, hadith_id):
+        hadith = HadithEntry.objects.filter(id=hadith_id, deleted_at__isnull=True, source__deleted_at__isnull=True).first()
+        if hadith is None:
+            return None, False
+        favorite = HadithFavorite.objects.filter(user=user, hadith=hadith).first()
+        if favorite is None:
+            return HadithFavorite.objects.create(user=user, hadith=hadith), True
+        if favorite.deleted_at is None:
+            favorite.soft_delete()
+            return favorite, False
+        favorite.deleted_at = None
+        favorite.save(update_fields=["deleted_at", "updated_at"])
+        return favorite, True
