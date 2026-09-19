@@ -6,6 +6,7 @@ from api.v1.health import HealthView, LivenessView, ReadinessView
 from api.v1.identity import CurrentIdentityView
 from apps.finance.api.reporting_views import FinanceCategoryBreakdownView
 from apps.finance.api.summary_views import FinanceSummaryView
+from apps.finance.api.trend_views import FinanceTrendView
 
 urlpatterns = [
     path("health/", HealthView.as_view(), name="health"),
@@ -37,5 +38,10 @@ urlpatterns = [
         "organizations/<uuid:organization_id>/finance/reporting/category-breakdown/",
         FinanceCategoryBreakdownView.as_view(),
         name="finance-category-breakdown",
+    ),
+    path(
+        "organizations/<uuid:organization_id>/finance/reporting/trend/",
+        FinanceTrendView.as_view(),
+        name="finance-trend",
     ),
 ]
