@@ -8,6 +8,32 @@ from apps.identity.models import NexoraUser
 from .models import GamificationActivity
 
 
+class XPRewardRules:
+    """Single source of truth for XP awarded by learning events."""
+
+    LESSON_COMPLETED = 20
+    QUIZ_COMPLETED = 0
+    TAJWID_PRACTICE_CORRECT = 5
+    TAJWID_PRACTICE_INCORRECT = 0
+    TAJWID_ASSESSMENT_PASS = 100
+
+    @classmethod
+    def lesson(cls, domain: str, configured_reward: int) -> int:
+        return max(0, configured_reward)
+
+    @classmethod
+    def quiz(cls, passed: bool, configured_reward: int = 0) -> int:
+        return max(0, configured_reward)
+
+    @classmethod
+    def tajwid_practice(cls, correct: bool) -> int:
+        return cls.TAJWID_PRACTICE_CORRECT if correct else cls.TAJWID_PRACTICE_INCORRECT
+
+    @classmethod
+    def tajwid_assessment(cls, passed: bool) -> int:
+        return cls.TAJWID_ASSESSMENT_PASS if passed else 0
+
+
 class GamificationService:
     @staticmethod
     @transaction.atomic
