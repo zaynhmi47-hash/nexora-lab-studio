@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Mapping
+
 from services.muslim.identity.provisioning import (
     IdentityProvisioningService,
     ProvisionedIdentity,
