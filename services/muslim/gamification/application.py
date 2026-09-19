@@ -56,6 +56,7 @@ class XPRewardApplicationService:
             user_id=event.user_id,
             event_id=event.event_id,
             event_type=event.event_type,
+            reward_key=reward_key,
             amount=policy.base_xp,
             created_at=event.occurred_at,
             activity_id=event.activity_id,
