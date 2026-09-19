@@ -2,6 +2,7 @@ import type { AuthSession } from '@/lib/auth/types';
 import type {
   TajwidPort,
   TajwidPracticeItem,
+  TajwidAssessmentResult,
   TajwidProgress,
   TajwidTopic,
   TajwidTopicId,
@@ -36,7 +37,7 @@ export function nexoraCoreTajwidRepository(session: AuthSession): TajwidPort {
     completeTopic: (_userId, topicId) =>
       request<TajwidProgress>(session, `/topics/${encodeURIComponent(topicId)}/complete/`, { method: 'POST' }),
     completeAssessment: (_userId, correctAnswers, totalQuestions) =>
-      request<TajwidProgress>(session, '/assessment/complete/', {
+      request<TajwidAssessmentResult>(session, '/assessment/complete/', {
         method: 'POST',
         body: JSON.stringify({ correctAnswers, totalQuestions }),
       }),
