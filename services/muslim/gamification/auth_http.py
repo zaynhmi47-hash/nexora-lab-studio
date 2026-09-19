@@ -3,14 +3,19 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Mapping
 
+from .api_service import GamificationAPIResult
 from .auth import AuthenticationError, UserIdentityResolver
 from .http_adapter import GamificationHTTPRequest, GamificationHTTPResponse
-from .api_service import GamificationAPIResult
 
 
 @dataclass(frozen=True, slots=True)
 class AuthenticatedGamificationHTTPAdapter:
-    """Authentication-aware adapter around the framework-neutral route adapter."""
+    """Authentication-aware adapter around the framework-neutral route adapter.
+
+    This is the HTTP trust boundary: the bearer token is the only credential
+    accepted from the request, while the internal Nexora user ID is resolved
+    server-side and injected into the downstream request contract.
+    """
 
     identity_resolver: UserIdentityResolver
     gamification_adapter: object
@@ -23,13 +28,13 @@ class AuthenticatedGamificationHTTPAdapter:
         authorization: str | None,
         body: Mapping[str, object] | None = None,
     ) -> GamificationHTTPResponse:
-        if not authorization or not authorization.startswith("Bearer "):
+        token = self._extract_bearer_token(authorization)
+        if token is None:
             return GamificationHTTPResponse(
                 status_code=401,
                 body={"success": False, "error": "Bearer token is required"},
             )
 
-        token = authorization[7:].strip()
         try:
             identity = self.identity_resolver.resolve_firebase_token(token)
         except AuthenticationError as exc:
@@ -45,3 +50,15 @@ class AuthenticatedGamificationHTTPAdapter:
             body=body,
         )
         return self.gamification_adapter.handle(request)
+
+    @staticmethod
+    def _extract_bearer_token(authorization: str | None) -> str | None:
+        if not isinstance(authorization, str):
+            return None
+
+        scheme, separator, credentials = authorization.strip().partition(" ")
+        if not separator or scheme.lower() != "bearer":
+            return None
+
+        token = credentials.strip()
+        return token or None
