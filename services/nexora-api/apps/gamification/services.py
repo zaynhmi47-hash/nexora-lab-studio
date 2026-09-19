@@ -125,8 +125,16 @@ class GamificationService:
         )
 
     @staticmethod
+    @transaction.atomic
+    def sync_milestones(user: NexoraUser):
+        from apps.learning.services import UnifiedLearningEngine
+
+        UnifiedLearningEngine.achievement_snapshot(user)
+
+    @staticmethod
     def list_recent(user: NexoraUser, limit: int = 50):
         GamificationService.sync_from_domains(user)
+        GamificationService.sync_milestones(user)
         limit = min(max(limit, 1), 100)
         return GamificationActivity.objects.filter(
             user=user,
@@ -136,6 +144,7 @@ class GamificationService:
     @staticmethod
     def statistics(user: NexoraUser, days: int = 30) -> dict:
         GamificationService.sync_from_domains(user)
+        GamificationService.sync_milestones(user)
         days = min(max(days, 1), 90)
         since = timezone.now() - timedelta(days=days - 1)
         activities = GamificationActivity.objects.filter(
