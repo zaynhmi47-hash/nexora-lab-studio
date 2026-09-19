@@ -36,7 +36,12 @@ export default function TajwidTopicScreen() {
   };
 
   const next = async () => {
-    if (!item) return;
+    if (!item || selected === null || !checked) return;
+    const repository = session?.user.provider === 'firebase' ? nexoraCoreTajwidRepository(session) : mockTajwid;
+    const userId = session?.user.id ?? DEMO_USER_ID;
+
+    await repository.completePractice(userId, item.id, selected === item.correctOptionIndex);
+
     if (index + 1 < items.length) {
       setIndex((value) => value + 1);
       setSelected(null);
@@ -44,8 +49,7 @@ export default function TajwidTopicScreen() {
       return;
     }
 
-    const repository = session?.user.provider === 'firebase' ? nexoraCoreTajwidRepository(session) : mockTajwid;
-    await repository.completeTopic(session?.user.id ?? DEMO_USER_ID, topicId as TajwidTopicId);
+    await repository.completeTopic(userId, topicId as TajwidTopicId);
     setFinished(true);
   };
 
