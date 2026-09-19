@@ -19,6 +19,7 @@ const sourceLabels = {
   learning: 'Quran',
   tajwid: 'Tajwid',
   arabic: 'Arabic',
+  gamification: 'Milestone',
 } as const;
 
 const actionLabels: Record<string, string> = {
@@ -26,6 +27,7 @@ const actionLabels: Record<string, string> = {
   practice_completed: 'Latihan selesai',
   topic_completed: 'Topik selesai',
   assessment_completed: 'Assessment selesai',
+  milestone_unlocked: 'Milestone tercapai',
 };
 
 function formatDate(value: string) {
