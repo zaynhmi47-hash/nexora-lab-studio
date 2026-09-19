@@ -36,6 +36,15 @@ class GamificationProcessResult:
 
 STREAK_MILESTONES: tuple[int, ...] = (7, 30)
 
+STREAK_ELIGIBLE_EVENT_TYPES: frozenset[GamificationEventType] = frozenset({
+    GamificationEventType.LESSON_COMPLETED,
+    GamificationEventType.QUIZ_COMPLETED,
+    GamificationEventType.TAJWID_PRACTICE_COMPLETED,
+    GamificationEventType.TAJWID_ASSESSMENT_COMPLETED,
+    GamificationEventType.ARABIC_LESSON_COMPLETED,
+    GamificationEventType.DAILY_ACTIVITY_COMPLETED,
+})
+
 QUEST_REWARD_EVENT_TYPES: dict[str, GamificationEventType] = {
     "daily_learn": GamificationEventType.DAILY_LEARN_QUEST_COMPLETED,
     "daily_quiz": GamificationEventType.DAILY_QUIZ_QUEST_COMPLETED,
@@ -74,7 +83,10 @@ class GamificationEventProcessor:
                 last_activity_date=state.last_activity_date,
             )
 
-            if reward.reason is not RewardReason.ALREADY_PROCESSED:
+            if (
+                reward.reason is not RewardReason.ALREADY_PROCESSED
+                and event.event_type in STREAK_ELIGIBLE_EVENT_TYPES
+            ):
                 next_streak = apply_daily_activity(next_streak, current_date)
 
             quest_counts = dict(state.quest_activity_counts)
