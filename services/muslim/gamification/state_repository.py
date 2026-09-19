@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
 from threading import RLock
 
 
@@ -19,6 +20,7 @@ class UserGamificationState:
     claimed_quest_keys: tuple[str, ...] = ()
     daily_reward_date: date | None = None
     rewarded_streak_milestones: tuple[int, ...] = ()
+    timezone_name: str = "UTC"
     updated_at: datetime = field(
         default_factory=lambda: datetime.now(timezone.utc)
     )
