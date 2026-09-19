@@ -1,6 +1,4 @@
 from datetime import date
-from decimal import Decimal
-
 import pytest
 from django.utils import timezone
 
@@ -69,9 +67,9 @@ def test_planning_summary_combines_actuals_budget_and_goal_pace(organization):
     assert summary["actual_expense_minor"] == 2_000_000
     assert summary["planned_spending_minor"] == 3_000_000
     assert summary["actual_goal_contribution_minor"] == 1_000_000
-    assert summary["planned_saving_minor"] == 1_000_000
-    assert summary["saving_gap_minor"] == 0
-    assert summary["projected_cash_after_plans_minor"] == 6_000_000
+    assert summary["planned_saving_minor"] == 2_000_000
+    assert summary["saving_gap_minor"] == 1_000_000
+    assert summary["projected_cash_after_plans_minor"] == 5_000_000
 
 
 @pytest.mark.django_db
