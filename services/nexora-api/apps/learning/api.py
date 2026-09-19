@@ -97,3 +97,21 @@ class LearningCompleteLessonView(APIView):
         except LearningLesson.DoesNotExist:
             return Response({"detail": "Lesson not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(progress_payload(progress))
+
+
+class LearningAchievementsView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        awards = LearningService.achievements(request.user)
+        return Response([
+            {
+                "id": str(item.achievement_id),
+                "key": item.achievement.key,
+                "title": item.achievement.title,
+                "description": item.achievement.description,
+                "earnedAt": item.earned_at.isoformat(),
+            }
+            for item in awards
+        ])
