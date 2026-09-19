@@ -86,6 +86,12 @@ class LearningService:
             lesson=lesson,
             defaults={"completed_at": timezone.now()},
         )
+        if not created and completion.deleted_at is not None:
+            completion.deleted_at = None
+            completion.completed_at = timezone.now()
+            completion.save(update_fields=["deleted_at", "completed_at", "updated_at"])
+            created = True
+
         progress = LearningProgress.objects.select_for_update().get_or_create(user=user)[0]
         if not created:
             return progress
