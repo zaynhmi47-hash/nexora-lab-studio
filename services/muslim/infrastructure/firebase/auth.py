@@ -9,6 +9,10 @@ class FirebaseAdminInitializationError(RuntimeError):
     """Firebase Admin SDK could not be initialized."""
 
 
+class FirebaseAdminTokenVerificationError(RuntimeError):
+    """Firebase ID token could not be verified."""
+
+
 class FirebaseAdminTokenVerifier(FirebaseTokenVerifier):
     """Lazy Firebase Admin SDK verifier.
 
@@ -68,7 +72,7 @@ class FirebaseAdminTokenVerifier(FirebaseTokenVerifier):
             else:
                 decoded = auth.verify_id_token(id_token, app=app)
         except Exception as exc:
-            raise FirebaseAdminInitializationError(
+            raise FirebaseAdminTokenVerificationError(
                 "Firebase ID token verification failed"
             ) from exc
 
