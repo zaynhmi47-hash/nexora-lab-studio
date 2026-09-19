@@ -66,6 +66,8 @@ class XPRewardApplicationService:
         if not self.repository.append_if_absent(entry):
             # A concurrent request won the idempotency race.
             existing = self.repository.get_by_event_id(event.event_id)
+            if existing is None:
+                existing = self.repository.get_by_reward_key(reward_key)
             if existing is not None:
                 return RewardResult(
                     awarded=False,
