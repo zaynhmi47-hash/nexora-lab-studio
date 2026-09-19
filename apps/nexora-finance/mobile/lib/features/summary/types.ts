@@ -120,6 +120,33 @@ export interface FinanceBudgetSummary {
 
 export type FinancePlanningStatus = 'on_track' | 'saving_gap' | 'budget_overage' | 'over_planned';
 
+export interface FinancePlanningBudgetItem {
+  budgetId: string;
+  name: string;
+  category: string;
+  budgetMinor: number;
+  actualMinor: number;
+  remainingMinor: number;
+  utilizationPercentage: number | null;
+  status: 'on_track' | 'near_limit' | 'over_budget';
+  transactionCount: number;
+}
+
+export interface FinancePlanningGoalItem {
+  goalId: string;
+  name: string;
+  targetAmountMinor: number;
+  currentAmountMinor: number;
+  remainingAmountMinor: number;
+  progressPercentage: number | null;
+  startDate: string;
+  targetDate: string;
+  plannedSavingMinor: number;
+  savingGapMinor: number;
+  daysRemaining: number;
+  status: 'active' | 'overdue' | 'completed';
+}
+
 export interface FinancePlanningSummary {
   startDate: string;
   endDate: string;
@@ -136,4 +163,6 @@ export interface FinancePlanningSummary {
   activeGoalCount: number;
   overBudgetCount: number;
   planningStatus: FinancePlanningStatus;
+  budgetItems: FinancePlanningBudgetItem[];
+  goalItems: FinancePlanningGoalItem[];
 }
