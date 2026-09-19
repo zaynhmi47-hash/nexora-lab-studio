@@ -99,7 +99,7 @@ export interface LearningPort {
 
 export type GamificationActivity = {
   id: string;
-  source: 'learning' | 'tajwid' | 'arabic';
+  source: 'learning' | 'tajwid' | 'arabic' | 'gamification';
   action: string;
   sourceKey: string;
   xpEarned: number;
@@ -114,6 +114,7 @@ export type GamificationStatistics = {
     learning: number;
     tajwid: number;
     arabic: number;
+    gamification: number;
   };
   dailyXp: Array<{
     date: string;
