@@ -27,8 +27,14 @@ XP_REWARD_POLICIES: dict[GamificationEventType, RewardPolicy] = {
         GamificationEventType.DAILY_REWARD_CLAIMED, 30, False, max_per_day=1
     ),
     # Quest rewards are created by the server after a qualifying activity.
-    GamificationEventType.DAILY_QUEST_COMPLETED: RewardPolicy(
-        GamificationEventType.DAILY_QUEST_COMPLETED, 25, False
+    GamificationEventType.DAILY_LEARN_QUEST_COMPLETED: RewardPolicy(
+        GamificationEventType.DAILY_LEARN_QUEST_COMPLETED, 25, False
+    ),
+    GamificationEventType.DAILY_QUIZ_QUEST_COMPLETED: RewardPolicy(
+        GamificationEventType.DAILY_QUIZ_QUEST_COMPLETED, 20, False
+    ),
+    GamificationEventType.DAILY_TAJWID_QUEST_COMPLETED: RewardPolicy(
+        GamificationEventType.DAILY_TAJWID_QUEST_COMPLETED, 20, False
     ),
 }
 
