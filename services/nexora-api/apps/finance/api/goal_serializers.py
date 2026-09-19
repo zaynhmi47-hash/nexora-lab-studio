@@ -84,6 +84,11 @@ class FinanceGoalContributionCreateSerializer(serializers.ModelSerializer):
         model = FinanceGoalContribution
         fields = ("amount_minor", "currency", "contributed_at", "note", "reference", "idempotency_key", "metadata")
 
+    def validate(self, attrs):
+        if attrs.get("currency", "IDR") != "IDR":
+            raise serializers.ValidationError({"currency": "Only IDR is supported by the initial finance domain contract."})
+        return attrs
+
 
 class FinanceGoalListQuerySerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=FinanceGoal.Status.choices, required=False)
