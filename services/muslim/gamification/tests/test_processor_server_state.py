@@ -4,7 +4,10 @@ from services.muslim.gamification.application import XPRewardApplicationService
 from services.muslim.gamification.domain import GamificationEvent, GamificationEventType
 from services.muslim.gamification.processor import GamificationEventProcessor
 from services.muslim.gamification.state_repository import InMemoryGamificationStateRepository
+from services.muslim.gamification.transaction import InMemoryGamificationTransactionManager
 from services.muslim.gamification.storage import InMemoryPersistentXPLedgerRepository
+from services.muslim.gamification.transaction import InMemoryGamificationTransactionManager
+from services.muslim.gamification.transaction import InMemoryGamificationTransactionManager
 
 
 def test_processor_reads_state_from_server_repository() -> None:
@@ -12,8 +15,9 @@ def test_processor_reads_state_from_server_repository() -> None:
     state = InMemoryGamificationStateRepository()
     processor = GamificationEventProcessor(
         XPRewardApplicationService(ledger),
-        state,
-    )
+            state,
+            InMemoryGamificationTransactionManager(),
+        )
 
     result = processor.process(
         GamificationEvent(
