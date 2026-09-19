@@ -2,6 +2,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.identity.models import NexoraUser
+from apps.gamification.services import GamificationService
 
 from .models import (
     TajwidPracticeCompletion,
@@ -100,6 +101,14 @@ class TajwidService:
             if correct:
                 progress.xp_earned += 5
             progress.save(update_fields=["practice_completed", "xp_earned", "updated_at"])
+            GamificationService.record_activity(
+                user=user,
+                source="tajwid",
+                action="practice_completed",
+                source_key=item.key,
+                xp_earned=5 if correct else 0,
+                occurred_at=completion.completed_at,
+            )
         return self.progress(user)
 
     @transaction.atomic
@@ -122,6 +131,14 @@ class TajwidService:
         if created:
             progress.xp_earned += topic.xp_reward
             progress.save(update_fields=["xp_earned", "updated_at"])
+            GamificationService.record_activity(
+                user=user,
+                source="tajwid",
+                action="topic_completed",
+                source_key=topic.key,
+                xp_earned=topic.xp_reward,
+                occurred_at=completion.completed_at,
+            )
         return self.progress(user)
 
     @transaction.atomic
@@ -139,6 +156,13 @@ class TajwidService:
             progress.assessment_completed = True
             progress.xp_earned += assessment_xp
             progress.save(update_fields=["assessment_completed", "xp_earned", "updated_at"])
+            GamificationService.record_activity(
+                user=user,
+                source="tajwid",
+                action="assessment_completed",
+                source_key="tajwid-assessment",
+                xp_earned=assessment_xp,
+            )
 
         return {
             "correctAnswers": correct,
