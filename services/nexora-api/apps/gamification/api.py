@@ -1,0 +1,26 @@
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from apps.identity.authentication import FirebaseIdentityAuthentication
+
+from .services import GamificationService
+
+
+class GamificationActivityView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        activities = GamificationService.list_recent(request.user)
+        return Response([
+            {
+                "id": str(activity.id),
+                "source": activity.source,
+                "action": activity.action,
+                "sourceKey": activity.source_key,
+                "xpEarned": activity.xp_earned,
+                "occurredAt": activity.occurred_at.isoformat(),
+            }
+            for activity in activities
+        ])
