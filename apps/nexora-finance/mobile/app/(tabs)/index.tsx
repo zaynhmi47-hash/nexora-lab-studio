@@ -77,6 +77,7 @@ export default function HomeScreen() {
   const { summary, loading: summaryLoading, error: summaryError } = useFinanceSummary(period);
   const { goals, loading: goalsLoading, error: goalsError } = useGoals();
   const { summary: budgetSummary, loading: budgetLoading, error: budgetError } = useFinanceBudgetSummary(period);
+  const { summary: planningSummary, loading: planningLoading, error: planningError } = useFinancePlanning(period);
   const { comparison, loading: comparisonLoading, error: comparisonError } = useFinanceComparison(period);
   const { report: profitLoss, loading: profitLossLoading, error: profitLossError } = useFinanceProfitLoss(period);
   const { cashFlow, loading: cashFlowLoading, error: cashFlowError } = useFinanceCashFlow(period);
@@ -86,8 +87,8 @@ export default function HomeScreen() {
   const { transactions, loading: transactionsLoading, error: transactionsError } =
     useTransactions({ status: 'posted', startDate: period.startDate, endDate: period.endDate, page: 1, pageSize: 8 });
 
-  const loading = summaryLoading || goalsLoading || breakdownLoading || trendLoading || transactionsLoading || comparisonLoading || profitLossLoading || cashFlowLoading || insightsLoading || budgetLoading;
-  const error = summaryError ?? goalsError ?? breakdownError ?? trendError ?? transactionsError ?? comparisonError ?? profitLossError ?? cashFlowError ?? insightsError ?? budgetError;
+  const loading = summaryLoading || goalsLoading || breakdownLoading || trendLoading || transactionsLoading || comparisonLoading || profitLossLoading || cashFlowLoading || insightsLoading || budgetLoading || planningLoading;
+  const error = summaryError ?? goalsError ?? breakdownError ?? trendError ?? transactionsError ?? comparisonError ?? profitLossError ?? cashFlowError ?? insightsError ?? budgetError ?? planningError;
 
   const incomeBreakdown = useMemo(() => breakdown.filter((item) => item.direction === 'income'), [breakdown]);
   const expenseBreakdown = useMemo(() => breakdown.filter((item) => item.direction === 'expense'), [breakdown]);
@@ -222,6 +223,31 @@ export default function HomeScreen() {
           </ResponsiveGrid>
 
           {renderTrend()}
+          <View style={styles.planningCard}>
+            <View style={styles.trendTitleBlock}>
+              <Text style={styles.sectionTitle}>Financial Planning</Text>
+              <Text style={styles.hint}>Actual cash flow combined with active budgets and savings goals</Text>
+            </View>
+            {planningLoading && !planningSummary ? (
+              <Text style={styles.hint}>Loading planning summary…</Text>
+            ) : planningSummary ? (
+              <>
+                <View style={styles.profitLossMetrics}>
+                  <View style={styles.profitLossMetric}><Text style={styles.label}>Actual net cash flow</Text><Text style={styles.profitLossValue}>{formatIdr(planningSummary.actualNetCashFlowMinor)}</Text></View>
+                  <View style={styles.profitLossMetric}><Text style={styles.label}>Planned spending</Text><Text style={styles.profitLossValue}>{formatIdr(planningSummary.plannedSpendingMinor)}</Text></View>
+                  <View style={styles.profitLossMetric}><Text style={styles.label}>Planned saving</Text><Text style={styles.profitLossValue}>{formatIdr(planningSummary.plannedSavingMinor)}</Text></View>
+                  <View style={styles.profitLossMetric}><Text style={styles.label}>Projected after plans</Text><Text style={styles.profitLossValue}>{formatIdr(planningSummary.projectedCashAfterPlansMinor)}</Text></View>
+                </View>
+                <View style={styles.planningDetails}>
+                  <View style={styles.planningDetail}><Text style={styles.hint}>Saving gap</Text><Text style={styles.planningDetailValue}>{formatIdr(planningSummary.savingGapMinor)}</Text></View>
+                  <View style={styles.planningDetail}><Text style={styles.hint}>Budget overages</Text><Text style={styles.planningDetailValue}>{String(planningSummary.overBudgetCount)}</Text></View>
+                  <View style={styles.planningDetail}><Text style={styles.hint}>Active goals in plan</Text><Text style={styles.planningDetailValue}>{String(planningSummary.activeGoalCount)}</Text></View>
+                  <View style={styles.planningBadge}><Text style={styles.planningBadgeText}>{planningSummary.planningStatus === 'on_track' ? 'On track' : planningSummary.planningStatus === 'saving_gap' ? 'Saving gap' : planningSummary.planningStatus === 'budget_overage' ? 'Budget overage' : 'Plans exceed income'}</Text></View>
+                </View>
+                <Text style={styles.hint}>Projected after plans is a planning calculation, not a bank balance or available cash figure.</Text>
+              </>
+            ) : null}
+          </View>
           <View style={styles.goalsCard}>
             <View style={styles.trendHeader}>
               <View style={styles.trendTitleBlock}>
@@ -513,6 +539,12 @@ const styles = StyleSheet.create({
   insightBadgeText: { fontSize: 11, fontWeight: '700', color: theme.colors.surface },
   insightCategory: { fontSize: 12, fontWeight: '700', color: theme.colors.text },
   cashFlowAnalysisCard: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 16 },
+  planningCard: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 16 },
+  planningDetails: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignItems: 'center' },
+  planningDetail: { minWidth: 150, padding: theme.spacing.md, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border, gap: 3 },
+  planningDetailValue: { fontSize: 15, fontWeight: '800', color: theme.colors.text },
+  planningBadge: { paddingHorizontal: 10, paddingVertical: 7, borderRadius: theme.radius.md, backgroundColor: theme.colors.text },
+  planningBadgeText: { fontSize: 12, fontWeight: '700', color: theme.colors.surface },
   budgetCard: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 16 },
   budgetList: { gap: 0 },
   budgetRow: { minHeight: 72, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 16, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
