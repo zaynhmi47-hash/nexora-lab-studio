@@ -5,6 +5,7 @@ from .api import (
     QuranBookmarkListView,
     QuranReadingPositionView,
     QuranRecitationListView,
+    QuranReadingGoalView, QuranReadingLogView, QuranReadingStatisticsView,
     QuranSurahDetailView,
     QuranSurahListView,
 )
@@ -16,4 +17,7 @@ urlpatterns = [
     path("bookmarks/", QuranBookmarkListView.as_view(), name="quran-bookmarks"),
     path("bookmarks/<uuid:bookmark_id>/", QuranBookmarkDetailView.as_view(), name="quran-bookmark-detail"),
     path("recitations/", QuranRecitationListView.as_view(), name="quran-recitations"),
+    path("goals/", QuranReadingGoalView.as_view(), name="quran-reading-goal"),
+    path("statistics/", QuranReadingStatisticsView.as_view(), name="quran-reading-statistics"),
+    path("reading-log/", QuranReadingLogView.as_view(), name="quran-reading-log"),
 ]
