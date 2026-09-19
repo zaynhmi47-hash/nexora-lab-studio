@@ -6,7 +6,7 @@ import type {
   QuranPort,
   ReadingPosition,
   Recitation,
-  SurahSummary,
+  SurahSummary, QuranReadingGoal, QuranReadingLog, QuranReadingStatistics,
 } from './types';
 
 const baseUrl = () => `${env.nexoraCoreUrl.replace(/\/$/, '')}/api/v1/quran`;
@@ -56,4 +56,8 @@ export const nexoraCoreQuranRepository = (session: AuthSession): QuranPort => ({
   },
   removeBookmark: (bookmarkId) => request(session, `/bookmarks/${bookmarkId}/`, { method: 'DELETE' }),
   listRecitations: () => request<Recitation[]>(session, '/recitations/'),
+  getReadingGoal: () => request<QuranReadingGoal>(session, '/goals/'),
+  updateReadingGoal: (value) => request<QuranReadingGoal>(session, '/goals/', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) }),
+  getReadingStatistics: () => request<QuranReadingStatistics>(session, '/statistics/'),
+  logReading: (log) => request<QuranReadingLog>(session, '/reading-log/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(log) }),
 });
