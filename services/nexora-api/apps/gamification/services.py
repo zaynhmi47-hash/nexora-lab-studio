@@ -148,6 +148,10 @@ class GamificationService:
             )
 
     @staticmethod
+    def milestone_key_for_streak(streak: int) -> str | None:
+        return XPRewardRules.streak_milestone(streak)
+
+    @staticmethod
     @transaction.atomic
     def record_milestone(user: NexoraUser, key: str, occurred_at=None) -> GamificationActivity:
         return GamificationService.record_activity(
