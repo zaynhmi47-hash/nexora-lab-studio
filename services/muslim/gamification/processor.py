@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
-from typing import Mapping
+from datetime import date, timezone
 
 from .achievements import AchievementDefinition, unlocked_achievements
 from .application import XPRewardApplicationService
 from .domain import GamificationEvent, RewardReason, RewardResult
 from .leveling import level_for_xp
+from .state_repository import GamificationStateRepository
 from .streaks import StreakState, apply_daily_activity
 
 
@@ -26,33 +26,35 @@ class GamificationProcessResult:
 
 
 class GamificationEventProcessor:
-    """Coordinates the gamification domain after an accepted learning event.
+    """Coordinates server-owned gamification state for an accepted event."""
 
-    XP remains server-authoritative through XPRewardApplicationService.
-    Streak and achievement state are supplied by callers until a persistent
-    user-progress repository is connected.
-    """
-
-    def __init__(self, reward_service: XPRewardApplicationService) -> None:
+    def __init__(
+        self,
+        reward_service: XPRewardApplicationService,
+        state_repository: GamificationStateRepository,
+    ) -> None:
         self.reward_service = reward_service
+        self.state_repository = state_repository
 
     def process(
         self,
         event: GamificationEvent,
         *,
-        current_xp: int,
-        current_streak: StreakState,
-        already_unlocked: tuple[str, ...] = (),
         activity_date: date | None = None,
     ) -> GamificationProcessResult:
+        state = self.state_repository.get(event.user_id)
         reward = self.reward_service.process(event)
 
-        next_xp = current_xp + reward.xp if reward.awarded else current_xp
-        # A replayed event must not advance the streak a second time.
-        next_streak = current_streak
+        next_xp = state.xp + reward.xp if reward.awarded else state.xp
+        next_streak = StreakState(
+            current=state.current_streak,
+            longest=state.longest_streak,
+            last_activity_date=state.last_activity_date,
+        )
+
         if reward.reason is not RewardReason.ALREADY_PROCESSED:
             next_streak = apply_daily_activity(
-                current_streak,
+                next_streak,
                 activity_date or event.occurred_at.astimezone(timezone.utc).date(),
             )
 
@@ -60,7 +62,26 @@ class GamificationEventProcessor:
             unlocked_achievements(
                 xp=next_xp,
                 streak=next_streak.current,
-                already_unlocked=already_unlocked,
+                already_unlocked=state.unlocked_achievement_keys,
+            )
+        )
+        all_achievement_keys = tuple(
+            dict.fromkeys(
+                (
+                    *state.unlocked_achievement_keys,
+                    *(item.key for item in new_achievements),
+                )
+            )
+        )
+
+        self.state_repository.save(
+            type(state)(
+                user_id=state.user_id,
+                xp=next_xp,
+                current_streak=next_streak.current,
+                longest_streak=next_streak.longest,
+                last_activity_date=next_streak.last_activity_date,
+                unlocked_achievement_keys=all_achievement_keys,
             )
         )
 
