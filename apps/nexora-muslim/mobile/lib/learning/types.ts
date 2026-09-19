@@ -90,3 +90,28 @@ export interface LearningPort {
   completeLesson(userId: string, lessonId: string): Promise<LearningProgress>;
   getAchievements(): Promise<LearningAchievement[]>;
 }
+
+
+export type GamificationActivity = {
+  id: string;
+  source: 'learning' | 'tajwid' | 'arabic';
+  action: string;
+  sourceKey: string;
+  xpEarned: number;
+  occurredAt: string;
+};
+
+export type GamificationStatistics = {
+  days: number;
+  totalXp: number;
+  activityCount: number;
+  bySource: {
+    learning: number;
+    tajwid: number;
+    arabic: number;
+  };
+  dailyXp: Array<{
+    date: string;
+    xp: number;
+  }>;
+};
