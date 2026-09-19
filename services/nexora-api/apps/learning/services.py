@@ -145,6 +145,103 @@ class UnifiedLearningEngine:
         }
 
     @classmethod
+    def achievement_catalog(cls) -> tuple[dict, ...]:
+        return (
+            {
+                "key": "first-activity",
+                "title": "First Activity",
+                "description": "Complete your first activity in any learning domain.",
+                "kind": "activity",
+                "threshold": 1,
+            },
+            {
+                "key": "streak-7",
+                "title": "Seven Day Streak",
+                "description": "Maintain a seven day learning streak.",
+                "kind": "streak",
+                "threshold": 7,
+            },
+            {
+                "key": "xp-100",
+                "title": "100 Total XP",
+                "description": "Reach 100 XP across all learning domains.",
+                "kind": "xp",
+                "threshold": 100,
+            },
+            {
+                "key": "tajwid-practice-10",
+                "title": "Tajwid Practice",
+                "description": "Complete 10 Tajwid practice items.",
+                "kind": "tajwid_practice",
+                "threshold": 10,
+            },
+            {
+                "key": "arabic-lessons-5",
+                "title": "Arabic Foundations",
+                "description": "Complete 5 Arabic lessons.",
+                "kind": "arabic_lessons",
+                "threshold": 5,
+            },
+            {
+                "key": "multi-domain",
+                "title": "Multi-Domain Learner",
+                "description": "Complete activities across all three learning domains.",
+                "kind": "domains",
+                "threshold": 3,
+            },
+        )
+
+    @classmethod
+    def achievement_snapshot(cls, user: NexoraUser) -> list[dict]:
+        snapshot = cls.snapshot(user)
+        activity_dates = cls._activity_dates(user)
+        activity_count = (
+            LearningLessonCompletion.objects.filter(user=user, deleted_at__isnull=True).count()
+            + TajwidTopicCompletion.objects.filter(user=user, deleted_at__isnull=True).count()
+            + TajwidPracticeCompletion.objects.filter(user=user, deleted_at__isnull=True).count()
+            + ArabicLessonCompletion.objects.filter(user=user, deleted_at__isnull=True).count()
+        )
+        tajwid_practice_count = TajwidPracticeCompletion.objects.filter(
+            user=user, deleted_at__isnull=True
+        ).count()
+        arabic_lesson_count = ArabicLessonCompletion.objects.filter(
+            user=user, deleted_at__isnull=True
+        ).count()
+        domain_activity = sum(
+            1
+            for completed in (
+                LearningLessonCompletion.objects.filter(user=user, deleted_at__isnull=True).exists(),
+                TajwidTopicCompletion.objects.filter(user=user, deleted_at__isnull=True).exists()
+                or TajwidPracticeCompletion.objects.filter(user=user, deleted_at__isnull=True).exists(),
+                ArabicLessonCompletion.objects.filter(user=user, deleted_at__isnull=True).exists(),
+            )
+            if completed
+        )
+
+        latest_activity = max(activity_dates) if activity_dates else None
+        earned = []
+        for achievement in cls.achievement_catalog():
+            kind = achievement["kind"]
+            threshold = achievement["threshold"]
+            is_earned = {
+                "activity": activity_count >= threshold,
+                "streak": snapshot["currentStreak"] >= threshold,
+                "xp": snapshot["totalXp"] >= threshold,
+                "tajwid_practice": tajwid_practice_count >= threshold,
+                "arabic_lessons": arabic_lesson_count >= threshold,
+                "domains": domain_activity >= threshold,
+            }[kind]
+            if is_earned:
+                earned.append({
+                    "id": achievement["key"],
+                    "key": achievement["key"],
+                    "title": achievement["title"],
+                    "description": achievement["description"],
+                    "earnedAt": latest_activity.isoformat() if latest_activity else timezone.now().isoformat(),
+                })
+        return earned
+
+    @classmethod
     def rewards(cls, total_xp: int) -> list[dict]:
         return [
             {"key": key, "title": title, "description": description, "earned": total_xp >= threshold}
