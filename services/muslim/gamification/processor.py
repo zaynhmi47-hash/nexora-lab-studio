@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date
 from zoneinfo import ZoneInfo
 
 from .achievements import AchievementDefinition, unlocked_achievements
