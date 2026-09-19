@@ -8,7 +8,6 @@ from uuid import UUID, uuid4
 from .repository import (
     Identity,
     IdentityConflict,
-    IdentityNotFound,
     IdentityRepository,
     ProviderAccount,
 )
@@ -18,6 +17,16 @@ class DBConnection(Protocol):
     """Minimal DB-API-like connection required by the SQL adapter."""
 
     def execute(self, query: str, params: tuple[Any, ...] = ()) -> Any:
+        ...
+
+
+class IdentityDatabaseConnection(DBConnection, Protocol):
+    """Connection contract shared by repository and transaction adapters."""
+
+    def commit(self) -> Any:
+        ...
+
+    def rollback(self) -> Any:
         ...
 
 
