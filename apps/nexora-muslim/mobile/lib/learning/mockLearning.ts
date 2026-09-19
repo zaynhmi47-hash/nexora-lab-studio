@@ -178,6 +178,25 @@ export const mockLearning: LearningPort = {
       options: [...question.options],
     }));
   },
+  async completeQuiz(lessonId, answers) {
+    const questions = quizzes[lessonId] ?? [];
+    const correctAnswers = questions.reduce(
+      (count, question, index) => count + (answers[index] === question.correctOptionIndex ? 1 : 0),
+      0,
+    );
+    const totalQuestions = questions.length;
+    const scorePercent = totalQuestions ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+    return {
+      attemptId: `mock-${Date.now()}`,
+      lessonId,
+      correctAnswers,
+      totalQuestions,
+      scorePercent,
+      passed: scorePercent >= 70,
+      xpEarned: 0,
+      completedAt: new Date().toISOString(),
+    };
+  },
   async getAchievements() {
     const progress = await this.getProgress(initialProgress.userId);
     const count = progress.completedLessonIds.length;
