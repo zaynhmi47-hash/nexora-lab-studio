@@ -11,8 +11,10 @@ def _distance_km(lat1, lon1, lat2, lon2):
 
 class IslamicPlacesService:
     @staticmethod
-    def list_places(latitude=None, longitude=None, radius_km=25):
+    def list_places(latitude=None, longitude=None, radius_km=25, place_type=None):
         places = IslamicPlace.objects.filter(is_published=True, deleted_at__isnull=True)
+        if place_type:
+            places = places.filter(place_type=place_type)
         rows = []
         for place in places:
             item = place
