@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Mapping
+from typing import Mapping, Protocol
 
-from .api_service import GamificationAPIResult
 from .auth import AuthenticationError, UserIdentityResolver
 from .http_adapter import GamificationHTTPRequest, GamificationHTTPResponse
+
+
+class GamificationRouteAdapter(Protocol):
+    def handle(self, request: GamificationHTTPRequest) -> GamificationHTTPResponse:
+        ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,7 +22,7 @@ class AuthenticatedGamificationHTTPAdapter:
     """
 
     identity_resolver: UserIdentityResolver
-    gamification_adapter: object
+    gamification_adapter: GamificationRouteAdapter
 
     def handle(
         self,
