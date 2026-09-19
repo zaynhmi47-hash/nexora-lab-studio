@@ -25,6 +25,33 @@ class FinancePlanningQuerySerializer(serializers.Serializer):
         return attrs
 
 
+class FinancePlanningBudgetItemSerializer(serializers.Serializer):
+    budget_id = serializers.UUIDField()
+    name = serializers.CharField()
+    category = serializers.CharField()
+    budget_minor = serializers.IntegerField()
+    actual_minor = serializers.IntegerField()
+    remaining_minor = serializers.IntegerField()
+    utilization_percentage = serializers.FloatField(allow_null=True)
+    status = serializers.CharField()
+    transaction_count = serializers.IntegerField()
+
+
+class FinancePlanningGoalItemSerializer(serializers.Serializer):
+    goal_id = serializers.UUIDField()
+    name = serializers.CharField()
+    target_amount_minor = serializers.IntegerField()
+    current_amount_minor = serializers.IntegerField()
+    remaining_amount_minor = serializers.IntegerField()
+    progress_percentage = serializers.FloatField(allow_null=True)
+    start_date = serializers.DateField()
+    target_date = serializers.DateField()
+    planned_saving_minor = serializers.IntegerField()
+    saving_gap_minor = serializers.IntegerField()
+    days_remaining = serializers.IntegerField()
+    status = serializers.ChoiceField(choices=("active", "overdue", "completed"))
+
+
 class FinancePlanningSummarySerializer(serializers.Serializer):
     start_date = serializers.DateField()
     end_date = serializers.DateField()
@@ -43,3 +70,5 @@ class FinancePlanningSummarySerializer(serializers.Serializer):
     planning_status = serializers.ChoiceField(
         choices=("on_track", "saving_gap", "budget_overage", "over_planned"),
     )
+    budget_items = FinancePlanningBudgetItemSerializer(many=True)
+    goal_items = FinancePlanningGoalItemSerializer(many=True)
