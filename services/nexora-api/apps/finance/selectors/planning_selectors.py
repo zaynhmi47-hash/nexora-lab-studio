@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from datetime import date
 
-from django.db.models import BigIntegerField, Coalesce, Q, Sum, Value
+from django.db.models import BigIntegerField, Count, Q, Sum, Value
+from django.db.models.functions import Coalesce
 
 from apps.finance.models import FinanceGoal, FinanceGoalContribution, FinanceTransaction
 from apps.finance.selectors.budget_summary_selectors import get_finance_budget_summary
@@ -12,24 +13,73 @@ def _days_inclusive(start: date, end: date) -> int:
     return max((end - start).days + 1, 0)
 
 
-def _goal_progress(*, goal, organization_id) -> int:
+def _goal_contribution_aggregate(*, goal_id, organization_id, start_date=None, end_date=None) -> dict:
     zero = Value(0, output_field=BigIntegerField())
-    return int(
-        FinanceGoalContribution.objects.active()
-        .filter(
-            organization_id=organization_id,
-            goal_id=goal.id,
-            status=FinanceGoalContribution.Status.POSTED,
-        )
-        .aggregate(amount=Coalesce(Sum("amount_minor"), zero))["amount"]
-        or 0
+    queryset = FinanceGoalContribution.objects.active().filter(
+        organization_id=organization_id,
+        goal_id=goal_id,
+        status=FinanceGoalContribution.Status.POSTED,
     )
+    if start_date is not None:
+        queryset = queryset.filter(contributed_at__date__gte=start_date)
+    if end_date is not None:
+        queryset = queryset.filter(contributed_at__date__lte=end_date)
+    aggregate = queryset.aggregate(
+        amount_minor=Coalesce(Sum("amount_minor"), zero),
+        contribution_count=Count("id"),
+    )
+    return {
+        "amount_minor": int(aggregate["amount_minor"] or 0),
+        "contribution_count": int(aggregate["contribution_count"] or 0),
+    }
 
 
-def _goal_plan_item(*, goal, current_amount: int, start_date: date, end_date: date, today: date) -> dict | None:
+def _goal_plan_item(
+    *,
+    goal,
+    current_amount: int,
+    actual_contribution: int,
+    start_date: date,
+    end_date: date,
+    today: date,
+) -> dict | None:
     remaining = max(goal.target_amount_minor - current_amount, 0)
+    progress = min(100.0, (current_amount / goal.target_amount_minor) * 100)
+    days_remaining = max((goal.target_date - today).days, 0)
+
     if remaining <= 0:
-        return None
+        return {
+            "goal_id": str(goal.id),
+            "name": goal.name,
+            "target_amount_minor": goal.target_amount_minor,
+            "current_amount_minor": current_amount,
+            "remaining_amount_minor": 0,
+            "progress_percentage": round(progress, 2),
+            "start_date": goal.start_date,
+            "target_date": goal.target_date,
+            "planned_saving_minor": 0,
+            "actual_contribution_minor": actual_contribution,
+            "saving_gap_minor": 0,
+            "days_remaining": days_remaining,
+            "status": "completed",
+        }
+
+    if goal.target_date < today:
+        return {
+            "goal_id": str(goal.id),
+            "name": goal.name,
+            "target_amount_minor": goal.target_amount_minor,
+            "current_amount_minor": current_amount,
+            "remaining_amount_minor": remaining,
+            "progress_percentage": round(progress, 2),
+            "start_date": goal.start_date,
+            "target_date": goal.target_date,
+            "planned_saving_minor": 0,
+            "actual_contribution_minor": actual_contribution,
+            "saving_gap_minor": 0,
+            "days_remaining": 0,
+            "status": "overdue",
+        }
 
     pace_start = max(today, goal.start_date)
     pace_end = goal.target_date
@@ -41,8 +91,6 @@ def _goal_plan_item(*, goal, current_amount: int, start_date: date, end_date: da
         return None
 
     planned = (remaining * allocation_days) // pace_days
-    progress = min(100.0, (current_amount / goal.target_amount_minor) * 100)
-    days_remaining = max((goal.target_date - today).days, 0)
     return {
         "goal_id": str(goal.id),
         "name": goal.name,
@@ -53,9 +101,10 @@ def _goal_plan_item(*, goal, current_amount: int, start_date: date, end_date: da
         "start_date": goal.start_date,
         "target_date": goal.target_date,
         "planned_saving_minor": planned,
-        "saving_gap_minor": planned,
+        "actual_contribution_minor": actual_contribution,
+        "saving_gap_minor": max(planned - actual_contribution, 0),
         "days_remaining": days_remaining,
-        "status": "completed" if remaining == 0 else "overdue" if goal.target_date < today else "active",
+        "status": "active",
     }
 
 
@@ -88,13 +137,23 @@ def get_finance_planning_summary(*, organization_id, start_date: date, end_date:
         organization_id=organization_id,
         status=FinanceGoal.Status.ACTIVE,
         start_date__lte=end_date,
-        target_date__gte=today,
     )
     goal_plans = []
     for goal in goals:
+        aggregate = _goal_contribution_aggregate(
+            goal_id=goal.id,
+            organization_id=organization_id,
+        )
+        period_aggregate = _goal_contribution_aggregate(
+            goal_id=goal.id,
+            organization_id=organization_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
         item = _goal_plan_item(
             goal=goal,
-            current_amount=_goal_progress(goal=goal, organization_id=organization_id),
+            current_amount=aggregate["amount_minor"],
+            actual_contribution=period_aggregate["amount_minor"],
             start_date=start_date,
             end_date=end_date,
             today=today,
@@ -103,18 +162,8 @@ def get_finance_planning_summary(*, organization_id, start_date: date, end_date:
             goal_plans.append(item)
 
     planned_saving = sum(item["planned_saving_minor"] for item in goal_plans)
-    actual_saving = int(
-        FinanceGoalContribution.objects.active()
-        .filter(
-            organization_id=organization_id,
-            status=FinanceGoalContribution.Status.POSTED,
-            contributed_at__date__gte=start_date,
-            contributed_at__date__lte=end_date,
-        )
-        .aggregate(amount=Coalesce(Sum("amount_minor"), zero))["amount"]
-        or 0
-    )
-    saving_gap = planned_saving - actual_saving
+    actual_saving = sum(item["actual_contribution_minor"] for item in goal_plans)
+    saving_gap = sum(item["saving_gap_minor"] for item in goal_plans)
     projected_after_plans = actual_income - planned_spending - planned_saving
 
     if projected_after_plans < 0:
@@ -139,7 +188,7 @@ def get_finance_planning_summary(*, organization_id, start_date: date, end_date:
         "planned_spending_gap_minor": planned_spending_gap,
         "saving_gap_minor": saving_gap,
         "projected_cash_after_plans_minor": projected_after_plans,
-        "active_goal_count": len(goal_plans),
+        "active_goal_count": sum(item["status"] == "active" for item in goal_plans),
         "over_budget_count": budget_summary["over_budget_count"],
         "planning_status": planning_status,
         "budget_items": budget_summary["budgets"],
