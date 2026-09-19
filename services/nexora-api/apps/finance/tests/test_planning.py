@@ -1,4 +1,5 @@
 from datetime import date
+
 import pytest
 from django.utils import timezone
 
@@ -70,6 +71,97 @@ def test_planning_summary_combines_actuals_budget_and_goal_pace(organization):
     assert summary["planned_saving_minor"] == 2_000_000
     assert summary["saving_gap_minor"] == 1_000_000
     assert summary["projected_cash_after_plans_minor"] == 5_000_000
+
+    goal_item = summary["goal_items"][0]
+    assert goal_item["actual_contribution_minor"] == 1_000_000
+    assert goal_item["saving_gap_minor"] == 1_000_000
+    assert goal_item["status"] == "active"
+
+
+@pytest.mark.django_db
+def test_planning_summary_includes_overdue_goal(organization):
+    goal = FinanceGoal.objects.create(
+        organization=organization,
+        name="Overdue fund",
+        target_amount_minor=5_000_000,
+        currency="IDR",
+        start_date=date(2026, 8, 1),
+        target_date=date(2026, 9, 10),
+    )
+
+    summary = get_finance_planning_summary(
+        organization_id=organization.id,
+        start_date=date(2026, 9, 1),
+        end_date=date(2026, 9, 30),
+        today=date(2026, 9, 15),
+    )
+
+    assert summary["active_goal_count"] == 0
+    assert len(summary["goal_items"]) == 1
+    assert summary["goal_items"][0]["status"] == "overdue"
+    assert summary["goal_items"][0]["planned_saving_minor"] == 0
+
+
+@pytest.mark.django_db
+def test_planning_summary_marks_completed_goal_and_does_not_add_required_saving(organization):
+    goal = FinanceGoal.objects.create(
+        organization=organization,
+        name="Completed fund",
+        target_amount_minor=2_000_000,
+        currency="IDR",
+        start_date=date(2026, 9, 1),
+        target_date=date(2026, 9, 30),
+    )
+    FinanceGoalContribution.objects.create(
+        organization=organization,
+        goal=goal,
+        amount_minor=2_000_000,
+        currency="IDR",
+        contributed_at=timezone.make_aware(timezone.datetime(2026, 9, 10, 10, 0)),
+        status=FinanceGoalContribution.Status.POSTED,
+    )
+
+    summary = get_finance_planning_summary(
+        organization_id=organization.id,
+        start_date=date(2026, 9, 1),
+        end_date=date(2026, 9, 30),
+        today=date(2026, 9, 15),
+    )
+
+    assert summary["active_goal_count"] == 0
+    assert summary["planned_saving_minor"] == 0
+    assert summary["goal_items"][0]["status"] == "completed"
+    assert summary["goal_items"][0]["saving_gap_minor"] == 0
+
+
+@pytest.mark.django_db
+def test_planning_summary_ignores_void_goal_contribution(organization):
+    goal = FinanceGoal.objects.create(
+        organization=organization,
+        name="Goal",
+        target_amount_minor=3_000_000,
+        currency="IDR",
+        start_date=date(2026, 9, 1),
+        target_date=date(2026, 9, 30),
+    )
+    FinanceGoalContribution.objects.create(
+        organization=organization,
+        goal=goal,
+        amount_minor=1_000_000,
+        currency="IDR",
+        contributed_at=timezone.make_aware(timezone.datetime(2026, 9, 5, 10, 0)),
+        status=FinanceGoalContribution.Status.VOID,
+    )
+
+    summary = get_finance_planning_summary(
+        organization_id=organization.id,
+        start_date=date(2026, 9, 1),
+        end_date=date(2026, 9, 30),
+        today=date(2026, 9, 15),
+    )
+
+    assert summary["actual_goal_contribution_minor"] == 0
+    assert summary["goal_items"][0]["current_amount_minor"] == 0
 
 
 @pytest.mark.django_db
