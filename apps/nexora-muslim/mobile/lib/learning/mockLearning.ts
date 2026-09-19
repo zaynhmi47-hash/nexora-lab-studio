@@ -3,6 +3,7 @@ import type {
   LearningPort,
   LearningProgress,
   QuizQuestion,
+  LearningAchievement,
 } from './types';
 
 const courses: LearningCourse[] = [
@@ -39,6 +40,11 @@ const initialProgress: LearningProgress = {
 };
 
 const progressByUser = new Map<string, LearningProgress>();
+const achievementCatalog: LearningAchievement[] = [
+  { id:'first-lesson', key:'first-lesson', title:'First Step', description:'Complete your first learning lesson.', earnedAt:'' },
+  { id:'xp-100', key:'xp-100', title:'100 XP', description:'Reach 100 XP.', earnedAt:'' },
+  { id:'streak-7', key:'streak-7', title:'Seven Day Streak', description:'Maintain a seven day learning streak.', earnedAt:'' },
+];
 
 const quizzes: Record<string, QuizQuestion[]> = {
   harakat: [
@@ -142,6 +148,11 @@ export const mockLearning: LearningPort = {
       ...question,
       options: [...question.options],
     }));
+  },
+  async getAchievements() {
+    const progress = await this.getProgress(initialProgress.userId);
+    const count = progress.completedLessonIds.length;
+    return achievementCatalog.filter(a => (a.key === 'first-lesson' && count >= 1) || (a.key === 'xp-100' && progress.xp >= 100) || (a.key === 'streak-7' && progress.currentStreak >= 7)).map(a => ({ ...a, earnedAt: progress.lastCompletedAt ?? new Date().toISOString() }));
   },
   async completeLesson(userId, lessonId) {
     const progress = await this.getProgress(userId);
