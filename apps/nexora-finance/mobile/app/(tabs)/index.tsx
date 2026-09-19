@@ -1,4 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 
 import { AdaptiveHeader, ResponsiveContainer, ResponsiveGrid, ResponsiveScaffold } from '@/components/layout';
@@ -68,6 +69,7 @@ const compactIdr = (value: number) => {
 
 export default function HomeScreen() {
   const { isMobile } = useResponsive();
+  const router = useRouter();
   const [periodKey, setPeriodKey] = useState<PeriodKey>('this_month');
   const [granularity, setGranularity] = useState<TrendGranularity>('day');
   const period = useMemo(() => getPeriodDates(periodKey), [periodKey]);
