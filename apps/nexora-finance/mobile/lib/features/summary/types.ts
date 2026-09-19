@@ -66,3 +66,24 @@ export interface FinanceCashFlow {
   inflowLines: FinanceCashFlowLine[];
   outflowLines: FinanceCashFlowLine[];
 }
+
+export type FinanceInsightSeverity = 'info' | 'warning';
+
+export interface FinanceInsight {
+  code: string;
+  severity: FinanceInsightSeverity;
+  title: string;
+  message: string;
+  metric: string;
+  valueMinor: number | null;
+  deltaMinor: number | null;
+  percentageChange: number | null;
+  category: string | null;
+}
+
+export interface FinanceInsights {
+  startDate: string;
+  endDate: string;
+  currency: 'IDR';
+  insights: FinanceInsight[];
+}
