@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, timezone
+from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
 
 from .achievements import AchievementDefinition, unlocked_achievements
 from .application import XPRewardApplicationService
@@ -74,7 +75,7 @@ class GamificationEventProcessor:
         with self.transaction_manager.transaction():
             state = self.state_repository.get(event.user_id)
             reward = self.reward_service.process(event)
-            current_date = activity_date or event.occurred_at.astimezone(timezone.utc).date()
+            current_date = activity_date or event.occurred_at.astimezone(ZoneInfo(state.timezone_name)).date()
 
             next_xp = state.xp + reward.xp if reward.awarded else state.xp
             next_streak = StreakState(
@@ -179,6 +180,7 @@ class GamificationEventProcessor:
                         else state.daily_reward_date
                     ),
                     rewarded_streak_milestones=tuple(sorted(rewarded_milestones)),
+                    timezone_name=state.timezone_name,
                 )
             )
 
