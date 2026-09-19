@@ -16,7 +16,7 @@ class FirebaseIdentityProvisioner:
 
     def provision_verified_claims(
         self,
-        claims: dict[str, object],
+        claims: Mapping[str, object],
     ) -> ProvisionedIdentity:
         firebase_uid = claims.get("uid")
         if not isinstance(firebase_uid, str) or not firebase_uid.strip():
