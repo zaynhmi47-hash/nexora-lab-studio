@@ -8,6 +8,8 @@ from django.utils import timezone
 from apps.identity.models import NexoraUser
 from apps.tajwid.services import TajwidService
 from apps.arabic.services import ArabicService
+from apps.tajwid.models import TajwidPracticeCompletion, TajwidTopicCompletion
+from apps.arabic.models import ArabicLessonCompletion
 
 from .models import (
     LearningCourse,
@@ -151,6 +153,52 @@ class UnifiedLearningEngine:
         ]
 
     @classmethod
+    def _activity_dates(cls, user: NexoraUser) -> set:
+        dates = set()
+
+        learning_dates = LearningLessonCompletion.objects.filter(
+            user=user, deleted_at__isnull=True
+        ).values_list("completed_at", flat=True)
+        tajwid_topic_dates = TajwidTopicCompletion.objects.filter(
+            user=user, deleted_at__isnull=True
+        ).values_list("completed_at", flat=True)
+        tajwid_practice_dates = TajwidPracticeCompletion.objects.filter(
+            user=user, deleted_at__isnull=True
+        ).values_list("completed_at", flat=True)
+        arabic_dates = ArabicLessonCompletion.objects.filter(
+            user=user, deleted_at__isnull=True
+        ).values_list("completed_at", flat=True)
+
+        for timestamp in (
+            *learning_dates,
+            *tajwid_topic_dates,
+            *tajwid_practice_dates,
+            *arabic_dates,
+        ):
+            dates.add(timezone.localtime(timestamp).date())
+
+        return dates
+
+    @classmethod
+    def current_streak(cls, user: NexoraUser) -> int:
+        dates = cls._activity_dates(user)
+        if not dates:
+            return 0
+
+        today = timezone.localdate()
+        if today not in dates:
+            today -= timedelta(days=1)
+            if today not in dates:
+                return 0
+
+        streak = 0
+        cursor = today
+        while cursor in dates:
+            streak += 1
+            cursor -= timedelta(days=1)
+        return streak
+
+    @classmethod
     def snapshot(cls, user: NexoraUser) -> dict:
         learning = LearningService.progress(user)
         tajwid = TajwidService.progress(user)
@@ -164,17 +212,11 @@ class UnifiedLearningEngine:
         total_xp = sum(domains.values())
         level_data = cls.level_progress(total_xp)
 
-        streaks = [
-            learning.current_streak,
-            tajwid.get("currentStreak", 0),
-            arabic.get("currentStreak", 0),
-        ]
-
         return {
             "userId": str(user.id),
             "totalXp": total_xp,
             **level_data,
-            "currentStreak": max(streaks),
+            "currentStreak": cls.current_streak(user),
             "domains": domains,
             "rewards": cls.rewards(total_xp),
         }
@@ -197,7 +239,7 @@ def learning_hub(user: NexoraUser):
             },
             "tajwid": {
                 "xp": tajwid["xpEarned"],
-                "streak": tajwid.get("currentStreak", 0),
+                "streak": engine["currentStreak"],
                 "completedCount": len(tajwid["completedTopicIds"]),
                 "practiceCompleted": tajwid["practiceCompleted"],
                 "assessmentCompleted": tajwid["assessmentCompleted"],
