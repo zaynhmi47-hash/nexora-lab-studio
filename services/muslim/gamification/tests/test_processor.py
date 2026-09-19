@@ -84,3 +84,21 @@ def test_seventh_activity_awards_streak_milestone_once() -> None:
     processor.process(make_event("lesson-7"))
     current = state.get("user-1")
     assert current.xp == 8 * 20 + 25 + 50
+
+
+def test_daily_reward_does_not_create_learning_streak() -> None:
+    processor, state = build_processor()
+
+    processor.process(
+        GamificationEvent(
+            event_id="daily-reward-1",
+            user_id="user-1",
+            event_type=GamificationEventType.DAILY_REWARD_CLAIMED,
+            occurred_at=datetime(2026, 9, 19, tzinfo=timezone.utc),
+            activity_id="2026-09-19",
+        )
+    )
+
+    current = state.get("user-1")
+    assert current.current_streak == 0
+    assert current.xp == 30
