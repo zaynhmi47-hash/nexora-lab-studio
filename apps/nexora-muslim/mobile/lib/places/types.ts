@@ -13,5 +13,5 @@ export type IslamicPlace = {
 };
 
 export interface IslamicPlacesPort {
-  listPlaces(options?: { latitude?: number; longitude?: number; radiusKm?: number }): Promise<IslamicPlace[]>;
+  listPlaces(options?: { latitude?: number; longitude?: number; radiusKm?: number; type?: IslamicPlaceType }): Promise<IslamicPlace[]>;
 }
