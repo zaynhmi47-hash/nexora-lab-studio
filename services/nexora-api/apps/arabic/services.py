@@ -43,6 +43,12 @@ class ArabicService:
         if lesson is None:
             raise ArabicLesson.DoesNotExist
         completion, created = ArabicLessonCompletion.objects.get_or_create(user=user, lesson=lesson, defaults={"completed_at": timezone.now()})
+        if not created and completion.deleted_at is not None:
+            completion.deleted_at = None
+            completion.completed_at = timezone.now()
+            completion.save(update_fields=["deleted_at", "completed_at", "updated_at"])
+            created = True
+
         progress, _ = ArabicProgress.objects.select_for_update().get_or_create(user=user)
         if not created:
             return ArabicService.progress(user)
