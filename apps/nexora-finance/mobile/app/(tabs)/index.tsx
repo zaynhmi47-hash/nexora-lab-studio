@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { AdaptiveHeader, ResponsiveContainer, ResponsiveGrid, ResponsiveScaffold } from '@/components/layout';
 import { useResponsive } from '@/lib/responsive';
 import { theme } from '@/lib/theme';
-import { useFinanceCategoryBreakdown, useFinanceCashFlow, useFinanceComparison, useFinanceInsights, useFinanceProfitLoss, useFinanceSummary, useFinanceTrend } from '@/lib/features/summary';
+import { useFinanceBudgetSummary, useFinanceCategoryBreakdown, useFinanceCashFlow, useFinanceComparison, useFinanceInsights, useFinanceProfitLoss, useFinanceSummary, useFinanceTrend } from '@/lib/features/summary';
 import { useTransactions } from '@/lib/features/transactions';
 
 type PeriodKey = 'this_month' | 'last_month' | 'three_months';
@@ -72,6 +72,7 @@ export default function HomeScreen() {
   const period = useMemo(() => getPeriodDates(periodKey), [periodKey]);
 
   const { summary, loading: summaryLoading, error: summaryError } = useFinanceSummary(period);
+  const { summary: budgetSummary, loading: budgetLoading, error: budgetError } = useFinanceBudgetSummary(period);
   const { comparison, loading: comparisonLoading, error: comparisonError } = useFinanceComparison(period);
   const { report: profitLoss, loading: profitLossLoading, error: profitLossError } = useFinanceProfitLoss(period);
   const { cashFlow, loading: cashFlowLoading, error: cashFlowError } = useFinanceCashFlow(period);
@@ -81,8 +82,8 @@ export default function HomeScreen() {
   const { transactions, loading: transactionsLoading, error: transactionsError } =
     useTransactions({ status: 'posted', startDate: period.startDate, endDate: period.endDate, page: 1, pageSize: 8 });
 
-  const loading = summaryLoading || breakdownLoading || trendLoading || transactionsLoading || comparisonLoading || profitLossLoading || cashFlowLoading || insightsLoading;
-  const error = summaryError ?? breakdownError ?? trendError ?? transactionsError ?? comparisonError ?? profitLossError ?? cashFlowError ?? insightsError;
+  const loading = summaryLoading || breakdownLoading || trendLoading || transactionsLoading || comparisonLoading || profitLossLoading || cashFlowLoading || insightsLoading || budgetLoading;
+  const error = summaryError ?? breakdownError ?? trendError ?? transactionsError ?? comparisonError ?? profitLossError ?? cashFlowError ?? insightsError ?? budgetError;
 
   const incomeBreakdown = useMemo(() => breakdown.filter((item) => item.direction === 'income'), [breakdown]);
   const expenseBreakdown = useMemo(() => breakdown.filter((item) => item.direction === 'expense'), [breakdown]);
@@ -329,6 +330,51 @@ export default function HomeScreen() {
             ) : null}
           </View>
 
+          <View style={styles.budgetCard}>
+            <View style={styles.trendTitleBlock}>
+              <Text style={styles.sectionTitle}>Budget vs Actual</Text>
+              <Text style={styles.hint}>Active expense budgets compared with posted expenses for the selected period</Text>
+            </View>
+            {budgetLoading && !budgetSummary ? (
+              <Text style={styles.hint}>Loading budget summary…</Text>
+            ) : budgetSummary ? (
+              <>
+                <View style={styles.profitLossMetrics}>
+                  <View style={styles.profitLossMetric}><Text style={styles.label}>Budget</Text><Text style={styles.profitLossValue}>{formatIdr(budgetSummary.totalBudgetMinor)}</Text></View>
+                  <View style={styles.profitLossMetric}><Text style={styles.label}>Actual</Text><Text style={styles.profitLossValue}>{formatIdr(budgetSummary.totalActualMinor)}</Text></View>
+                  <View style={styles.profitLossMetric}><Text style={styles.label}>Remaining</Text><Text style={styles.profitLossValue}>{formatIdr(budgetSummary.totalRemainingMinor)}</Text></View>
+                  <View style={styles.profitLossMetric}><Text style={styles.label}>Utilization</Text><Text style={styles.profitLossValue}>{budgetSummary.overallUtilizationPercentage === null ? '—' : budgetSummary.overallUtilizationPercentage.toFixed(1) + '%'}</Text></View>
+                </View>
+                {budgetSummary.budgets.length === 0 ? (
+                  <Text style={styles.hint}>No active budgets overlap this period.</Text>
+                ) : (
+                  <View style={styles.budgetList}>
+                    {budgetSummary.budgets.slice(0, 8).map((budget) => (
+                      <View key={budget.budgetId} style={styles.budgetRow}>
+                        <View style={styles.budgetMain}>
+                          <View style={styles.breakdownTitleRow}>
+                            <View style={styles.budgetNameBlock}>
+                              <Text style={styles.profitLossCategory} numberOfLines={1}>{budget.name}</Text>
+                              <Text style={styles.hint}>{budget.category} · {budget.transactionCount} transaction{budget.transactionCount === 1 ? '' : 's'}</Text>
+                            </View>
+                            <View style={[styles.budgetBadge, budget.status === 'over_budget' && styles.budgetBadgeOver, budget.status === 'near_limit' && styles.budgetBadgeNear]}>
+                              <Text style={styles.budgetBadgeText}>{budget.status === 'over_budget' ? 'Over budget' : budget.status === 'near_limit' ? 'Near limit' : 'On track'}</Text>
+                            </View>
+                          </View>
+                          <View style={styles.progressTrack}><View style={[styles.progressFill, { width: Math.min(100, budget.utilizationPercentage ?? 0) + '%' }]} /></View>
+                        </View>
+                        <View style={styles.budgetAmountBlock}>
+                          <Text style={styles.breakdownAmount}>{formatIdr(budget.actualMinor)}</Text>
+                          <Text style={styles.hint}>of {formatIdr(budget.budgetMinor)}</Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </>
+            ) : null}
+          </View>
+
           <View style={styles.profitLossCard}>
             <View style={styles.trendTitleBlock}>
               <Text style={styles.sectionTitle}>Profit &amp; Loss</Text>
@@ -434,6 +480,16 @@ const styles = StyleSheet.create({
   insightBadgeText: { fontSize: 11, fontWeight: '700', color: theme.colors.surface },
   insightCategory: { fontSize: 12, fontWeight: '700', color: theme.colors.text },
   cashFlowAnalysisCard: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 16 },
+  budgetCard: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 16 },
+  budgetList: { gap: 0 },
+  budgetRow: { minHeight: 72, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 16, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  budgetMain: { flex: 1, gap: 6 },
+  budgetNameBlock: { flex: 1, gap: 2 },
+  budgetAmountBlock: { minWidth: 120, alignItems: 'flex-end', gap: 2 },
+  budgetBadge: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: theme.radius.md, backgroundColor: theme.colors.border },
+  budgetBadgeNear: { backgroundColor: theme.colors.muted },
+  budgetBadgeOver: { backgroundColor: theme.colors.text },
+  budgetBadgeText: { fontSize: 11, fontWeight: '700', color: theme.colors.surface },
   profitLossCard: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 16 },
   profitLossMetrics: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   profitLossMetric: { flex: 1, minWidth: 190, padding: theme.spacing.lg, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border, gap: 4 },
