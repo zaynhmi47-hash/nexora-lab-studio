@@ -2,7 +2,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.identity.models import NexoraUser
-from apps.gamification.services import GamificationService
+from apps.gamification.services import GamificationService, XPRewardRules
 
 from .models import (
     TajwidPracticeCompletion,
@@ -106,7 +106,7 @@ class TajwidService:
                 source="tajwid",
                 action="practice_completed",
                 source_key=item.key,
-                xp_earned=5 if correct else 0,
+                xp_earned=XPRewardRules.tajwid_practice(correct),
                 occurred_at=completion.completed_at,
             )
         return self.progress(user)
