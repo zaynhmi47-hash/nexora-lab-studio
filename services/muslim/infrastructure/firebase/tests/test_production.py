@@ -158,6 +158,23 @@ def test_production_authentication_boundary_reaches_real_gamification_endpoint()
     first_user_id = str(connection.identity[0])
     UUID(first_user_id)
 
+    event_response = components.gamification_adapter.handle(
+        method="POST",
+        path="/gamification/events/",
+        authorization="Bearer firebase-token",
+        body={
+            "userId": "attacker-controlled",
+            "eventId": "production-auth-event-1",
+            "eventType": "LESSON_COMPLETED",
+            "occurredAt": "2026-09-19T00:00:00+00:00",
+            "activityId": "lesson-1",
+        },
+    )
+
+    assert event_response.status_code == 200
+    assert event_response.body["reward"]["xp"] == 20
+    assert event_response.body["gamification"]["xp"] == 20
+
     second_response = components.gamification_adapter.handle(
         method="GET",
         path="/gamification/profile/",
