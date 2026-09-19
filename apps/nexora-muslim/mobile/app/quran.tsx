@@ -1,13 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Audio } from 'expo-av';
 import { router } from 'expo-router';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/constants/theme';
 import { useAppState } from '@/lib/app-state';
 import { useAuth } from '@/lib/auth/AuthProvider';
-import { mockQuran, nexoraCoreQuranRepository, type Bookmark, type QuranPage, type QuranPort, type ReadingPosition, type SurahSummary } from '@/lib/quran';
+import { mockQuran, nexoraCoreQuranRepository, type Bookmark, type QuranPage, type QuranPort, type ReadingPosition, type Recitation, type SurahSummary } from '@/lib/quran';
 
 export default function QuranScreen() {
   const { session } = useAuth();
@@ -18,14 +19,18 @@ export default function QuranScreen() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [readingPosition, setReadingPosition] = useState<ReadingPosition | null>(null);
   const [showSurahs, setShowSurahs] = useState(false);
+  const [recitations, setRecitations] = useState<Recitation[]>([]);
+  const [selectedRecitation, setSelectedRecitation] = useState<Recitation | null>(null);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [playing, setPlaying] = useState(false);
 
   async function load() {
-    const [nextSurahs, position, saved] = await Promise.all([repository.listSurahs(), repository.getReadingPosition(), repository.listBookmarks()]);
+    const [nextSurahs, position, saved, nextRecitations] = await Promise.all([repository.listSurahs(), repository.getReadingPosition(), repository.listBookmarks(), repository.listRecitations()]);
     const nextPage = await repository.getSurah(position?.surahNumber ?? 2);
-    setSurahs(nextSurahs); setReadingPosition(position); setBookmarks(saved); setPage(nextPage);
+    setSurahs(nextSurahs); setReadingPosition(position); setBookmarks(saved); setPage(nextPage); setRecitations(nextRecitations); setSelectedRecitation(nextRecitations[0] ?? null);
   }
 
-  useEffect(() => { void load(); }, [repository]);
+  useEffect(() => { void load(); return () => { if (sound) void sound.unloadAsync(); }; }, [repository]);
 
   const ayah = page?.ayahs.find((item) => item.numberInSurah === readingPosition?.ayahNumber) ?? page?.ayahs[0];
   const isBookmarked = ayah ? bookmarks.some((item) => item.surahNumber === ayah.surahNumber && item.ayahNumber === ayah.numberInSurah) : false;
@@ -51,6 +56,39 @@ export default function QuranScreen() {
     setShowSurahs(false);
   }
 
+  async function togglePlayback() {
+    if (!selectedRecitation?.audioUrl) return;
+    if (sound) {
+      const status = await sound.getStatusAsync();
+      if (status.isLoaded) {
+        if (status.isPlaying) {
+          await sound.pauseAsync();
+          setPlaying(false);
+        } else {
+          await sound.playAsync();
+          setPlaying(true);
+        }
+        return;
+      }
+    }
+    const { sound: nextSound } = await Audio.Sound.createAsync(
+      { uri: selectedRecitation.audioUrl },
+      { shouldPlay: true },
+      (status) => {
+        if (!status.isLoaded) return;
+        setPlaying(status.isPlaying);
+      },
+    );
+    setSound(nextSound);
+    setPlaying(true);
+  }
+
+  async function stopPlayback() {
+    if (!sound) return;
+    await sound.stopAsync();
+    setPlaying(false);
+  }
+
   async function saveCurrentPosition() {
     if (!ayah) return;
     const position = { surahNumber: ayah.surahNumber, ayahNumber: ayah.numberInSurah, updatedAt: new Date().toISOString() };
@@ -67,7 +105,35 @@ export default function QuranScreen() {
           {ayah ? <><Text style={styles.arabic}>{ayah.arabicText}</Text><View style={styles.divider} /><Text style={styles.translation}>{ayah.translation}</Text><View style={styles.readerActions}><Pressable style={styles.action} onPress={() => void saveCurrentPosition()}><Ionicons name="location-outline" size={21} color={colors.primary} /><Text style={styles.actionText}>Save position</Text></Pressable><Pressable style={styles.action} onPress={toggleBookmark}><Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={20} color={colors.primary} /><Text style={styles.actionText}>{isBookmarked ? 'Saved' : 'Save'}</Text></Pressable></View></> : <Text style={styles.empty}>No Quran content is available for this surah in the current dataset.</Text>}
         </Card>
         {showSurahs && <Card style={styles.surahListCard}><Text style={styles.sectionTitle}>Surahs</Text>{surahs.map((surah) => <Pressable key={surah.number} style={styles.surahRow} onPress={() => void openSurah(surah)}><View style={styles.number}><Text style={styles.numberText}>{surah.number}</Text></View><View style={styles.surahInfo}><Text style={styles.surahName}>{surah.name}</Text><Text style={styles.meta}>{surah.revelationPlace === 'makkah' ? 'Makkah' : 'Madinah'} · {surah.ayahCount} ayahs</Text></View><Text style={styles.arabicName}>{surah.arabicName}</Text></Pressable>)}</Card>}
-        <Text style={styles.sectionHeading}>Explore</Text>
+                <Card style={styles.audioCard}>
+          <View style={styles.audioHeader}>
+            <View style={styles.itemBody}>
+              <Text style={styles.sectionTitle}>Quran Audio</Text>
+              <Text style={styles.meta}>{selectedRecitation?.name ?? 'No recitation configured'}</Text>
+            </View>
+            <Ionicons name="volume-high-outline" size={23} color={colors.primary} />
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.recitationRow}>
+            {recitations.map((item) => (
+              <Pressable key={item.id} onPress={() => setSelectedRecitation(item)} style={[styles.recitationChip, selectedRecitation?.id === item.id && styles.recitationChipActive]}>
+                <Text style={[styles.recitationText, selectedRecitation?.id === item.id && styles.recitationTextActive]}>{item.name}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+          <View style={styles.playerRow}>
+            <Pressable style={styles.playButton} onPress={() => void togglePlayback()} disabled={!selectedRecitation?.audioUrl}>
+              <Ionicons name={playing ? 'pause' : 'play'} size={22} color={colors.white} />
+              <Text style={styles.playText}>{playing ? 'Pause' : 'Play'}</Text>
+            </Pressable>
+            <Pressable style={styles.stopButton} onPress={() => void stopPlayback()} disabled={!sound}>
+              <Ionicons name="stop" size={18} color={colors.primary} />
+              <Text style={styles.stopText}>Stop</Text>
+            </Pressable>
+          </View>
+          {!selectedRecitation?.audioUrl && <Text style={styles.audioNote}>Audio source is not configured yet. Add a verified recitation URL before production use.</Text>}
+        </Card>
+
+<Text style={styles.sectionHeading}>Explore</Text>
         <Pressable style={styles.item} onPress={() => setShowSurahs(true)}><View style={styles.itemIcon}><Ionicons name="book-outline" size={21} color={colors.primary} /></View><View style={styles.itemBody}><Text style={styles.itemText}>Surah</Text><Text style={styles.itemDescription}>Browse the Quran</Text></View><Ionicons name="chevron-forward" size={18} color={colors.textMuted} /></Pressable>
         <Pressable style={styles.item} onPress={() => router.push('/quran-bookmarks')}><View style={styles.itemIcon}><Ionicons name="bookmark-outline" size={21} color={colors.primary} /></View><View style={styles.itemBody}><Text style={styles.itemText}>Bookmarks</Text><Text style={styles.itemDescription}>{bookmarks.length} saved</Text></View><Ionicons name="chevron-forward" size={18} color={colors.textMuted} /></Pressable>
       </ScrollView>
