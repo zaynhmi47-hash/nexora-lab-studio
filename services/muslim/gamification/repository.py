@@ -14,6 +14,10 @@ class XPLedgerRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def get_by_reward_key(self, reward_key: str) -> XPLedgerEntry | None:
+        raise NotImplementedError
+
+    @abstractmethod
     def count_events(
         self,
         *,
