@@ -47,6 +47,7 @@ class FinancePlanningGoalItemSerializer(serializers.Serializer):
     start_date = serializers.DateField()
     target_date = serializers.DateField()
     planned_saving_minor = serializers.IntegerField()
+    actual_contribution_minor = serializers.IntegerField()
     saving_gap_minor = serializers.IntegerField()
     days_remaining = serializers.IntegerField()
     status = serializers.ChoiceField(choices=("active", "overdue", "completed"))
