@@ -26,6 +26,17 @@ class XPRewardApplicationService:
                 ledger_entry=existing,
             )
 
+        reward_key = event.reward_key(repeatable=policy.repeatable)
+        if not policy.repeatable:
+            existing = self.repository.get_by_reward_key(reward_key)
+            if existing is not None:
+                return RewardResult(
+                    awarded=False,
+                    xp=existing.amount,
+                    reason=RewardReason.ALREADY_PROCESSED,
+                    ledger_entry=existing,
+                )
+
         day = event.occurred_at.astimezone(timezone.utc).date()
         count = self.repository.count_events(
             user_id=event.user_id,
