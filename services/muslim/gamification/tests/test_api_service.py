@@ -98,3 +98,16 @@ def test_api_rejects_missing_authenticated_user() -> None:
 
     assert result.status_code == 401
     assert result.body["success"] is False
+
+
+def test_api_exposes_quest_progress_and_bonus_rewards() -> None:
+    api = build_api()
+
+    result = api.handle_event(
+        authenticated_user_id="user-1",
+        payload=payload(),
+    )
+
+    assert result.status_code == 200
+    assert result.body["gamification"]["quests"][0]["completed"] is True
+    assert result.body["rewards"][0]["xp"] == 25
