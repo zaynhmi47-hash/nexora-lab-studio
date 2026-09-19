@@ -24,3 +24,15 @@ class GamificationActivityView(APIView):
             }
             for activity in activities
         ])
+
+
+class GamificationStatisticsView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            days = int(request.query_params.get("days", 30))
+        except (TypeError, ValueError):
+            days = 30
+        return Response(GamificationService.statistics(request.user, days))
