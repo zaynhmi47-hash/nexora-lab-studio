@@ -1,1 +1,1 @@
-export type DuaEntry={id:string;title:string;category:string;arabic:string;transliteration:string;translation:string;reference:string}; export interface DuaPort{list(category?:string):Promise<DuaEntry[]>;}
+export type DuaEntry={id:string;title:string;category:string;arabic:string;transliteration:string;translation:string;reference:string}; export type DuaFavorite = DuaEntry & { favoriteId: string }; export interface DuaPort{list(category?:string):Promise<DuaEntry[]>; listFavorites():Promise<DuaFavorite[]>; toggleFavorite(duaId:string):Promise<boolean>;}
