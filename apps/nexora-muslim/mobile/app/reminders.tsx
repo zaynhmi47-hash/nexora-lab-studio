@@ -60,7 +60,7 @@ export default function RemindersScreen() {
     try {
       if (nextEnabled) {
         const permission = await requestNotificationPermission();
-        const granted = permission.granted || permission.ios?.status === 3;
+        const granted = permission.granted || permission.ios?.status === 1;
         setPermissionGranted(granted);
         if (!granted) {
           setError("Notification permission was not granted.");
