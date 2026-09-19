@@ -233,5 +233,8 @@ def test_sql_repository_simulates_two_transactions_same_first_login() -> None:
     assert str(database.provider_row[1]) == successful_user_id
     assert str(database.provider_row[1]) != conflicted_user_id
 
-    assert successful_user_id in database.identity_rows
+    # Exactly one identity is committed. The losing transaction's identity
+    # existed only in its transaction-local pending state and was rolled back.
+    assert len(database.identity_rows) == 1
+    assert set(database.identity_rows) == {successful_user_id}
     assert conflicted_user_id not in database.identity_rows
