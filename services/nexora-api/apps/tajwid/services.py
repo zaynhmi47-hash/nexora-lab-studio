@@ -3,7 +3,13 @@ from django.utils import timezone
 
 from apps.identity.models import NexoraUser
 
-from .models import TajwidPracticeItem, TajwidProgress, TajwidTopic, TajwidTopicCompletion
+from .models import (
+    TajwidPracticeCompletion,
+    TajwidPracticeItem,
+    TajwidProgress,
+    TajwidTopic,
+    TajwidTopicCompletion,
+)
 
 
 class TajwidService:
@@ -70,6 +76,31 @@ class TajwidService:
         } for item in TajwidPracticeItem.objects.filter(
             topic=topic, deleted_at__isnull=True
         )]
+
+    @transaction.atomic
+    def complete_practice(self, user: NexoraUser, practice_key, correct):
+        item = TajwidPracticeItem.objects.filter(
+            key=practice_key, deleted_at__isnull=True, topic__is_published=True, topic__deleted_at__isnull=True
+        ).first()
+        if item is None:
+            raise ValueError("Tajwid practice item not found.")
+        completion, created = TajwidPracticeCompletion.objects.get_or_create(
+            user=user,
+            practice_item=item,
+            defaults={"completed_at": timezone.now()},
+        )
+        if not created and completion.deleted_at is not None:
+            completion.deleted_at = None
+            completion.completed_at = timezone.now()
+            completion.save(update_fields=["deleted_at", "completed_at", "updated_at"])
+            created = True
+        progress, _ = TajwidProgress.objects.get_or_create(user=user)
+        if created:
+            progress.practice_completed += 1
+            if correct:
+                progress.xp_earned += 5
+            progress.save(update_fields=["practice_completed", "xp_earned", "updated_at"])
+        return self.progress(user)
 
     @transaction.atomic
     def complete_topic(self, user: NexoraUser, topic_key):
