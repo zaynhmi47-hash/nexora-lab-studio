@@ -103,7 +103,7 @@ def get_finance_insights(*, organization_id, start_date: date, end_date: date) -
                 message="There are no posted transactions in the selected period.",
                 metric="transaction_count",
                 value_minor=None,
-                delta_minor=-sum(row["transaction_count"] for row in previous_rows),
+                delta_minor=None,
                 percentage_change=None,
             )
         )
