@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from uuid import UUID
 
 from services.muslim.infrastructure.firebase.production import (
@@ -28,7 +27,7 @@ class FakeConnection:
         if normalized.startswith("SELECT USER_ID FROM NEXORA_PROVIDER_ACCOUNTS"):
             if self.provider is None:
                 return FakeCursor()
-            return FakeCursor((self.provider[0],))
+            return FakeCursor((self.provider[1],))
 
         if normalized.startswith("SELECT ID, USER_ID, CREATED_AT, UPDATED_AT FROM NEXORA_PROVIDER_ACCOUNTS"):
             if self.provider is None:
@@ -114,6 +113,6 @@ def test_production_factory_builds_authenticated_gamification_adapter():
         body={"userId": "attacker-controlled"},
     )
 
-    assert response == {"user_id": response["user_id"]}
+    assert response["user_id"] == str(connection.identity[0])
     assert response["user_id"] != "attacker-controlled"
     assert connection.commits == 1
