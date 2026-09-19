@@ -14,6 +14,7 @@ export interface FinanceCategoryBreakdown {
   amountMinor: number;
   transactionCount: number;
 }
+
 export interface FinanceComparisonMetric {
   current: number;
   previous: number;
@@ -32,6 +33,7 @@ export interface FinanceComparison {
   netCashFlow: FinanceComparisonMetric;
   transactionCount: FinanceComparisonMetric;
 }
+
 export interface FinanceProfitLossLine {
   category: string;
   amountMinor: number;
@@ -88,7 +90,6 @@ export interface FinanceInsights {
   insights: FinanceInsight[];
 }
 
-
 export type FinanceBudgetStatus = 'on_track' | 'near_limit' | 'over_budget';
 
 export interface FinanceBudgetSummaryItem {
@@ -117,8 +118,11 @@ export interface FinanceBudgetSummary {
   budgets: FinanceBudgetSummaryItem[];
 }
 
-
-export type FinancePlanningStatus = 'on_track' | 'saving_gap' | 'budget_overage' | 'over_planned';
+export type FinancePlanningStatus =
+  | 'on_track'
+  | 'saving_gap'
+  | 'budget_overage'
+  | 'over_planned';
 
 export interface FinancePlanningBudgetItem {
   budgetId: string;
@@ -128,9 +132,11 @@ export interface FinancePlanningBudgetItem {
   actualMinor: number;
   remainingMinor: number;
   utilizationPercentage: number | null;
-  status: 'on_track' | 'near_limit' | 'over_budget';
+  status: FinanceBudgetStatus;
   transactionCount: number;
 }
+
+export type FinancePlanningGoalStatus = 'active' | 'overdue' | 'completed';
 
 export interface FinancePlanningGoalItem {
   goalId: string;
@@ -142,9 +148,10 @@ export interface FinancePlanningGoalItem {
   startDate: string;
   targetDate: string;
   plannedSavingMinor: number;
+  actualContributionMinor: number;
   savingGapMinor: number;
   daysRemaining: number;
-  status: 'active' | 'overdue' | 'completed';
+  status: FinancePlanningGoalStatus;
 }
 
 export interface FinancePlanningSummary {
