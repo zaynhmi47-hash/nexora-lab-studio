@@ -34,3 +34,11 @@ class HadithEntry(AuditableBaseModel):
     source = models.ForeignKey(KnowledgeSource, on_delete=models.PROTECT, related_name="hadith_entries")
     class Meta:
         db_table = "knowledge_hadith_entries"
+
+class HadithFavorite(AuditableBaseModel):
+    user = models.ForeignKey("identity.NexoraUser", on_delete=models.CASCADE, related_name="hadith_favorites")
+    hadith = models.ForeignKey(HadithEntry, on_delete=models.CASCADE, related_name="favorites")
+    class Meta:
+        db_table = "knowledge_hadith_favorites"
+        constraints = [models.UniqueConstraint(fields=("user", "hadith"), name="hadith_user_entry_unique")]
+        indexes = [models.Index(fields=("user", "-created_at"), name="hadith_favorite_user_date_idx")]
