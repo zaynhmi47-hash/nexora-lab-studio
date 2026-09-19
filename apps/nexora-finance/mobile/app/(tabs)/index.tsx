@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { AdaptiveHeader, ResponsiveContainer, ResponsiveGrid, ResponsiveScaffold } from '@/components/layout';
 import { useResponsive } from '@/lib/responsive';
 import { theme } from '@/lib/theme';
-import { useFinanceCategoryBreakdown, useFinanceCashFlow, useFinanceComparison, useFinanceProfitLoss, useFinanceSummary, useFinanceTrend } from '@/lib/features/summary';
+import { useFinanceCategoryBreakdown, useFinanceCashFlow, useFinanceComparison, useFinanceInsights, useFinanceProfitLoss, useFinanceSummary, useFinanceTrend } from '@/lib/features/summary';
 import { useTransactions } from '@/lib/features/transactions';
 
 type PeriodKey = 'this_month' | 'last_month' | 'three_months';
@@ -75,13 +75,14 @@ export default function HomeScreen() {
   const { comparison, loading: comparisonLoading, error: comparisonError } = useFinanceComparison(period);
   const { report: profitLoss, loading: profitLossLoading, error: profitLossError } = useFinanceProfitLoss(period);
   const { cashFlow, loading: cashFlowLoading, error: cashFlowError } = useFinanceCashFlow(period);
+  const { report: insightsReport, loading: insightsLoading, error: insightsError } = useFinanceInsights(period);
   const { breakdown, loading: breakdownLoading, error: breakdownError } = useFinanceCategoryBreakdown(period);
   const { points: trend, loading: trendLoading, error: trendError } = useFinanceTrend(period, granularity);
   const { transactions, loading: transactionsLoading, error: transactionsError } =
     useTransactions({ status: 'posted', startDate: period.startDate, endDate: period.endDate, page: 1, pageSize: 8 });
 
-  const loading = summaryLoading || breakdownLoading || trendLoading || transactionsLoading || comparisonLoading || profitLossLoading || cashFlowLoading;
-  const error = summaryError ?? breakdownError ?? trendError ?? transactionsError ?? comparisonError ?? profitLossError ?? cashFlowError;
+  const loading = summaryLoading || breakdownLoading || trendLoading || transactionsLoading || comparisonLoading || profitLossLoading || cashFlowLoading || insightsLoading;
+  const error = summaryError ?? breakdownError ?? trendError ?? transactionsError ?? comparisonError ?? profitLossError ?? cashFlowError ?? insightsError;
 
   const incomeBreakdown = useMemo(() => breakdown.filter((item) => item.direction === 'income'), [breakdown]);
   const expenseBreakdown = useMemo(() => breakdown.filter((item) => item.direction === 'expense'), [breakdown]);
@@ -264,6 +265,33 @@ export default function HomeScreen() {
             <View style={styles.comparisonCard}><Text style={styles.hint}>Loading period comparison…</Text></View>
           ) : null}
 
+          <View style={styles.insightsCard}>
+            <View style={styles.trendTitleBlock}>
+              <Text style={styles.sectionTitle}>Financial Insights</Text>
+              <Text style={styles.hint}>Data-driven observations from posted transactions in the selected period</Text>
+            </View>
+            {insightsLoading && !insightsReport ? (
+              <Text style={styles.hint}>Loading financial insights…</Text>
+            ) : insightsReport && insightsReport.insights.length > 0 ? (
+              <View style={styles.insightsList}>
+                {insightsReport.insights.map((insight) => (
+                  <View key={insight.code} style={styles.insightItem}>
+                    <View style={styles.insightHeader}>
+                      <Text style={styles.insightTitle}>{insight.title}</Text>
+                      <View style={[styles.insightBadge, insight.severity === 'warning' && styles.insightBadgeWarning]}>
+                        <Text style={styles.insightBadgeText}>{insight.severity === 'warning' ? 'Attention' : 'Info'}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.hint}>{insight.message}</Text>
+                    {insight.category ? <Text style={styles.insightCategory}>{insight.category}</Text> : null}
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.hint}>No notable observations were detected for this period.</Text>
+            )}
+          </View>
+
           <View style={styles.cashFlowAnalysisCard}>
             <View style={styles.trendTitleBlock}>
               <Text style={styles.sectionTitle}>Cash Flow Analysis</Text>
@@ -396,6 +424,15 @@ const styles = StyleSheet.create({
   section: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 12 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.text },
   comparisonCard: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 16 },
+  insightsCard: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 16 },
+  insightsList: { gap: 10 },
+  insightItem: { padding: theme.spacing.lg, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border, gap: 7 },
+  insightHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  insightTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: theme.colors.text },
+  insightBadge: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: theme.radius.md, backgroundColor: theme.colors.border },
+  insightBadgeWarning: { backgroundColor: theme.colors.text },
+  insightBadgeText: { fontSize: 11, fontWeight: '700', color: theme.colors.surface },
+  insightCategory: { fontSize: 12, fontWeight: '700', color: theme.colors.text },
   cashFlowAnalysisCard: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 16 },
   profitLossCard: { padding: theme.spacing.xl, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 16 },
   profitLossMetrics: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
