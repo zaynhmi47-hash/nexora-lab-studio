@@ -2,6 +2,13 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from services.muslim.gamification.api_service import GamificationAPIService
+from services.muslim.gamification.application import XPRewardApplicationService
+from services.muslim.gamification.http_adapter import GamificationHTTPAdapter
+from services.muslim.gamification.processor import GamificationEventProcessor
+from services.muslim.gamification.state_repository import InMemoryGamificationStateRepository
+from services.muslim.gamification.storage import InMemoryPersistentXPLedgerRepository
+from services.muslim.gamification.transaction import InMemoryGamificationTransactionManager
 from services.muslim.infrastructure.firebase.production import (
     ProductionFirebaseAuthenticationFactory,
 )
@@ -116,3 +123,50 @@ def test_production_factory_builds_authenticated_gamification_adapter():
     assert response["user_id"] == str(connection.identity[0])
     assert response["user_id"] != "attacker-controlled"
     assert connection.commits == 1
+
+
+def build_real_gamification_adapter() -> GamificationHTTPAdapter:
+    ledger = InMemoryPersistentXPLedgerRepository()
+    state = InMemoryGamificationStateRepository()
+    processor = GamificationEventProcessor(
+        XPRewardApplicationService(ledger),
+        state,
+        InMemoryGamificationTransactionManager(),
+    )
+    return GamificationHTTPAdapter(GamificationAPIService(processor))
+
+
+def test_production_authentication_boundary_reaches_real_gamification_endpoint() -> None:
+    connection = FakeConnection()
+    components = ProductionFirebaseAuthenticationFactory(
+        connection=connection,
+        gamification_adapter=build_real_gamification_adapter(),
+        token_verifier=FakeVerifier(),
+    ).build()
+
+    response = components.gamification_adapter.handle(
+        method="GET",
+        path="/gamification/profile/",
+        authorization="Bearer firebase-token",
+    )
+
+    assert response.status_code == 200
+    assert response.body["success"] is True
+    assert response.body["gamification"]["xp"] == 0
+    assert response.body["gamification"]["timezone"] == "UTC"
+
+    first_user_id = str(connection.identity[0])
+    UUID(first_user_id)
+
+    second_response = components.gamification_adapter.handle(
+        method="GET",
+        path="/gamification/profile/",
+        authorization="Bearer firebase-token",
+        body={"userId": "attacker-controlled"},
+    )
+
+    assert second_response.status_code == 200
+    assert second_response.body["gamification"]["xp"] == 0
+    assert str(connection.identity[0]) == first_user_id
+    assert connection.commits == 2
+    assert connection.rollbacks == 0
