@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Audio } from 'expo-av';
 import { router } from 'expo-router';
@@ -23,6 +23,7 @@ export default function QuranScreen() {
   const [selectedRecitation, setSelectedRecitation] = useState<Recitation | null>(null);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [playing, setPlaying] = useState(false);
+  const soundRef = useRef<Audio.Sound | null>(null);
 
   async function load() {
     const [nextSurahs, position, saved, nextRecitations] = await Promise.all([repository.listSurahs(), repository.getReadingPosition(), repository.listBookmarks(), repository.listRecitations()]);
@@ -30,7 +31,7 @@ export default function QuranScreen() {
     setSurahs(nextSurahs); setReadingPosition(position); setBookmarks(saved); setPage(nextPage); setRecitations(nextRecitations); setSelectedRecitation(nextRecitations[0] ?? null);
   }
 
-  useEffect(() => { void load(); return () => { if (sound) void sound.unloadAsync(); }; }, [repository]);
+  useEffect(() => { void load(); return () => { if (soundRef.current) void soundRef.current.unloadAsync(); }; }, [repository]);
 
   const ayah = page?.ayahs.find((item) => item.numberInSurah === readingPosition?.ayahNumber) ?? page?.ayahs[0];
   const isBookmarked = ayah ? bookmarks.some((item) => item.surahNumber === ayah.surahNumber && item.ayahNumber === ayah.numberInSurah) : false;
@@ -58,14 +59,14 @@ export default function QuranScreen() {
 
   async function togglePlayback() {
     if (!selectedRecitation?.audioUrl) return;
-    if (sound) {
-      const status = await sound.getStatusAsync();
+    if (soundRef.current) {
+      const status = await soundRef.current.getStatusAsync();
       if (status.isLoaded) {
         if (status.isPlaying) {
-          await sound.pauseAsync();
+          await soundRef.current.pauseAsync();
           setPlaying(false);
         } else {
-          await sound.playAsync();
+          await soundRef.current.playAsync();
           setPlaying(true);
         }
         return;
@@ -79,13 +80,14 @@ export default function QuranScreen() {
         setPlaying(status.isPlaying);
       },
     );
+    soundRef.current = nextSound;
     setSound(nextSound);
     setPlaying(true);
   }
 
   async function stopPlayback() {
-    if (!sound) return;
-    await sound.stopAsync();
+    if (!soundRef.current) return;
+    await soundRef.current.stopAsync();
     setPlaying(false);
   }
 
