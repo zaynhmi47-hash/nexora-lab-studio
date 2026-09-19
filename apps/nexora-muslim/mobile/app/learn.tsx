@@ -16,18 +16,20 @@ export default function LearnScreen() {
   ), [session]);
   const [courses, setCourses] = useState<LearningCourse[]>([]);
   const [progress, setProgress] = useState<LearningProgress | null>(null);
+  const [hub, setHub] = useState<import('@/lib/learning').LearningHub | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [achievements, setAchievements] = useState<import('@/lib/learning').LearningAchievement[]>([]);
 
   useEffect(() => {
     let active = true;
     setError(null);
-    Promise.all([repository.getCourses(), repository.getProgress(userId), repository.getAchievements()])
-      .then(([nextCourses, nextProgress, nextAchievements]) => {
+    Promise.all([repository.getCourses(), repository.getProgress(userId), repository.getAchievements(), repository.getHub()])
+      .then(([nextCourses, nextProgress, nextAchievements, nextHub]) => {
         if (!active) return;
         setCourses(nextCourses);
         setProgress(nextProgress);
         setAchievements(nextAchievements);
+        setHub(nextHub);
       })
       .catch(() => {
         if (active) setError('Unable to load learning progress. Please try again.');
@@ -61,6 +63,34 @@ export default function LearnScreen() {
           </View>
           <View style={styles.bar}><View style={[styles.fill, { width: xpPercent }]} /></View>
         </Card>
+
+        {hub && (
+          <Card style={styles.hubCard}>
+            <View style={styles.row}>
+              <View>
+                <Text style={styles.progressTitle}>Learning Hub</Text>
+                <Text style={styles.muted}>Semua jalur pembelajaran</Text>
+              </View>
+              <Text style={styles.hubXp}>{hub.totalXp} XP</Text>
+            </View>
+            <View style={styles.domainGrid}>
+              {([
+                ['learning', 'Quran'],
+                ['tajwid', 'Tajwid'],
+                ['arabic', 'Arabic'],
+              ] as const).map(([key, label]) => {
+                const domain = hub.domains[key];
+                return (
+                  <View key={key} style={styles.domainCard}>
+                    <Text style={styles.domainLabel}>{label}</Text>
+                    <Text style={styles.domainXp}>{domain.xp} XP</Text>
+                    <Text style={styles.muted}>{domain.completedCount} selesai</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </Card>
+        )}
 
         <Card style={styles.achievementCard}>
           <View style={styles.row}><View><Text style={styles.progressTitle}>Achievements</Text><Text style={styles.muted}>{achievements.length} earned</Text></View><Text style={styles.xp}>🏆</Text></View>
@@ -143,6 +173,12 @@ const styles = StyleSheet.create({
   bar: { height: 8, backgroundColor: colors.border, borderRadius: 8, marginTop: spacing.md, overflow: 'hidden' },
   fill: { height: 8, backgroundColor: colors.primary, borderRadius: 8 },
   sectionTitle: { fontSize: 19, fontWeight: '800', color: colors.text, marginTop: spacing.xl, marginBottom: spacing.md },
+  hubCard: { marginTop: spacing.md, borderColor: colors.primary },
+  hubXp: { color: colors.primary, fontSize: 18, fontWeight: '900' },
+  domainGrid: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
+  domainCard: { backgroundColor: colors.surfaceMuted, borderRadius: 12, flex: 1, padding: spacing.sm },
+  domainLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '800' },
+  domainXp: { color: colors.text, fontSize: 17, fontWeight: '900', marginTop: 4 },
   achievementCard: { marginTop: spacing.md },
   achievement: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md },
   badge: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.primarySoft, color: colors.primary, textAlign: 'center', textAlignVertical: 'center', fontWeight: '800', paddingTop: 7 },
