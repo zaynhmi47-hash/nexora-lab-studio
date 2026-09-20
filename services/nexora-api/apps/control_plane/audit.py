@@ -6,6 +6,7 @@ from django.db import models
 from django.utils import timezone
 import uuid
 
+from apps.core.context import get_request_context
 from apps.identity.models import NexoraUser
 
 
@@ -79,15 +80,18 @@ def record_control_plane_audit(
     actor: NexoraUser | None = None,
     target: NexoraUser | None = None,
     success: bool = True,
-    correlation_id: str = "",
+    correlation_id: str | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> ControlPlaneAuditEvent:
     """Write only safe, structured audit metadata; callers must never pass credentials."""
+    resolved_correlation_id = correlation_id
+    if resolved_correlation_id is None:
+        resolved_correlation_id = get_request_context().correlation_id or ""
     return ControlPlaneAuditEvent.objects.create(
         event_type=event_type,
         actor=actor,
         target=target,
         success=success,
-        correlation_id=correlation_id[:128],
+        correlation_id=resolved_correlation_id[:128],
         metadata=_validate_audit_metadata(metadata),
     )
