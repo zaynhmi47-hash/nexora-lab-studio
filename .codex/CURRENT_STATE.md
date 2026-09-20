@@ -80,3 +80,4 @@ The backend default DRF policy is now deny-by-default:
 - Existing health/liveness endpoints retain explicit public behavior.
 - The Control Plane remains DEBUG-only and does not inherit production API access.
 - Focused tests cover the default authentication/permission policy and public health behavior.
+\n## Learning gamification integration — verified on 2026-09-20\n\n- `apps.gamification` is registered in Django `INSTALLED_APPS`.\n- Gamification API is exposed under `/api/v1/gamification/`.\n- Control Center application registry includes the gamification platform service.\n- Learning quiz completion now returns the XP actually recorded by the gamification ledger.\n- Gamification migrations already exist and are now discoverable by Django migration tooling.\n

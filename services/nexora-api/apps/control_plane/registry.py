@@ -14,6 +14,12 @@ APPLICATION_REGISTRY = [
         "status": "active",
     },
     {
+        "id": "nexora-gamification", "name": "Nexora Gamification", "kind": "platform",
+        "description": "Cross-domain XP, activity ledger, milestones and learning rewards.",
+        "route_prefixes": ["/api/v1/gamification/"],
+        "status": "active",
+    },
+    {
         "id": "dignity", "name": "Dignity", "kind": "application",
         "description": "Education and academic platform; backend domains can be attached incrementally.",
         "route_prefixes": ["/api/v1/learning/"],

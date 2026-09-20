@@ -119,7 +119,7 @@ class LearningService:
             source="learning",
             action="quiz_completed",
             source_key=f"{lesson.key}:{attempt.id}",
-            xp_earned=XPRewardRules.quiz(passed),
+            xp_earned=(xp_earned := XPRewardRules.quiz(passed)),
             occurred_at=completed_at,
         )
         return {
@@ -129,7 +129,7 @@ class LearningService:
             "totalQuestions": total,
             "scorePercent": score,
             "passed": passed,
-            "xpEarned": 0,
+            "xpEarned": xp_earned,
             "completedAt": completed_at.isoformat(),
         }
 
