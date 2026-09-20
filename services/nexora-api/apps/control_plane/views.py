@@ -266,11 +266,26 @@ class ControlPlaneAuditLogView(View):
             return JsonResponse({"detail": "limit must be an integer."}, status=400)
 
         event_type = request.GET.get("event_type", "").strip()
+        success_filter = request.GET.get("success", "").strip().lower()
+        actor_email = request.GET.get("actor", "").strip()
+        target_email = request.GET.get("target", "").strip()
+        correlation_id = request.GET.get("correlation_id", "").strip()
+
         queryset = ControlPlaneAuditEvent.objects.select_related("actor", "target")
         if event_type:
             if event_type not in set(ControlPlaneAuditEventType.values):
                 return JsonResponse({"detail": "Unknown audit event type."}, status=400)
             queryset = queryset.filter(event_type=event_type)
+        if success_filter:
+            if success_filter not in {"true", "false"}:
+                return JsonResponse({"detail": "success must be true or false."}, status=400)
+            queryset = queryset.filter(success=success_filter == "true")
+        if actor_email:
+            queryset = queryset.filter(actor__email__icontains=actor_email)
+        if target_email:
+            queryset = queryset.filter(target__email__icontains=target_email)
+        if correlation_id:
+            queryset = queryset.filter(correlation_id=correlation_id[:128])
 
         events = queryset.order_by("-occurred_at", "-id")[:limit]
         return JsonResponse({
