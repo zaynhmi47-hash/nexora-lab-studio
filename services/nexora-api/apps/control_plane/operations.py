@@ -93,20 +93,44 @@ class ControlPlaneOperationsOverviewView(View):
             return error
 
         checked_at = timezone.now().isoformat()
-        routes = route_inventory()
         diagnostics = {
             "database": database_diagnostic(checked_at=checked_at),
             "firebase": firebase_configuration_diagnostic(checked_at=checked_at),
-            "api": api_route_diagnostic(routes, checked_at=checked_at),
         }
+
+        try:
+            routes = route_inventory()
+            diagnostics["api"] = api_route_diagnostic(routes, checked_at=checked_at)
+        except Exception as exc:
+            routes = []
+            diagnostics["api"] = {
+                "status": "unavailable",
+                "latency_ms": None,
+                "checked_at": checked_at,
+                "details": {"error_type": exc.__class__.__name__},
+            }
+
+        try:
+            applications = application_snapshot(routes)
+        except Exception as exc:
+            applications = []
+            diagnostics["api"]["details"] = {
+                **diagnostics["api"]["details"],
+                "application_inventory_error_type": exc.__class__.__name__,
+            }
+
+        try:
+            requests = recent_requests(50)
+        except Exception:
+            requests = []
 
         return JsonResponse({
             "operator": {"email": actor.user.email, "role": actor.role},
             "status": overall_operations_status(diagnostics),
             "checked_at": checked_at,
             "diagnostics": diagnostics,
-            "applications": application_snapshot(routes),
-            "recent_requests": recent_requests(50),
+            "applications": applications,
+            "recent_requests": requests,
             "actions": {
                 "clear_request_telemetry": actor.has_permission(ControlPlanePermission.OPERATIONS_MANAGE),
             },
