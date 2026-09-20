@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from time import monotonic
+from datetime import datetime
 from threading import Lock
 
 from django.conf import settings
@@ -250,6 +251,22 @@ class ControlPlaneAuditLogView(View):
             return JsonResponse({"detail": "correlation_id is too long."}, status=400)
         if len(actor_email) > 254 or len(target_email) > 254:
             return JsonResponse({"detail": "actor and target filters are too long."}, status=400)
+        occurred_before = request.GET.get("occurred_before", "").strip()
+        occurred_after = request.GET.get("occurred_after", "").strip()
+        parsed_before = parsed_after = None
+        for raw, label in ((occurred_before, "occurred_before"), (occurred_after, "occurred_after")):
+            if not raw:
+                continue
+            try:
+                parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            except ValueError:
+                return JsonResponse({"detail": f"{label} must be an ISO-8601 timestamp."}, status=400)
+            if label == "occurred_before":
+                parsed_before = parsed
+            else:
+                parsed_after = parsed
+        if parsed_before and parsed_after and parsed_after >= parsed_before:
+            return JsonResponse({"detail": "occurred_after must be earlier than occurred_before."}, status=400)
 
         try:
             queryset = ControlPlaneAuditEvent.objects.select_related("actor", "target")
@@ -268,7 +285,11 @@ class ControlPlaneAuditLogView(View):
         if target_email:
             queryset = queryset.filter(target__email__icontains=target_email)
         if correlation_id:
-            queryset = queryset.filter(correlation_id=correlation_id[:128])
+            queryset = queryset.filter(correlation_id=correlation_id)
+        if parsed_before:
+            queryset = queryset.filter(occurred_at__lt=parsed_before)
+        if parsed_after:
+            queryset = queryset.filter(occurred_at__gte=parsed_after)
 
         try:
             events = queryset.order_by("-occurred_at", "-id")[:limit]
