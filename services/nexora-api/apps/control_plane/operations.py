@@ -7,10 +7,14 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views import View
 
-from infrastructure.firebase.health import check_firebase_configuration
-
 from .audit import ControlPlaneAuditEvent, ControlPlaneAuditEventType, record_control_plane_audit
-from .diagnostics import api_route_counts, database_status, diagnostic_status, route_inventory
+from .diagnostics import (
+    api_route_diagnostic,
+    database_diagnostic,
+    firebase_configuration_diagnostic,
+    overall_operations_status,
+    route_inventory,
+)
 from .models import ControlPlaneBootstrapState, ControlPlanePermission, ControlPlanePrincipal, ControlPlaneRole
 from .registry import application_snapshot
 from .telemetry import clear_requests, recent_requests
@@ -90,51 +94,17 @@ class ControlPlaneOperationsOverviewView(View):
 
         checked_at = timezone.now().isoformat()
         routes = route_inventory()
-        healthy_db, db_detail = database_status()
-
-        try:
-            latency_ms = float(db_detail.removesuffix(" ms")) if healthy_db else None
-        except ValueError:
-            latency_ms = None
-
-        firebase_configured = check_firebase_configuration()
-
-        db_diagnostic = diagnostic_status(
-            status="healthy" if healthy_db else "unavailable",
-            checked_at=checked_at,
-            latency_ms=latency_ms,
-            details={"detail": db_detail},
-        )
-        firebase_diagnostic = diagnostic_status(
-            status="healthy" if firebase_configured else "unavailable",
-            checked_at=checked_at,
-            latency_ms=None,
-            details={"configured": firebase_configured, "check": "configuration-only"},
-        )
-
-        api_counts = api_route_counts(routes)
-        api_diagnostic = diagnostic_status(
-            status="healthy" if api_counts["route_count"] else "unavailable",
-            checked_at=checked_at,
-            latency_ms=0.0,
-            details=api_counts,
-        )
-
-        overall_status = (
-            "healthy"
-            if db_diagnostic["status"] == "healthy" and firebase_diagnostic["status"] == "healthy"
-            else "degraded"
-        )
+        diagnostics = {
+            "database": database_diagnostic(checked_at=checked_at),
+            "firebase": firebase_configuration_diagnostic(checked_at=checked_at),
+            "api": api_route_diagnostic(routes, checked_at=checked_at),
+        }
 
         return JsonResponse({
             "operator": {"email": actor.user.email, "role": actor.role},
-            "status": overall_status,
+            "status": overall_operations_status(diagnostics),
             "checked_at": checked_at,
-            "diagnostics": {
-                "database": db_diagnostic,
-                "firebase": firebase_diagnostic,
-                "api": api_diagnostic,
-            },
+            "diagnostics": diagnostics,
             "applications": application_snapshot(routes),
             "recent_requests": recent_requests(50),
             "actions": {
