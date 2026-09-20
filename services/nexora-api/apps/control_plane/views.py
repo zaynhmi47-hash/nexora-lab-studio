@@ -80,6 +80,7 @@ def _control_plane_user(request):
 
 
 @method_decorator(never_cache, name="dispatch")
+@method_decorator(csrf_protect, name="post")
 class ControlPlaneLoginView(View):
     def get(self, request):
         if not settings.DEBUG:
@@ -94,6 +95,8 @@ class ControlPlaneLoginView(View):
         if _login_rate_limited(request):
             return render(request, "control_plane/login.html", {"error": "Too many login attempts. Try again later."}, status=429)
         token = request.POST.get("id_token", "").strip()
+        if len(token) > 8192:
+            return render(request, "control_plane/login.html", {"error": "Firebase ID token is too large."}, status=400)
         if not token:
             return render(request, "control_plane/login.html", {"error": "Firebase ID token is required."}, status=400)
         try:
@@ -102,7 +105,7 @@ class ControlPlaneLoginView(View):
             record_control_plane_audit(
                 event_type=ControlPlaneAuditEventType.LOGIN_FAILED,
                 success=False,
-                correlation_id=request.headers.get("X-Request-ID", ""),
+                correlation_id=_request_correlation_id(request),
                 metadata={"reason": "access_denied", "error_type": exc.__class__.__name__},
             )
             return render(request, "control_plane/login.html", {"error": str(exc)}, status=403)
