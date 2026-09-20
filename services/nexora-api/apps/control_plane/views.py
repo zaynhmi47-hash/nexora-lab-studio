@@ -16,7 +16,7 @@ from rest_framework.views import APIView
 
 from infrastructure.firebase.health import check_firebase_configuration
 
-from .models import ControlPlanePrincipal
+from .models import ControlPlanePermission, ControlPlanePrincipal
 from .registry import application_snapshot
 from .services import ControlPlaneAccessDenied, authenticate_control_plane_token
 from .telemetry import recent_requests
@@ -170,7 +170,8 @@ class ControlPlaneDashboardView(View):
     def get(self, request):
         if not settings.DEBUG:
             return HttpResponseForbidden("Control Plane is available only in DEBUG mode.")
-        if _control_plane_user(request) is None:
+        user = _control_plane_user(request)
+        if user is None or not user.control_plane_principal.has_permission(ControlPlanePermission.DASHBOARD_READ):
             return redirect("control_plane:login")
         return render(request, "control_plane/dashboard.html")
 
@@ -182,6 +183,9 @@ class ControlPlaneSnapshotView(APIView):
     def get(self, request):
         if not settings.DEBUG:
             return Response({"detail": "Control Plane is disabled outside DEBUG."}, status=404)
-        if _control_plane_user(request) is None:
+        user = _control_plane_user(request)
+        if user is None:
             return Response({"detail": "Control Center authentication is required."}, status=401)
+        if not user.control_plane_principal.has_permission(ControlPlanePermission.DASHBOARD_READ):
+            return Response({"detail": "Control Center permission denied."}, status=403)
         return Response(_snapshot())
