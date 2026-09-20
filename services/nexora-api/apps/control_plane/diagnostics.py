@@ -6,12 +6,28 @@ from time import monotonic
 from django.db import connection
 from django.urls import URLPattern, URLResolver, get_resolver
 
+from infrastructure.firebase.health import check_firebase_configuration
+
 
 DIAGNOSTIC_STATUSES = frozenset({"healthy", "degraded", "unavailable"})
 
 
+def _checked_at(value: str | None) -> str:
+    if value is not None:
+        return value
+    from django.utils import timezone
+
+    return timezone.now().isoformat()
+
+
+def diagnostic_status(*, status: str, checked_at: str, latency_ms: float | None,
+                      details: dict[str, object] | None = None) -> dict[str, object]:
+    if status not in DIAGNOSTIC_STATUSES:
+        raise ValueError(f"Unsupported diagnostic status: {status}")
+    return {"status": status, "latency_ms": latency_ms, "checked_at": checked_at, "details": details or {}}
+
+
 def route_inventory() -> list[dict[str, object]]:
-    """Return a read-only inventory of registered Django endpoints."""
     routes: list[dict[str, object]] = []
 
     def walk(patterns, prefix: str = "") -> None:
@@ -22,31 +38,22 @@ def route_inventory() -> list[dict[str, object]]:
                 view_class = getattr(view, "view_class", None)
                 permissions = getattr(view_class, "permission_classes", None)
                 auth_classes = getattr(view_class, "authentication_classes", None)
-                permission_names = [
-                    f"{cls.__module__}.{cls.__name__}" for cls in permissions or []
-                ]
-                auth_names = [
-                    f"{cls.__module__}.{cls.__name__}" for cls in auth_classes or []
-                ]
-                if any(
-                    name.endswith("AllowAny") or name.endswith("PublicEndpointPermission")
-                    for name in permission_names
-                ):
+                permission_names = [f"{cls.__module__}.{cls.__name__}" for cls in permissions or []]
+                auth_names = [f"{cls.__module__}.{cls.__name__}" for cls in auth_classes or []]
+                if any(name.endswith("AllowAny") or name.endswith("PublicEndpointPermission") for name in permission_names):
                     access = "public"
                 elif permission_names:
                     access = "authenticated"
                 else:
                     access = "default"
-                routes.append(
-                    {
-                        "route": "/" + route.lstrip("/"),
-                        "name": item.name or "",
-                        "kind": "endpoint",
-                        "access": access,
-                        "permissions": permission_names,
-                        "authentication": auth_names,
-                    }
-                )
+                routes.append({
+                    "route": "/" + route.lstrip("/"),
+                    "name": item.name or "",
+                    "kind": "endpoint",
+                    "access": access,
+                    "permissions": permission_names,
+                    "authentication": auth_names,
+                })
             elif isinstance(item, URLResolver):
                 walk(item.url_patterns, route)
 
@@ -54,50 +61,78 @@ def route_inventory() -> list[dict[str, object]]:
     return sorted(routes, key=lambda item: str(item["route"]))
 
 
-def database_status() -> tuple[bool, str]:
-    """Run a minimal read-only database connectivity check."""
+def database_diagnostic(*, checked_at: str | None = None) -> dict[str, object]:
+    """Run a read-only database check without exposing raw exception messages."""
     started = monotonic()
+    timestamp = _checked_at(checked_at)
     try:
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
             cursor.fetchone()
-        return True, f"{(monotonic() - started) * 1000:.1f} ms"
     except Exception as exc:
-        return False, exc.__class__.__name__
+        return diagnostic_status(
+            status="unavailable",
+            checked_at=timestamp,
+            latency_ms=(monotonic() - started) * 1000,
+            details={"error_type": exc.__class__.__name__},
+        )
+    return diagnostic_status(
+        status="healthy",
+        checked_at=timestamp,
+        latency_ms=(monotonic() - started) * 1000,
+        details={"check": "SELECT 1"},
+    )
+
+
+def firebase_configuration_diagnostic(*, checked_at: str | None = None) -> dict[str, object]:
+    """Report Firebase configuration only; intentionally performs no network health check."""
+    timestamp = _checked_at(checked_at)
+    try:
+        configured = bool(check_firebase_configuration())
+    except Exception as exc:
+        return diagnostic_status(
+            status="unavailable",
+            checked_at=timestamp,
+            latency_ms=None,
+            details={"check": "configuration-only", "error_type": exc.__class__.__name__},
+        )
+    return diagnostic_status(
+        status="healthy" if configured else "unavailable",
+        checked_at=timestamp,
+        latency_ms=None,
+        details={"configured": configured, "check": "configuration-only"},
+    )
 
 
 def api_route_counts(routes: list[dict[str, object]]) -> dict[str, object]:
-    """Derive stable API route counts from an existing route inventory."""
     prefix_counts = Counter(
-        str(route["route"]).split("/")[3]
-        if len(str(route["route"]).split("/")) > 3
-        else "root"
+        str(route["route"]).split("/")[3] if len(str(route["route"]).split("/")) > 3 else "root"
         for route in routes
         if str(route["route"]).startswith("/api/")
     )
     return {
         "route_count": len(routes),
         "api_route_count": sum(prefix_counts.values()),
-        "api_groups": [
-            {"name": name, "routes": count}
-            for name, count in sorted(prefix_counts.items())
-        ],
+        "api_groups": [{"name": name, "routes": count} for name, count in sorted(prefix_counts.items())],
     }
 
 
-def diagnostic_status(
-    *,
-    status: str,
-    checked_at: str,
-    latency_ms: float | None,
-    details: dict[str, object] | None = None,
-) -> dict[str, object]:
-    """Build the shared structured diagnostic result contract."""
-    if status not in DIAGNOSTIC_STATUSES:
-        raise ValueError(f"Unsupported diagnostic status: {status}")
-    return {
-        "status": status,
-        "latency_ms": latency_ms,
-        "checked_at": checked_at,
-        "details": details or {},
-    }
+def api_route_diagnostic(routes: list[dict[str, object]], *, checked_at: str | None = None) -> dict[str, object]:
+    counts = api_route_counts(routes)
+    return diagnostic_status(
+        status="healthy" if counts["route_count"] else "unavailable",
+        checked_at=_checked_at(checked_at),
+        latency_ms=0.0,
+        details=counts,
+    )
+
+
+def overall_operations_status(diagnostics: dict[str, dict[str, object]]) -> str:
+    database = diagnostics["database"]["status"]
+    firebase = diagnostics["firebase"]["status"]
+    api = diagnostics["api"]["status"]
+    if database == "unavailable":
+        return "unavailable"
+    if "unavailable" in {firebase, api} or "degraded" in {database, firebase, api}:
+        return "degraded"
+    return "healthy"
