@@ -22,6 +22,11 @@ from .registry import application_snapshot
 from .telemetry import clear_requests, recent_requests
 
 
+def _request_correlation_id(request) -> str:
+    value = getattr(request, "correlation_id", "") or getattr(request, "request_id", "")
+    return str(value)[:128]
+
+
 def _actor(request):
     user_id = request.session.get("control_plane_user_id")
     if not user_id:
