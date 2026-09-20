@@ -1,24 +1,26 @@
 from __future__ import annotations
 
-from typing import Any
 import json
 import re
+import uuid
 from datetime import timedelta
+from typing import Any
 
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
-import uuid
 
 from apps.core.context import get_request_context
 from apps.identity.models import NexoraUser
-
 
 MAX_AUDIT_METADATA_BYTES = 8192
 MAX_AUDIT_METADATA_DEPTH = 8
 MAX_AUDIT_METADATA_ITEMS = 100
 MAX_AUDIT_METADATA_STRING = 2048
 MAX_AUDIT_CORRELATION_ID = 128
-SENSITIVE_AUDIT_KEY_TERMS = frozenset({"token", "authorization", "password", "secret", "credential", "privatekey", "apikey"})
+SENSITIVE_AUDIT_KEY_TERMS = frozenset(
+    {"token", "authorization", "password", "secret", "credential", "privatekey", "apikey"}
+)
 
 
 class ControlPlaneAuditEventType(models.TextChoices):
@@ -45,20 +47,8 @@ class ControlPlaneAuditEvent(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     event_type = models.CharField(max_length=64, choices=ControlPlaneAuditEventType.choices, db_index=True)
-    actor = models.ForeignKey(
-        NexoraUser,
-        null=True,
-        blank=True,
-        on_delete=models.PROTECT,
-        related_name="control_plane_audit_events",
-    )
-    target = models.ForeignKey(
-        NexoraUser,
-        null=True,
-        blank=True,
-        on_delete=models.PROTECT,
-        related_name="control_plane_audit_targets",
-    )
+    actor = models.ForeignKey(NexoraUser, null=True, blank=True, on_delete=models.PROTECT, related_name="control_plane_audit_events")
+    target = models.ForeignKey(NexoraUser, null=True, blank=True, on_delete=models.PROTECT, related_name="control_plane_audit_targets")
     success = models.BooleanField(default=True)
     occurred_at = models.DateTimeField(default=timezone.now, db_index=True)
     correlation_id = models.CharField(max_length=128, blank=True, default="", db_index=True)
@@ -144,13 +134,9 @@ def record_control_plane_audit(
         actor=actor,
         target=target,
         success=success,
-        correlation_id=resolved_correlation_id[:128],
+        correlation_id=resolved_correlation_id,
         metadata=safe_metadata,
     )
-
-
-from datetime import timedelta
-from django.conf import settings
 
 
 def audit_retention_days() -> int:
