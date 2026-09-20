@@ -16,7 +16,9 @@ from rest_framework.views import APIView
 
 from infrastructure.firebase.health import check_firebase_configuration
 
+from .models import ControlPlanePrincipal
 from .registry import application_snapshot
+from .services import ControlPlaneAccessDenied, authenticate_control_plane_token
 from .telemetry import recent_requests
 
 
@@ -122,11 +124,54 @@ def _snapshot():
     }
 
 
+def _control_plane_user(request):
+    user_id = request.session.get("control_plane_user_id")
+    if not user_id:
+        return None
+    principal = (
+        ControlPlanePrincipal.objects.select_related("user")
+        .filter(user_id=user_id, enabled=True, deleted_at__isnull=True)
+        .first()
+    )
+    return principal.user if principal else None
+
+
 @method_decorator(never_cache, name="dispatch")
+class ControlPlaneLoginView(View):
+    def get(self, request):
+        if not settings.DEBUG:
+            return HttpResponseForbidden("Control Plane is available only in DEBUG mode.")
+        if _control_plane_user(request):
+            return redirect("control_plane:dashboard")
+        return render(request, "control_plane/login.html")
+
+    def post(self, request):
+        if not settings.DEBUG:
+            return HttpResponseForbidden("Control Plane is available only in DEBUG mode.")
+        token = request.POST.get("id_token", "").strip()
+        if not token:
+            return render(request, "control_plane/login.html", {"error": "Firebase ID token is required."}, status=400)
+        try:
+            user = authenticate_control_plane_token(token)
+        except ControlPlaneAccessDenied as exc:
+            return render(request, "control_plane/login.html", {"error": str(exc)}, status=403)
+        request.session.cycle_key()
+        request.session["control_plane_user_id"] = str(user.id)
+        return redirect("control_plane:dashboard")
+
+
+class ControlPlaneLogoutView(View):
+    def post(self, request):
+        request.session.pop("control_plane_user_id", None)
+        return redirect("control_plane:login")
+
+
 class ControlPlaneDashboardView(View):
     def get(self, request):
         if not settings.DEBUG:
             return HttpResponseForbidden("Control Plane is available only in DEBUG mode.")
+        if _control_plane_user(request) is None:
+            return redirect("control_plane:login")
         return render(request, "control_plane/dashboard.html")
 
 
@@ -137,4 +182,6 @@ class ControlPlaneSnapshotView(APIView):
     def get(self, request):
         if not settings.DEBUG:
             return Response({"detail": "Control Plane is disabled outside DEBUG."}, status=404)
+        if _control_plane_user(request) is None:
+            return Response({"detail": "Control Center authentication is required."}, status=401)
         return Response(_snapshot())
