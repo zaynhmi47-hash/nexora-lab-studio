@@ -18,7 +18,7 @@ from .audit import (
     ControlPlaneAuditEventType,
     record_control_plane_audit,
 )
-from .diagnostics import database_status, route_inventory
+from .diagnostics import database_diagnostic, route_inventory
 from .models import ControlPlanePermission, ControlPlanePrincipal, ControlPlaneRole
 from .registry import application_snapshot
 from .services import (
@@ -134,7 +134,13 @@ class ControlPlaneSnapshotView(APIView):
             return Response({"detail": "Control Center permission denied."}, status=403)
 
         routes = route_inventory()
-        healthy_db, db_detail = database_status()
+        db_diagnostic = database_diagnostic()
+        healthy_db = db_diagnostic["status"] == "healthy"
+        db_detail = (
+            f'{db_diagnostic["latency_ms"]:.1f} ms'
+            if db_diagnostic["latency_ms"] is not None
+            else str(db_diagnostic["details"].get("error_type", "unavailable"))
+        )
         from infrastructure.firebase.health import check_firebase_configuration
         firebase_configured = check_firebase_configuration()
 
