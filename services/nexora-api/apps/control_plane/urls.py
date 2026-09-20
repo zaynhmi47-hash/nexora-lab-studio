@@ -1,6 +1,11 @@
 from django.urls import path
 
-from .operations import (\n    ControlPlaneClearTelemetryView,\n    ControlPlaneOperationsOverviewView,\n    ControlPlaneSecurityOverviewView,\n)\nfrom .views import (
+from .operations import (
+    ControlPlaneClearTelemetryView,
+    ControlPlaneOperationsOverviewView,
+    ControlPlaneSecurityOverviewView,
+)
+from .views import (
     ControlPlaneAuditLogView,
     ControlPlaneDashboardView,
     ControlPlaneLoginView,
@@ -17,5 +22,8 @@ urlpatterns = [
     path("logout/", ControlPlaneLogoutView.as_view(), name="logout"),
     path("snapshot/", ControlPlaneSnapshotView.as_view(), name="snapshot"),
     path("principals/", ControlPlanePrincipalManagementView.as_view(), name="principals"),
-    path("audit/", ControlPlaneAuditLogView.as_view(), name="audit"),\n    path("security/", ControlPlaneSecurityOverviewView.as_view(), name="security"),\n    path("operations/", ControlPlaneOperationsOverviewView.as_view(), name="operations"),\n    path("operations/telemetry/clear/", ControlPlaneClearTelemetryView.as_view(), name="operations-telemetry-clear"),
+    path("audit/", ControlPlaneAuditLogView.as_view(), name="audit"),
+    path("security/", ControlPlaneSecurityOverviewView.as_view(), name="security"),
+    path("operations/", ControlPlaneOperationsOverviewView.as_view(), name="operations"),
+    path("operations/telemetry/clear/", ControlPlaneClearTelemetryView.as_view(), name="operations-telemetry-clear"),
 ]
