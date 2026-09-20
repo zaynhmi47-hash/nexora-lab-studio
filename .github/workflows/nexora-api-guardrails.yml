@@ -21,7 +21,7 @@ jobs:
         working-directory: services/nexora-api
 
     env:
-      SECRET_KEY: ci-only-secret-key
+      SECRET_KEY: ci-only-secret-key-for-django-deployment-checks-2026
       DEBUG: "False"
       ALLOWED_HOSTS: localhost,127.0.0.1
       CSRF_TRUSTED_ORIGINS: http://localhost:8000
@@ -33,10 +33,10 @@ jobs:
       CONTROL_PLANE_SESSION_AGE: "1800"
       CONTROL_PLANE_LOGIN_RATE_LIMIT: "5"
       CONTROL_PLANE_AUDIT_RETENTION_DAYS: "0"
-      SECURE_SSL_REDIRECT: "False"
-      SECURE_HSTS_SECONDS: "0"
-      SECURE_HSTS_INCLUDE_SUBDOMAINS: "False"
-      SECURE_HSTS_PRELOAD: "False"
+      SECURE_SSL_REDIRECT: "True"
+      SECURE_HSTS_SECONDS: "31536000"
+      SECURE_HSTS_INCLUDE_SUBDOMAINS: "True"
+      SECURE_HSTS_PRELOAD: "True"
 
     steps:
       - name: Checkout
