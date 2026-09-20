@@ -19,6 +19,7 @@ from rest_framework.views import APIView
 
 from infrastructure.firebase.health import check_firebase_configuration
 
+from .audit import ControlPlaneAuditEventType, record_control_plane_audit
 from .models import ControlPlanePermission, ControlPlanePrincipal, ControlPlaneRole
 from .registry import application_snapshot
 from .services import (
@@ -184,7 +185,21 @@ class ControlPlaneLoginView(View):
         try:
             user = authenticate_control_plane_token(token)
         except ControlPlaneAccessDenied as exc:
+            record_control_plane_audit(
+                event_type=ControlPlaneAuditEventType.LOGIN_FAILED,
+                success=False,
+                correlation_id=request.headers.get("X-Request-ID", ""),
+                metadata={"reason": "access_denied", "error_type": exc.__class__.__name__},
+            )
             return render(request, "control_plane/login.html", {"error": str(exc)}, status=403)
+        except Exception as exc:
+            record_control_plane_audit(
+                event_type=ControlPlaneAuditEventType.LOGIN_FAILED,
+                success=False,
+                correlation_id=request.headers.get("X-Request-ID", ""),
+                metadata={"reason": "authentication_error", "error_type": exc.__class__.__name__},
+            )
+            return render(request, "control_plane/login.html", {"error": "Authentication failed."}, status=403)
         request.session.cycle_key()
         request.session.set_expiry(settings.CONTROL_PLANE_SESSION_AGE)
         request.session["control_plane_user_id"] = str(user.id)
@@ -259,7 +274,7 @@ class ControlPlanePrincipalManagementView(View):
         actor = self._actor(request)
         if actor is None:
             return JsonResponse({"detail": "Control Center authentication is required."}, status=401)
-        if actor.role != "owner":
+        if actor.role != ControlPlaneRole.OWNER:
             return JsonResponse({"detail": "Owner permission is required."}, status=403)
         import json
         try:
