@@ -91,3 +91,7 @@ class ControlPlaneBootstrapState(models.Model):
 
     def __str__(self) -> str:
         return f"ControlPlaneBootstrapState<locked={self.locked}>"
+
+
+# Keep the audit model in the app registry without coupling audit services to authorization models.
+from .audit import ControlPlaneAuditEvent  # noqa: E402,F401
