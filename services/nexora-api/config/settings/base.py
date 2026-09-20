@@ -11,6 +11,7 @@ env = environ.Env(
     DATABASE_URL=(str, "sqlite:///db.sqlite3"),
     DATABASE_CONN_MAX_AGE=(int, 0),
     DATABASE_CONN_HEALTH_CHECKS=(bool, True),
+    CONTROL_PLANE_BOOTSTRAP_EMAILS=(list, []),
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
@@ -36,6 +37,7 @@ ASGI_APPLICATION = "config.asgi.application"
 
 DATABASES = {"default": {**env.db("DATABASE_URL"), "CONN_MAX_AGE": env("DATABASE_CONN_MAX_AGE"), "CONN_HEALTH_CHECKS": env("DATABASE_CONN_HEALTH_CHECKS")}}
 CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
+CONTROL_PLANE_BOOTSTRAP_EMAILS = env("CONTROL_PLANE_BOOTSTRAP_EMAILS")
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
