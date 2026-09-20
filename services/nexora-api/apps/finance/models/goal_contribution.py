@@ -40,8 +40,8 @@ class FinanceGoalContribution(AuditableBaseModel):
             )
         ]
         indexes = [
-            models.Index(fields=("organization", "goal", "contributed_at"), name="finance_goal_contrib_period_idx"),
-            models.Index(fields=("organization", "status"), name="finance_goal_contrib_status_idx"),
+            models.Index(fields=("organization", "goal", "contributed_at"), name="finance_goal_period_idx"),
+            models.Index(fields=("organization", "status"), name="finance_goal_status_idx"),
         ]
 
     def clean(self):

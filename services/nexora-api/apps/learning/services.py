@@ -119,7 +119,7 @@ class LearningService:
             source="learning",
             action="quiz_completed",
             source_key=f"{lesson.key}:{attempt.id}",
-            xp_earned=XPRewardRules.quiz(passed),
+            xp_earned=(xp_earned := XPRewardRules.quiz(passed)),
             occurred_at=completed_at,
         )
         return {
@@ -129,7 +129,7 @@ class LearningService:
             "totalQuestions": total,
             "scorePercent": score,
             "passed": passed,
-            "xpEarned": 0,
+            "xpEarned": xp_earned,
             "completedAt": completed_at.isoformat(),
         }
 
@@ -227,53 +227,49 @@ class UnifiedLearningEngine:
     @classmethod
     def achievement_catalog(cls) -> tuple[dict, ...]:
         return (
-            {
-                "key": "first-activity",
-                "title": "First Activity",
-                "description": "Complete your first activity in any learning domain.",
-                "kind": "activity",
-                "threshold": 1,
-            },
-            {
-                "key": "streak-7",
-                "title": "Seven Day Streak",
-                "description": "Maintain a seven day learning streak.",
-                "kind": "streak",
-                "threshold": 7,
-            },
-            {
-                "key": "xp-100",
-                "title": "100 Total XP",
-                "description": "Reach 100 XP across all learning domains.",
-                "kind": "xp",
-                "threshold": 100,
-            },
-            {
-                "key": "tajwid-practice-10",
-                "title": "Tajwid Practice",
-                "description": "Complete 10 Tajwid practice items.",
-                "kind": "tajwid_practice",
-                "threshold": 10,
-            },
-            {
-                "key": "arabic-lessons-5",
-                "title": "Arabic Foundations",
-                "description": "Complete 5 Arabic lessons.",
-                "kind": "arabic_lessons",
-                "threshold": 5,
-            },
-            {
-                "key": "multi-domain",
-                "title": "Multi-Domain Learner",
-                "description": "Complete activities across all three learning domains.",
-                "kind": "domains",
-                "threshold": 3,
-            },
+            {"key": "first-activity", "title": "First Activity", "description": "Complete your first activity in any learning domain.", "kind": "activity", "threshold": 1},
+            {"key": "streak-7", "title": "Seven Day Streak", "description": "Maintain a seven day learning streak.", "kind": "streak", "threshold": 7},
+            {"key": "xp-100", "title": "100 Total XP", "description": "Reach 100 XP across all learning domains.", "kind": "xp", "threshold": 100},
+            {"key": "tajwid-practice-10", "title": "Tajwid Practice", "description": "Complete 10 Tajwid practice items.", "kind": "tajwid_practice", "threshold": 10},
+            {"key": "arabic-lessons-5", "title": "Arabic Foundations", "description": "Complete 5 Arabic lessons.", "kind": "arabic_lessons", "threshold": 5},
+            {"key": "multi-domain", "title": "Multi-Domain Learner", "description": "Complete activities across all three learning domains.", "kind": "domains", "threshold": 3},
         )
 
     @classmethod
+    def _base_snapshot(cls, user: NexoraUser) -> dict:
+        from django.db.models import Sum
+        from apps.gamification.models import GamificationActivity
+
+        learning = LearningService.progress(user)
+        tajwid = TajwidService.progress(user)
+        arabic = ArabicService.progress(user)
+        gamification_xp = (
+            GamificationActivity.objects.filter(
+                user=user,
+                source=GamificationActivity.Source.GAMIFICATION,
+                deleted_at__isnull=True,
+            ).aggregate(total=Sum("xp_earned"))["total"]
+            or 0
+        )
+        domains = {
+            "learning": learning.xp,
+            "tajwid": tajwid["xpEarned"],
+            "arabic": arabic["xpEarned"],
+            "gamification": gamification_xp,
+        }
+        total_xp = sum(domains.values())
+        return {
+            "userId": str(user.id),
+            "totalXp": total_xp,
+            **cls.level_progress(total_xp),
+            "currentStreak": cls.current_streak(user),
+            "domains": domains,
+            "rewards": cls.rewards(total_xp),
+        }
+
+    @classmethod
     def achievement_snapshot(cls, user: NexoraUser) -> list[dict]:
-        snapshot = cls.snapshot(user)
+        snapshot = cls._base_snapshot(user)
         activity_dates = cls._activity_dates(user)
         activity_count = (
             LearningLessonCompletion.objects.filter(user=user, deleted_at__isnull=True).count()
@@ -281,23 +277,16 @@ class UnifiedLearningEngine:
             + TajwidPracticeCompletion.objects.filter(user=user, deleted_at__isnull=True).count()
             + ArabicLessonCompletion.objects.filter(user=user, deleted_at__isnull=True).count()
         )
-        tajwid_practice_count = TajwidPracticeCompletion.objects.filter(
-            user=user, deleted_at__isnull=True
-        ).count()
-        arabic_lesson_count = ArabicLessonCompletion.objects.filter(
-            user=user, deleted_at__isnull=True
-        ).count()
+        tajwid_practice_count = TajwidPracticeCompletion.objects.filter(user=user, deleted_at__isnull=True).count()
+        arabic_lesson_count = ArabicLessonCompletion.objects.filter(user=user, deleted_at__isnull=True).count()
         domain_activity = sum(
-            1
-            for completed in (
+            1 for completed in (
                 LearningLessonCompletion.objects.filter(user=user, deleted_at__isnull=True).exists(),
                 TajwidTopicCompletion.objects.filter(user=user, deleted_at__isnull=True).exists()
                 or TajwidPracticeCompletion.objects.filter(user=user, deleted_at__isnull=True).exists(),
                 ArabicLessonCompletion.objects.filter(user=user, deleted_at__isnull=True).exists(),
-            )
-            if completed
+            ) if completed
         )
-
         latest_activity = max(activity_dates) if activity_dates else None
         earned = []
         for achievement in cls.achievement_catalog():
@@ -337,28 +326,18 @@ class UnifiedLearningEngine:
     @classmethod
     def _activity_dates(cls, user: NexoraUser) -> set:
         dates = set()
-
-        learning_dates = LearningLessonCompletion.objects.filter(
-            user=user, deleted_at__isnull=True
-        ).values_list("completed_at", flat=True)
-        tajwid_topic_dates = TajwidTopicCompletion.objects.filter(
-            user=user, deleted_at__isnull=True
-        ).values_list("completed_at", flat=True)
-        tajwid_practice_dates = TajwidPracticeCompletion.objects.filter(
-            user=user, deleted_at__isnull=True
-        ).values_list("completed_at", flat=True)
-        arabic_dates = ArabicLessonCompletion.objects.filter(
-            user=user, deleted_at__isnull=True
-        ).values_list("completed_at", flat=True)
-
-        for timestamp in (
-            *learning_dates,
-            *tajwid_topic_dates,
-            *tajwid_practice_dates,
-            *arabic_dates,
+        for model, field in (
+            (LearningLessonCompletion, "completed_at"),
+            (TajwidTopicCompletion, "completed_at"),
+            (TajwidPracticeCompletion, "completed_at"),
+            (ArabicLessonCompletion, "completed_at"),
         ):
-            dates.add(timezone.localtime(timestamp).date())
-
+            timestamps = model.objects.filter(
+                user=user, deleted_at__isnull=True
+            ).values_list(field, flat=True)
+            for timestamp in timestamps:
+                if timestamp is not None:
+                    dates.add(timezone.localtime(timestamp).date())
         return dates
 
     @classmethod
@@ -366,15 +345,12 @@ class UnifiedLearningEngine:
         dates = cls._activity_dates(user)
         if not dates:
             return 0
-
-        today = timezone.localdate()
-        if today not in dates:
-            today -= timedelta(days=1)
-            if today not in dates:
+        cursor = timezone.localdate()
+        if cursor not in dates:
+            cursor -= timedelta(days=1)
+            if cursor not in dates:
                 return 0
-
         streak = 0
-        cursor = today
         while cursor in dates:
             streak += 1
             cursor -= timedelta(days=1)
@@ -382,27 +358,9 @@ class UnifiedLearningEngine:
 
     @classmethod
     def snapshot(cls, user: NexoraUser) -> dict:
-        learning = LearningService.progress(user)
-        tajwid = TajwidService.progress(user)
-        arabic = ArabicService.progress(user)
-
-        domains = {
-            "learning": learning.xp,
-            "tajwid": tajwid["xpEarned"],
-            "arabic": arabic["xpEarned"],
-        }
-        total_xp = sum(domains.values())
-        level_data = cls.level_progress(total_xp)
-
-        return {
-            "userId": str(user.id),
-            "totalXp": total_xp,
-            **level_data,
-            "currentStreak": cls.current_streak(user),
-            "domains": domains,
-            "rewards": cls.rewards(total_xp),
-            "achievements": cls.achievement_snapshot(user),
-        }
+        snapshot = cls._base_snapshot(user)
+        snapshot["achievements"] = cls.achievement_snapshot(user)
+        return snapshot
 
 
 def learning_hub(user: NexoraUser):
@@ -432,6 +390,8 @@ def learning_hub(user: NexoraUser):
                 "streak": arabic["currentStreak"],
                 "completedCount": len(arabic["completedLessonIds"]),
             },
+            "gamification": {
+                "xp": engine["domains"]["gamification"],
+            },
         },
     }
-\n

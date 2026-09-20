@@ -33,6 +33,6 @@ class GamificationActivity(AuditableBaseModel):
         indexes = [
             models.Index(
                 fields=("user", "-occurred_at"),
-                name="gamification_activity_user_date_idx",
+                name="gamification_user_date_idx",
             ),
         ]
