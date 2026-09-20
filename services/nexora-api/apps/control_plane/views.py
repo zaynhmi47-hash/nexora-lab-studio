@@ -50,6 +50,16 @@ def _login_rate_limited(request) -> bool:
         return False
 
 
+def _control_plane_internal_error(request):
+    return JsonResponse(
+        {
+            "detail": "Control Center request could not be completed.",
+            "correlation_id": request.headers.get("X-Request-ID", "")[:128],
+        },
+        status=500,
+    )
+
+
 def _control_plane_user(request):
     user_id = request.session.get("control_plane_user_id")
     if not user_id:
@@ -205,11 +215,14 @@ class ControlPlaneAuditLogView(View):
         if not settings.DEBUG:
             return JsonResponse({"detail": "Control Plane is disabled outside DEBUG."}, status=404)
 
-        actor = ControlPlanePrincipal.objects.select_related("user").filter(
-            user_id=request.session.get("control_plane_user_id"),
-            enabled=True,
-            deleted_at__isnull=True,
-        ).first()
+        try:
+            actor = ControlPlanePrincipal.objects.select_related("user").filter(
+                user_id=request.session.get("control_plane_user_id"),
+                enabled=True,
+                deleted_at__isnull=True,
+            ).first()
+        except Exception:
+            return _control_plane_internal_error(request)
         if actor is None:
             return JsonResponse({"detail": "Control Center authentication is required."}, status=401)
         if not actor.has_permission(ControlPlanePermission.AUDIT_READ):
@@ -226,7 +239,10 @@ class ControlPlaneAuditLogView(View):
         target_email = request.GET.get("target", "").strip()
         correlation_id = request.GET.get("correlation_id", "").strip()
 
-        queryset = ControlPlaneAuditEvent.objects.select_related("actor", "target")
+        try:
+            queryset = ControlPlaneAuditEvent.objects.select_related("actor", "target")
+        except Exception:
+            return _control_plane_internal_error(request)
         if event_type:
             if event_type not in set(ControlPlaneAuditEventType.values):
                 return JsonResponse({"detail": "Unknown audit event type."}, status=400)
@@ -242,9 +258,9 @@ class ControlPlaneAuditLogView(View):
         if correlation_id:
             queryset = queryset.filter(correlation_id=correlation_id[:128])
 
-        events = queryset.order_by("-occurred_at", "-id")[:limit]
-        return JsonResponse({
-            "events": [
+        try:
+            events = queryset.order_by("-occurred_at", "-id")[:limit]
+            payload = [
                 {
                     "id": str(event.id),
                     "event_type": event.event_type,
@@ -256,7 +272,11 @@ class ControlPlaneAuditLogView(View):
                     "metadata": event.metadata,
                 }
                 for event in events
-            ],
+            ]
+        except Exception:
+            return _control_plane_internal_error(request)
+        return JsonResponse({
+            "events": payload,
             "limit": limit,
             "event_types": list(ControlPlaneAuditEventType.values),
         })
@@ -284,13 +304,17 @@ class ControlPlanePrincipalManagementView(View):
             return JsonResponse({"detail": "Control Center authentication is required."}, status=401)
         if actor.role != ControlPlaneRole.OWNER:
             return JsonResponse({"detail": "Owner permission is required."}, status=403)
-        principals = ControlPlanePrincipal.objects.select_related("user").filter(deleted_at__isnull=True).order_by("user__email")
-        return JsonResponse({
-            "principals": [
+        try:
+            principals = ControlPlanePrincipal.objects.select_related("user").filter(deleted_at__isnull=True).order_by("user__email")
+            payload = [
                 {"user_id": str(p.user_id), "email": p.user.email, "role": p.role, "enabled": p.enabled,
                  "last_authenticated_at": p.last_authenticated_at.isoformat() if p.last_authenticated_at else None}
                 for p in principals
-            ],
+            ]
+        except Exception:
+            return _control_plane_internal_error(request)
+        return JsonResponse({
+            "principals": payload,
             "roles": [{"value": value, "label": label} for value, label in ControlPlaneRole.choices],
         })
 
@@ -330,4 +354,15 @@ class ControlPlanePrincipalManagementView(View):
             )
         except ControlPlaneRoleManagementError as exc:
             return JsonResponse({"detail": str(exc)}, status=400)
-        return JsonResponse({"user_id": str(target.user_id), "email": target.user.email, "role": target.role, "enabled": target.enabled})
+        except Exception:
+            return _control_plane_internal_error(request)
+        try:
+            response_payload = {
+                "user_id": str(target.user_id),
+                "email": target.user.email,
+                "role": target.role,
+                "enabled": target.enabled,
+            }
+        except Exception:
+            return _control_plane_internal_error(request)
+        return JsonResponse(response_payload)
