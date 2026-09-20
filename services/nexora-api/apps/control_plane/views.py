@@ -19,7 +19,11 @@ from rest_framework.views import APIView
 
 from infrastructure.firebase.health import check_firebase_configuration
 
-from .audit import ControlPlaneAuditEventType, record_control_plane_audit
+from .audit import (
+    ControlPlaneAuditEvent,
+    ControlPlaneAuditEventType,
+    record_control_plane_audit,
+)
 from .models import ControlPlanePermission, ControlPlanePrincipal, ControlPlaneRole
 from .registry import application_snapshot
 from .services import (
@@ -237,6 +241,55 @@ class ControlPlaneSnapshotView(APIView):
             return Response({"detail": "Control Center permission denied."}, status=403)
         return Response(_snapshot())
 
+
+
+class ControlPlaneAuditLogView(View):
+    """Read-only security audit log for authorized Control Center operators."""
+
+    def get(self, request):
+        if not settings.DEBUG:
+            return JsonResponse({"detail": "Control Plane is disabled outside DEBUG."}, status=404)
+
+        actor = ControlPlanePrincipal.objects.select_related("user").filter(
+            user_id=request.session.get("control_plane_user_id"),
+            enabled=True,
+            deleted_at__isnull=True,
+        ).first()
+        if actor is None:
+            return JsonResponse({"detail": "Control Center authentication is required."}, status=401)
+        if not actor.has_permission(ControlPlanePermission.AUDIT_READ):
+            return JsonResponse({"detail": "Audit read permission is required."}, status=403)
+
+        try:
+            limit = min(max(int(request.GET.get("limit", "50")), 1), 100)
+        except ValueError:
+            return JsonResponse({"detail": "limit must be an integer."}, status=400)
+
+        event_type = request.GET.get("event_type", "").strip()
+        queryset = ControlPlaneAuditEvent.objects.select_related("actor", "target")
+        if event_type:
+            if event_type not in set(ControlPlaneAuditEventType.values):
+                return JsonResponse({"detail": "Unknown audit event type."}, status=400)
+            queryset = queryset.filter(event_type=event_type)
+
+        events = queryset.order_by("-occurred_at", "-id")[:limit]
+        return JsonResponse({
+            "events": [
+                {
+                    "id": str(event.id),
+                    "event_type": event.event_type,
+                    "success": event.success,
+                    "occurred_at": event.occurred_at.isoformat(),
+                    "actor": {"user_id": str(event.actor_id), "email": event.actor.email} if event.actor else None,
+                    "target": {"user_id": str(event.target_id), "email": event.target.email} if event.target else None,
+                    "correlation_id": event.correlation_id,
+                    "metadata": event.metadata,
+                }
+                for event in events
+            ],
+            "limit": limit,
+            "event_types": list(ControlPlaneAuditEventType.values),
+        })
 
 class ControlPlanePrincipalManagementView(View):
     """Owner-only endpoint for role and access management."""
