@@ -27,6 +27,8 @@ if not DEBUG and SECRET_KEY == "django-insecure-development-only":
     raise RuntimeError("SECRET_KEY must be explicitly configured when DEBUG=False.")
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
+if not DEBUG and not ALLOWED_HOSTS:
+    raise RuntimeError("ALLOWED_HOSTS must be explicitly configured when DEBUG=False.")
 
 INSTALLED_APPS = [
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes", "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
