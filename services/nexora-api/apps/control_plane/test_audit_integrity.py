@@ -89,6 +89,28 @@ def test_audit_retention_defaults_to_indefinite():
 
 
 @pytest.mark.django_db
+def test_audit_target_reference_blocks_hard_delete():
+    user = NexoraUser.objects.create(
+        email="protected-target@example.com",
+        display_name="Protected Target",
+        status=NexoraUser.Status.ACTIVE,
+    )
+    actor = NexoraUser.objects.create(
+        email="protected-target-actor@example.com",
+        display_name="Protected Target Actor",
+        status=NexoraUser.Status.ACTIVE,
+    )
+    record_control_plane_audit(
+        event_type=ControlPlaneAuditEventType.PRINCIPAL_ROLE_CHANGED,
+        actor=actor,
+        target=user,
+    )
+    with pytest.raises(IntegrityError):
+        user.delete()
+    assert NexoraUser.objects.filter(pk=user.pk).exists()
+
+
+@pytest.mark.django_db
 def test_audit_identity_reference_blocks_hard_delete():
     user = NexoraUser.objects.create(email="protected-audit@example.com", display_name="Protected Audit", status=NexoraUser.Status.ACTIVE)
     record_control_plane_audit(event_type=ControlPlaneAuditEventType.LOGIN, actor=user)
