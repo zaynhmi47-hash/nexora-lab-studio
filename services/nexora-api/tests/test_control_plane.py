@@ -179,11 +179,20 @@ def test_control_plane_endpoints_are_disabled_outside_debug(settings):
 
 @pytest.mark.django_db
 def test_telemetry_clear_requires_csrf(settings):
-    client = authenticated_control_center_client(settings)
-    csrf_client = Client(enforce_csrf_checks=True)
-    csrf_client.cookies = client.cookies
-    csrf_client.session = client.session
-    response = csrf_client.post("/ops/operations/telemetry/clear/")
+    settings.DEBUG = True
+    user = NexoraUser.objects.create(
+        email="csrf-required@example.com",
+        display_name="CSRF Required",
+        status=NexoraUser.Status.ACTIVE,
+    )
+    ControlPlanePrincipal.objects.create(user=user, enabled=True, role=ControlPlaneRole.OWNER)
+    client = Client(enforce_csrf_checks=True)
+    session = client.session
+    session["control_plane_user_id"] = str(user.id)
+    session.save()
+
+    client.get("/ops/")
+    response = client.post("/ops/operations/telemetry/clear/")
     assert response.status_code == 403
 
 
