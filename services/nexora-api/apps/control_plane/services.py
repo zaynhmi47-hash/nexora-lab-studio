@@ -8,6 +8,7 @@ from apps.identity.models import IdentityProviderAccount, NexoraUser
 from infrastructure.firebase.registry import FirebaseProviderRegistry
 from apps.identity.services import IdentityService
 
+from .audit import ControlPlaneAuditEventType, record_control_plane_audit
 from .models import ControlPlaneBootstrapState, ControlPlanePrincipal, ControlPlaneRole
 
 
@@ -32,6 +33,12 @@ def _bootstrap_first_owner(user: NexoraUser) -> ControlPlanePrincipal:
     with transaction.atomic():
         state = ControlPlaneBootstrapState.objects.select_for_update().get(pk=1)
         if state.locked:
+            record_control_plane_audit(
+                event_type=ControlPlaneAuditEventType.BOOTSTRAP_REJECTED,
+                target=user,
+                success=False,
+                metadata={"reason": "bootstrap_locked"},
+            )
             raise ControlPlaneAccessDenied(
                 "Control Center bootstrap is locked. An existing owner must grant access."
             )
@@ -41,6 +48,12 @@ def _bootstrap_first_owner(user: NexoraUser) -> ControlPlanePrincipal:
             state.locked = True
             state.locked_at = timezone.now()
             state.save(update_fields=["locked", "locked_at"])
+            record_control_plane_audit(
+                event_type=ControlPlaneAuditEventType.BOOTSTRAP_REJECTED,
+                target=user,
+                success=False,
+                metadata={"reason": "existing_principal"},
+            )
             raise ControlPlaneAccessDenied(
                 "Control Center bootstrap is already initialized."
             )
@@ -53,6 +66,12 @@ def _bootstrap_first_owner(user: NexoraUser) -> ControlPlanePrincipal:
         state.locked = True
         state.locked_at = timezone.now()
         state.save(update_fields=["locked", "locked_at"])
+        record_control_plane_audit(
+            event_type=ControlPlaneAuditEventType.BOOTSTRAP_COMPLETED,
+            actor=user,
+            target=user,
+            metadata={"role": ControlPlaneRole.OWNER},
+        )
         return principal
 
 
@@ -97,6 +116,12 @@ def authenticate_control_plane_token(token: str) -> NexoraUser:
 
     principal.last_authenticated_at = timezone.now()
     principal.save(update_fields=["last_authenticated_at", "updated_at"])
+    record_control_plane_audit(
+        event_type=ControlPlaneAuditEventType.LOGIN,
+        actor=user,
+        target=user,
+        metadata={"role": principal.role},
+    )
     return user
 
 
@@ -142,7 +167,28 @@ def manage_control_plane_principal(
             if owner_count < 1:
                 raise ControlPlaneRoleManagementError("At least one active Control Center owner must remain.")
 
+        previous_role = target.role
+        previous_enabled = target.enabled
         target.role = next_role
         target.enabled = next_enabled
         target.save(update_fields=["role", "enabled", "updated_at"])
+
+        if previous_role != next_role:
+            record_control_plane_audit(
+                event_type=ControlPlaneAuditEventType.PRINCIPAL_ROLE_CHANGED,
+                actor=actor.user,
+                target=target.user,
+                metadata={"role_before": previous_role, "role_after": next_role},
+            )
+        if previous_enabled != next_enabled:
+            record_control_plane_audit(
+                event_type=(
+                    ControlPlaneAuditEventType.PRINCIPAL_ENABLED
+                    if next_enabled
+                    else ControlPlaneAuditEventType.PRINCIPAL_DISABLED
+                ),
+                actor=actor.user,
+                target=target.user,
+                metadata={"enabled_before": previous_enabled, "enabled_after": next_enabled},
+            )
         return target
