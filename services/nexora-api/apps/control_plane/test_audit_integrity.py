@@ -50,3 +50,34 @@ def test_audit_event_creation_remains_supported():
     )
     assert event.actor_id == user.id
     assert event.metadata == {"source": "control-plane-test"}
+
+
+@pytest.mark.django_db
+def test_audit_metadata_rejects_sensitive_key_patterns():
+    with pytest.raises(ValueError):
+        record_control_plane_audit(event_type=ControlPlaneAuditEventType.LOGIN, metadata={"access_token": "x"})
+    with pytest.raises(ValueError):
+        record_control_plane_audit(event_type=ControlPlaneAuditEventType.LOGIN, metadata={"nested": [{"client-secret": "x"}]})
+
+
+@pytest.mark.django_db
+def test_audit_metadata_is_size_and_depth_bounded():
+    with pytest.raises(ValueError, match="maximum size"):
+        record_control_plane_audit(event_type=ControlPlaneAuditEventType.LOGIN, metadata={"note": "x" * 9000})
+    nested = value = {}
+    for _ in range(10):
+        value["next"] = {}
+        value = value["next"]
+    with pytest.raises(ValueError, match="nesting"):
+        record_control_plane_audit(event_type=ControlPlaneAuditEventType.LOGIN, metadata=nested)
+
+
+def test_audit_correlation_id_is_normalized_and_bounded():
+    event = record_control_plane_audit(event_type=ControlPlaneAuditEventType.LOGIN, correlation_id="  req-123  ")
+    assert event.correlation_id == "req-123"
+    with pytest.raises(ValueError, match="too long"):
+        record_control_plane_audit(event_type=ControlPlaneAuditEventType.LOGIN, correlation_id="x" * 129)
+
+
+def test_audit_event_type_contract_is_explicit():
+    assert ControlPlaneAuditEventType.TELEMETRY_CLEARED in ControlPlaneAuditEventType.values
