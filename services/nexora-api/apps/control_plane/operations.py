@@ -36,11 +36,20 @@ def _actor(request):
 def _guard(request, permission):
     if not settings.DEBUG:
         return None, JsonResponse({"detail": "Control Plane is disabled outside DEBUG."}, status=404)
-    actor = _actor(request)
-    if actor is None:
-        return None, JsonResponse({"detail": "Control Center authentication is required."}, status=401)
-    if not actor.has_permission(permission):
-        return None, JsonResponse({"detail": "Control Center permission denied."}, status=403)
+    try:
+        actor = _actor(request)
+        if actor is None:
+            return None, JsonResponse({"detail": "Control Center authentication is required."}, status=401)
+        if not actor.has_permission(permission):
+            return None, JsonResponse({"detail": "Control Center permission denied."}, status=403)
+    except Exception:
+        return None, JsonResponse(
+            {
+                "detail": "Control Center security state could not be evaluated.",
+                "correlation_id": request.headers.get("X-Request-ID", "")[:128],
+            },
+            status=500,
+        )
     return actor, None
 
 
