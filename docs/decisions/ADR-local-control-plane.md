@@ -35,3 +35,21 @@ Limitations:
 - Request history is lost on restart.
 - In-memory telemetry is per process.
 - Production observability should use dedicated metrics/logging infrastructure later.
+
+## Control Center identity boundary
+
+The local Control Plane is an internal operator surface, not the public Nexora Office product.
+
+Access now requires:
+
+- Django DEBUG mode;
+- a verified Firebase identity;
+- an explicit Control Plane principal;
+- an enabled principal record;
+- a server-side session created after successful identity verification.
+
+Initial owner bootstrapping is restricted to emails listed in `CONTROL_PLANE_BOOTSTRAP_EMAILS`. The allowlist only creates the principal after Firebase verification reports a verified email. Once created, access is controlled by the persisted principal record; an absent or disabled principal is denied.
+
+The bootstrap allowlist is intentionally separate from future role/permission governance. Step 2 will add explicit Control Center roles and permissions without weakening this identity boundary.
+
+The Control Center login never stores the Firebase ID token in the Django session; only the internal NEXORA user UUID is stored.
