@@ -7,7 +7,8 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck",
+    "check:boundaries": "node tooling/dependency-boundary-check.mjs"
   },
   "devDependencies": {
     "turbo": "^2.5.6"

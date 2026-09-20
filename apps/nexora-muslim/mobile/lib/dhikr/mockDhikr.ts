@@ -1,4 +1,4 @@
-import type { Dhikr, DhikrHistoryEntry, DhikrRepository } from './types';
+import type { Dhikr, DhikrRepository } from './types';
 
 export const mockDhikrList: Dhikr[] = [
   {
@@ -33,45 +33,8 @@ export const mockDhikrList: Dhikr[] = [
   },
 ];
 
-const history: DhikrHistoryEntry[] = [];
-
 export const mockDhikrRepository: DhikrRepository = {
   async getAll() {
-    return mockDhikrList.map((item) => ({ ...item }));
-  },
-
-  async increment(dhikrId) {
-    const item = mockDhikrList.find((candidate) => candidate.id === dhikrId);
-    if (!item) {
-      throw new Error(`Dhikr not found: ${dhikrId}`);
-    }
-
-    if (item.completed < item.target) {
-      item.completed += 1;
-      history.push({
-        id: `${dhikrId}-${Date.now()}-${history.length}`,
-        dhikrId,
-        count: 1,
-        completedAt: new Date().toISOString(),
-      });
-    }
-
-    return { ...item };
-  },
-
-  async reset(dhikrId) {
-    const item = mockDhikrList.find((candidate) => candidate.id === dhikrId);
-    if (!item) {
-      throw new Error(`Dhikr not found: ${dhikrId}`);
-    }
-
-    item.completed = 0;
-    return { ...item };
-  },
-
-  async getHistory(dhikrId) {
-    return history
-      .filter((entry) => !dhikrId || entry.dhikrId === dhikrId)
-      .map((entry) => ({ ...entry }));
+    return mockDhikrList;
   },
 };

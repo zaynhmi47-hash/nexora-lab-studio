@@ -1,46 +1,45 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { SectionTitle } from '@/components/SectionTitle';
 import { colors, radius, spacing, typography } from '@/constants/theme';
-import { useAppState } from '@/lib/app-state';
-import { useAuth } from '@/lib/auth/AuthProvider';
-import { mockUmrahRepository, nexoraCoreUmrahRepository, type JourneyStage, type UmrahJourney } from '@/lib/umrah';
+import { mockUmrahJourney, type JourneyStage } from '@/lib/umrah';
 
 export default function UmrahScreen() {
-  const { refresh: refreshAppState } = useAppState();
-  const { session } = useAuth();
-  const repository = useMemo(() => session?.user.provider === 'firebase' ? nexoraCoreUmrahRepository(session) : mockUmrahRepository, [session]);
-  const [journey, setJourney] = useState<UmrahJourney | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    void repository.getJourney().then((data) => {
-      if (active) setJourney(data);
-    });
-    return () => { active = false; };
-  }, [repository]);
+  const [journey, setJourney] = useState(mockUmrahJourney);
 
   const currentStage = useMemo(
-    () => journey?.stages.find((stage) => stage.id === journey.currentStageId),
-    [journey],
+    () => journey.stages.find((stage) => stage.id === journey.currentStageId),
+    [journey.currentStageId, journey.stages],
   );
 
-  if (!journey) {
-    return <Screen><Text style={styles.muted}>Loading Umrah journey…</Text></Screen>;
-  }
+  const toggleChecklist = (id: string) => {
+    setJourney((current) => {
+      const checklist = current.checklist.map((item) =>
+        item.id === id ? { ...item, completed: !item.completed } : item,
+      );
 
-  const toggleChecklist = async (id: string) => {
-    if (busyId) return;
-    setBusyId(id);
-    try {
-      setJourney(await repository.toggleChecklist(id));
-      await refreshAppState();
-    } finally {
-      setBusyId(null);
-    }
+      const stages = current.stages.map((stage) => {
+        const stageItems = checklist.filter((item) => item.stageId === stage.id);
+        const completedCount = stageItems.filter((item) => item.completed).length;
+        return {
+          ...stage,
+          checklistCount: stageItems.length,
+          completedChecklistCount: completedCount,
+          progress: stageItems.length === 0 ? 0 : completedCount / stageItems.length,
+        };
+      });
+
+      const completedCount = checklist.filter((item) => item.completed).length;
+
+      return {
+        ...current,
+        checklist,
+        stages,
+        overallProgress: checklist.length === 0 ? 0 : completedCount / checklist.length,
+      };
+    });
   };
 
   const statusLabel = (stage: JourneyStage) => {
@@ -62,7 +61,9 @@ export default function UmrahScreen() {
       <View style={styles.hero}>
         <Text style={styles.heroLabel}>YOUR JOURNEY</Text>
         <Text style={styles.progressValue}>{Math.round(journey.overallProgress * 100)}%</Text>
-        <Text style={styles.heroText}>Progress is a preparation aid, not a measure of worship or spiritual worth.</Text>
+        <Text style={styles.heroText}>
+          Progress is a preparation aid, not a measure of worship or spiritual worth.
+        </Text>
         <View style={styles.progressTrack}>
           <View style={[styles.progressFill, { width: `${journey.overallProgress * 100}%` }]} />
         </View>
@@ -78,13 +79,17 @@ export default function UmrahScreen() {
             <View style={styles.flex}>
               <View style={styles.titleRow}>
                 <Text style={styles.stageTitle}>{stage.title}</Text>
-                <Text style={[styles.status, stage.status === 'current' && styles.statusCurrent]}>{statusLabel(stage)}</Text>
+                <Text style={[styles.status, stage.status === 'current' && styles.statusCurrent]}>
+                  {statusLabel(stage)}
+                </Text>
               </View>
               <Text style={styles.description}>{stage.description}</Text>
               <View style={styles.smallProgressTrack}>
                 <View style={[styles.smallProgressFill, { width: `${stage.progress * 100}%` }]} />
               </View>
-              <Text style={styles.muted}>{stage.completedChecklistCount} / {stage.checklistCount} checklist items</Text>
+              <Text style={styles.muted}>
+                {stage.completedChecklistCount} / {stage.checklistCount} checklist items
+              </Text>
             </View>
           </View>
         </Card>
@@ -96,10 +101,8 @@ export default function UmrahScreen() {
           {currentChecklist.map((item) => (
             <Pressable
               key={item.id}
-              disabled={busyId !== null}
-              onPress={() => void toggleChecklist(item.id)}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: item.completed, disabled: busyId !== null }}
+              onPress={() => toggleChecklist(item.id)}
+              accessibilityRole="button"
               accessibilityLabel={`${item.title}, ${item.completed ? 'completed' : 'not completed'}`}
             >
               <Card style={styles.checkCard}>
@@ -119,7 +122,11 @@ export default function UmrahScreen() {
         </>
       ) : null}
 
-      <Text style={styles.disclaimer}>Travel requirements, health rules, visa information, and religious guidance can change. Nexora Muslim will connect these areas to verified official or qualified sources before production use. This prototype does not act as a travel organizer or religious authority.</Text>
+      <Text style={styles.disclaimer}>
+        Travel requirements, health rules, visa information, and religious guidance can change.
+        Nexora Muslim will connect these areas to verified official or qualified sources before
+        production use. This prototype does not act as a travel organizer or religious authority.
+      </Text>
     </Screen>
   );
 }

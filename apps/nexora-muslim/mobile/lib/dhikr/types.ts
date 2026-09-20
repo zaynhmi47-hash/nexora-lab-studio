@@ -1,5 +1,3 @@
-export type DhikrCategory = 'morning' | 'evening' | 'general';
-
 export type Dhikr = {
   id: string;
   title: string;
@@ -8,19 +6,9 @@ export type Dhikr = {
   translation: string;
   target: number;
   completed: number;
-  category: DhikrCategory;
-};
-
-export type DhikrHistoryEntry = {
-  id: string;
-  dhikrId: string;
-  count: number;
-  completedAt: string;
+  category: 'morning' | 'evening' | 'general';
 };
 
 export interface DhikrRepository {
   getAll(): Promise<Dhikr[]>;
-  increment(dhikrId: string): Promise<Dhikr>;
-  reset(dhikrId: string): Promise<Dhikr>;
-  getHistory(dhikrId?: string): Promise<DhikrHistoryEntry[]>;
 }
