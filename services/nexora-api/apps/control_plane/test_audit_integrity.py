@@ -1,7 +1,7 @@
 import pytest
 from django.db import DatabaseError
 
-from apps.control_plane.audit import ControlPlaneAuditEvent, ControlPlaneAuditEventType, record_control_plane_audit
+from apps.control_plane.audit import ControlPlaneAuditEvent, ControlPlaneAuditEventType, audit_retention_cutoff, record_control_plane_audit
 from apps.identity.models import NexoraUser
 
 
@@ -81,3 +81,8 @@ def test_audit_correlation_id_is_normalized_and_bounded():
 
 def test_audit_event_type_contract_is_explicit():
     assert ControlPlaneAuditEventType.TELEMETRY_CLEARED in ControlPlaneAuditEventType.values
+
+
+@pytest.mark.django_db
+def test_audit_retention_defaults_to_indefinite():
+    assert audit_retention_cutoff() is None
