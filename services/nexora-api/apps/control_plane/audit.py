@@ -53,6 +53,25 @@ class ControlPlaneAuditEvent(models.Model):
         ]
 
 
+def _validate_audit_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
+    if metadata is None:
+        return {}
+    forbidden = {"token", "id_token", "authorization", "password", "secret", "credential", "credentials"}
+    def walk(value: Any) -> None:
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if str(key).strip().lower() in forbidden:
+                    raise ValueError("Sensitive credential fields are not allowed in audit metadata.")
+                walk(child)
+        elif isinstance(value, list):
+            for child in value:
+                walk(child)
+    if not isinstance(metadata, dict):
+        raise TypeError("Audit metadata must be a dictionary.")
+    walk(metadata)
+    return metadata
+
+
 def record_control_plane_audit(
     *,
     event_type: str,
@@ -69,5 +88,5 @@ def record_control_plane_audit(
         target=target,
         success=success,
         correlation_id=correlation_id[:128],
-        metadata=metadata or {},
+        metadata=_validate_audit_metadata(metadata),
     )
