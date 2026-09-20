@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
 
 from apps.identity.models import IdentityProviderAccount, NexoraUser
 from infrastructure.firebase.registry import FirebaseProviderRegistry
 from apps.identity.services import IdentityService
 
-from .models import ControlPlanePrincipal
+from .models import ControlPlanePrincipal, ControlPlaneRole
 
 
 class ControlPlaneAccessDenied(Exception):
@@ -63,3 +64,51 @@ def authenticate_control_plane_token(token: str) -> NexoraUser:
     principal.last_authenticated_at = timezone.now()
     principal.save(update_fields=["last_authenticated_at", "updated_at"])
     return user
+
+
+class ControlPlaneRoleManagementError(Exception):
+    pass
+
+
+def manage_control_plane_principal(
+    *,
+    actor: ControlPlanePrincipal,
+    target_user_id: str,
+    role: str | None = None,
+    enabled: bool | None = None,
+) -> ControlPlanePrincipal:
+    """Apply an owner-only authorization change with last-owner protection."""
+    if actor.role != ControlPlaneRole.OWNER or not actor.enabled or actor.deleted_at is not None:
+        raise ControlPlaneRoleManagementError("Only an active Control Center owner may manage principals.")
+    if role is not None and role not in ControlPlaneRole.values:
+        raise ControlPlaneRoleManagementError("Invalid Control Center role.")
+    if role == ControlPlaneRole.OWNER and target_user_id == str(actor.user_id):
+        raise ControlPlaneRoleManagementError("The acting owner cannot change their own owner role.")
+
+    with transaction.atomic():
+        target = (
+            ControlPlanePrincipal.objects.select_for_update()
+            .select_related("user")
+            .filter(user_id=target_user_id)
+            .first()
+        )
+        if target is None:
+            raise ControlPlaneRoleManagementError("Control Center principal not found.")
+
+        next_role = role if role is not None else target.role
+        next_enabled = enabled if enabled is not None else target.enabled
+        remains_owner = next_role == ControlPlaneRole.OWNER and next_enabled and target.deleted_at is None
+        if target.role == ControlPlaneRole.OWNER and target.enabled and not remains_owner:
+            owner_count = (
+                ControlPlanePrincipal.objects.select_for_update()
+                .filter(role=ControlPlaneRole.OWNER, enabled=True, deleted_at__isnull=True)
+                .exclude(pk=target.pk)
+                .count()
+            )
+            if owner_count < 1:
+                raise ControlPlaneRoleManagementError("At least one active Control Center owner must remain.")
+
+        target.role = next_role
+        target.enabled = next_enabled
+        target.save(update_fields=["role", "enabled", "updated_at"])
+        return target
