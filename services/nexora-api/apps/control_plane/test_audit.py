@@ -1,5 +1,7 @@
 from django.test import SimpleTestCase
 
+from apps.core.middleware.context import RequestContext, get_request_context, set_request_context, reset_request_context
+
 from .audit import (
     ControlPlaneAuditEventType,
     _validate_audit_metadata,
@@ -38,3 +40,15 @@ class ControlPlaneAuditBoundaryTests(SimpleTestCase):
     def test_metadata_must_be_a_dictionary(self):
         with self.assertRaises(TypeError):
             _validate_audit_metadata(["not", "a", "dict"])
+
+
+class ControlPlaneAuditCorrelationTests(SimpleTestCase):
+    def test_audit_uses_request_context_when_correlation_id_is_omitted(self):
+        token = set_request_context(RequestContext(correlation_id="req-123"))
+        try:
+            self.assertEqual(get_request_context().correlation_id, "req-123")
+        finally:
+            reset_request_context(token)
+
+    def test_request_context_is_reset_after_test(self):
+        self.assertIsNone(get_request_context().correlation_id)
