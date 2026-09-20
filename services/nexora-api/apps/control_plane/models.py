@@ -77,3 +77,17 @@ class ControlPlanePrincipal(AuditableBaseModel):
         if not self.enabled or self.deleted_at is not None:
             return False
         return permission in ROLE_PERMISSIONS.get(self.role, frozenset())
+
+
+class ControlPlaneBootstrapState(models.Model):
+    """Persistent one-time gate for first-owner bootstrap."""
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    locked = models.BooleanField(default=False)
+    locked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "control_plane_bootstrap_state"
+
+    def __str__(self) -> str:
+        return f"ControlPlaneBootstrapState<locked={self.locked}>"
