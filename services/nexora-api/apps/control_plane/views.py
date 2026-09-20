@@ -55,7 +55,7 @@ def _snapshot():
     firebase_configured = check_firebase_configuration()
 
     prefix_counts = Counter(
-        route["route"].split("/")[1] if len(route["route"].split("/")) > 1 else "root"
+        route["route"].split("/")[3] if len(route["route"].split("/")) > 3 else "root"
         for route in routes
         if route["route"].startswith("/api/")
     )
