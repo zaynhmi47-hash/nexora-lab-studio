@@ -1,4 +1,4 @@
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.utils import timezone
 from django.db.models import Sum
 from datetime import timedelta
@@ -151,16 +151,16 @@ class GamificationService:
 
     @staticmethod
     @transaction.atomic
-    def claim_daily_reward(user: NexoraUser) -> GamificationActivity:
+    def claim_daily_reward(user: NexoraUser) -> tuple[GamificationActivity, bool]:
         today = timezone.localdate().isoformat()
-        return GamificationService.record_activity(
+        activity, created = GamificationActivity.objects.get_or_create(
             user=user,
             source=GamificationActivity.Source.GAMIFICATION,
             action="daily_reward",
             source_key=f"daily:{today}",
-            xp_earned=10,
-            occurred_at=timezone.now(),
+            defaults={"xp_earned": 10, "occurred_at": timezone.now()},
         )
+        return activity, created
 
     @staticmethod
     def quiz_xp_allowed(user: NexoraUser, lesson_key: str, passed: bool) -> int:

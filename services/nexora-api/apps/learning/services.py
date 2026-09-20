@@ -432,5 +432,8 @@ def learning_hub(user: NexoraUser):
                 "streak": arabic["currentStreak"],
                 "completedCount": len(arabic["completedLessonIds"]),
             },
+            "gamification": {
+                "xp": engine["domains"]["gamification"],
+            },
         },
     }
