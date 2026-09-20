@@ -16,6 +16,7 @@ from rest_framework.views import APIView
 from .audit import (
     ControlPlaneAuditEvent,
     ControlPlaneAuditEventType,
+    normalize_audit_correlation_id,
     record_control_plane_audit,
 )
 from .diagnostics import database_diagnostic, route_inventory
@@ -243,6 +244,12 @@ class ControlPlaneAuditLogView(View):
         actor_email = request.GET.get("actor", "").strip()
         target_email = request.GET.get("target", "").strip()
         correlation_id = request.GET.get("correlation_id", "").strip()
+        try:
+            correlation_id = normalize_audit_correlation_id(correlation_id)
+        except ValueError:
+            return JsonResponse({"detail": "correlation_id is too long."}, status=400)
+        if len(actor_email) > 254 or len(target_email) > 254:
+            return JsonResponse({"detail": "actor and target filters are too long."}, status=400)
 
         try:
             queryset = ControlPlaneAuditEvent.objects.select_related("actor", "target")
