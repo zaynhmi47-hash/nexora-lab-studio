@@ -1,5 +1,5 @@
 import pytest
-from django.db import DatabaseError
+from django.db import DatabaseError, IntegrityError
 
 from apps.control_plane.audit import ControlPlaneAuditEvent, ControlPlaneAuditEventType, audit_retention_cutoff, record_control_plane_audit
 from apps.identity.models import NexoraUser
@@ -86,3 +86,12 @@ def test_audit_event_type_contract_is_explicit():
 @pytest.mark.django_db
 def test_audit_retention_defaults_to_indefinite():
     assert audit_retention_cutoff() is None
+
+
+@pytest.mark.django_db
+def test_audit_identity_reference_blocks_hard_delete():
+    user = NexoraUser.objects.create(email="protected-audit@example.com", display_name="Protected Audit", status=NexoraUser.Status.ACTIVE)
+    record_control_plane_audit(event_type=ControlPlaneAuditEventType.LOGIN, actor=user)
+    with pytest.raises(IntegrityError):
+        user.delete()
+    assert NexoraUser.objects.filter(pk=user.pk).exists()
