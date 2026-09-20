@@ -113,7 +113,7 @@ class ControlPlaneLoginView(View):
             record_control_plane_audit(
                 event_type=ControlPlaneAuditEventType.LOGIN_FAILED,
                 success=False,
-                correlation_id=request.headers.get("X-Request-ID", ""),
+                correlation_id=_request_correlation_id(request),
                 metadata={"reason": "authentication_error", "error_type": exc.__class__.__name__},
             )
             return render(request, "control_plane/login.html", {"error": "Authentication failed."}, status=403)
