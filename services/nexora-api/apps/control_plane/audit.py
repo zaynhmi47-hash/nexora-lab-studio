@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 import json
 import re
+from datetime import timedelta
 
 from django.db import models
 from django.utils import timezone
@@ -48,7 +49,7 @@ class ControlPlaneAuditEvent(models.Model):
         NexoraUser,
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name="control_plane_audit_events",
     )
     target = models.ForeignKey(
