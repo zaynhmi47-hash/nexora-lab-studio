@@ -43,6 +43,8 @@
     <div class="panel"><h2>Recent requests</h2><div class="scroll"><table><thead><tr><th>Method</th><th>Path</th><th>Status</th><th>ms</th></tr></thead><tbody id="activity"></tbody></table></div></div>
   </section>
 
+  <section class="section panel"><h2>Security audit</h2><div class="scroll"><table><thead><tr><th>Time</th><th>Event</th><th>Actor</th><th>Target</th><th>Outcome</th><th>Metadata</th></tr></thead><tbody id="audit"></tbody></table></div></section>
+
   <section class="section panel"><h2>Route inventory</h2><div class="scroll"><table><thead><tr><th>Route</th><th>Name</th><th>Access</th><th>Kind</th></tr></thead><tbody id="routeList"></tbody></table></div></section>
 </div>
 <script>
@@ -70,6 +72,14 @@ async function refresh() {
     document.getElementById("activity").innerHTML = d.recent_requests.map(x =>
       '<tr><td>'+esc(x.method)+'</td><td><code>'+esc(x.path)+'</code></td><td class="'+statusClass(x.status_code)+'">'+x.status_code+'</td><td>'+x.duration_ms+'</td></tr>'
     ).join("") || '<tr><td colspan="4" class="muted">No requests yet</td></tr>';
+    const auditResponse = await fetch("./audit/?limit=50", {cache:"no-store"});
+    if (auditResponse.ok) {
+      const audit = await auditResponse.json();
+      document.getElementById("audit").innerHTML = audit.events.map(x =>
+        '<tr><td>'+esc(new Date(x.occurred_at).toLocaleString())+'</td><td><code>'+esc(x.event_type)+'</code></td><td>'+esc(x.actor?.email || "system")+'</td><td>'+esc(x.target?.email || "—")+'</td><td class="'+(x.success ? "ok" : "bad")+'">'+(x.success ? "success" : "failed")+'</td><td><code>'+esc(JSON.stringify(x.metadata))+'</code></td></tr>'
+      ).join("") || '<tr><td colspan="6" class="muted">No audit events yet</td></tr>';
+    }
+
     document.getElementById("routeList").innerHTML = d.routes.map(x =>
       '<tr><td><code>'+esc(x.route)+'</code></td><td>'+esc(x.name)+'</td><td class="'+statusClass(x.access)+'">'+esc(x.access)+'</td><td>'+esc(x.kind)+'</td></tr>'
     ).join("");
