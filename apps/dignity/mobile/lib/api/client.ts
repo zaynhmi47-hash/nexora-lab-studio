@@ -21,7 +21,7 @@ export function createNexoraApiClient(baseUrl: string): NexoraApiClient {
   const normalizedBaseUrl = baseUrl.replace(/\/$/, '');
 
   return {
-    async request<T>(path, init) {
+    async request<T>(path: string, init?: RequestInit) {
       const response = await fetch(`${normalizedBaseUrl}${path}`, init);
       if (!response.ok) {
         throw new NexoraApiError(`Nexora API request failed with status ${response.status}`, response.status);

@@ -27,7 +27,7 @@ async function readErrorMessage(response: Response): Promise<string> {
 
 export function createNexoraApiClient(baseUrl: string): NexoraApiClient {
   return {
-    async request<T>(path, init) {
+    async request<T>(path: string, init?: RequestInit) {
       const response = await fetch(joinUrl(baseUrl, path), {
         ...init,
         headers: {
