@@ -1,5 +1,4 @@
-from django.urls import include
-from django.urls import path
+from django.urls import include, path
 
 from api.v1.app_state import CurrentAppStateView
 from api.v1.health import HealthView, LivenessView, ReadinessView
@@ -10,7 +9,14 @@ from apps.finance.api.comparison_views import FinancePeriodComparisonView
 from apps.finance.api.profit_loss_views import FinanceProfitLossView
 from apps.finance.api.budget_summary_views import FinanceBudgetSummaryView
 from apps.finance.api.budget_views import FinanceBudgetDetailView, FinanceBudgetListView
-from apps.finance.api.goal_views import (\n    FinanceGoalContributionDetailView, FinanceGoalContributionListView,\n    FinanceGoalDetailView, FinanceGoalListView, FinanceGoalSummaryView,\n)\nfrom apps.finance.api.cash_flow_views import FinanceCashFlowView
+from apps.finance.api.goal_views import (
+    FinanceGoalContributionDetailView,
+    FinanceGoalContributionListView,
+    FinanceGoalDetailView,
+    FinanceGoalListView,
+    FinanceGoalSummaryView,
+)
+from apps.finance.api.cash_flow_views import FinanceCashFlowView
 from apps.finance.api.insights_views import FinanceInsightsView
 from apps.finance.api.planning_views import FinancePlanningSummaryView
 from apps.finance.api.trend_views import FinanceTrendView
@@ -22,6 +28,7 @@ urlpatterns = [
     path("identity/me/", CurrentIdentityView.as_view(), name="identity-me"),
     path("app-state/", CurrentAppStateView.as_view(), name="app-state"),
     path("learning/", include("apps.learning.urls")),
+    path("gamification/", include("apps.gamification.urls")),
     path("quran/", include("apps.quran.urls")),
     path("dhikr/", include("apps.dhikr.urls")),
     path("umrah/", include("apps.umrah.urls")),
@@ -34,7 +41,8 @@ urlpatterns = [
     path("calendar/", include("apps.calendar.urls")),
     path("zakat/", include("apps.zakat.urls")),
     path("reminders/", include("apps.reminders.urls")),
-    path("places/", include("apps.places.urls")),\n    path("ramadan/", include("apps.ramadan.urls")),
+    path("places/", include("apps.places.urls")),
+    path("ramadan/", include("apps.ramadan.urls")),
     path("search/", include("api.v1.urls_search")),
     path("organizations/", include("api.v1.urls_organizations")),
     path("products/", include("apps.products.api.urls")),
@@ -50,34 +58,10 @@ urlpatterns = [
     path("organizations/<uuid:organization_id>/finance/goals/<uuid:goal_id>/contributions/", FinanceGoalContributionListView.as_view(), name="finance-goal-contribution-list"),
     path("organizations/<uuid:organization_id>/finance/goals/<uuid:goal_id>/contributions/<uuid:contribution_id>/", FinanceGoalContributionDetailView.as_view(), name="finance-goal-contribution-detail"),
     path("organizations/<uuid:organization_id>/finance/summary/", FinanceSummaryView.as_view(), name="finance-summary"),
-    path(
-        "organizations/<uuid:organization_id>/finance/reporting/category-breakdown/",
-        FinanceCategoryBreakdownView.as_view(),
-        name="finance-category-breakdown",
-    ),
-    path(
-        "organizations/<uuid:organization_id>/finance/reporting/trend/",
-        FinanceTrendView.as_view(),
-        name="finance-trend",
-    ),
-    path(
-        "organizations/<uuid:organization_id>/finance/reporting/comparison/",
-        FinancePeriodComparisonView.as_view(),
-        name="finance-period-comparison",
-    ),
-    path(
-        "organizations/<uuid:organization_id>/finance/reporting/profit-loss/",
-        FinanceProfitLossView.as_view(),
-        name="finance-profit-loss",
-    ),
-    path(
-        "organizations/<uuid:organization_id>/finance/reporting/cash-flow/",
-        FinanceCashFlowView.as_view(),
-        name="finance-cash-flow",
-    ),
-    path(
-        "organizations/<uuid:organization_id>/finance/reporting/insights/",
-        FinanceInsightsView.as_view(),
-        name="finance-insights",
-    ),
+    path("organizations/<uuid:organization_id>/finance/reporting/category-breakdown/", FinanceCategoryBreakdownView.as_view(), name="finance-category-breakdown"),
+    path("organizations/<uuid:organization_id>/finance/reporting/trend/", FinanceTrendView.as_view(), name="finance-trend"),
+    path("organizations/<uuid:organization_id>/finance/reporting/comparison/", FinancePeriodComparisonView.as_view(), name="finance-period-comparison"),
+    path("organizations/<uuid:organization_id>/finance/reporting/profit-loss/", FinanceProfitLossView.as_view(), name="finance-profit-loss"),
+    path("organizations/<uuid:organization_id>/finance/reporting/cash-flow/", FinanceCashFlowView.as_view(), name="finance-cash-flow"),
+    path("organizations/<uuid:organization_id>/finance/reporting/insights/", FinanceInsightsView.as_view(), name="finance-insights"),
 ]

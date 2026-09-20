@@ -26,14 +26,30 @@ class CurrentAppStateView(APIView):
         umrah = UmrahService.get_journey(user)
         reading_position = QuranService().get_reading_position(user)
         bookmark_count = QuranService().list_bookmarks(user).count()
-        dhikr_items = list(Dhikr.objects.filter(is_published=True, deleted_at__isnull=True))
+        dhikr_items = list(
+            Dhikr.objects.filter(
+                is_published=True,
+                deleted_at__isnull=True,
+            )
+        )
         dhikr_progress = {
             item.dhikr_id: item.completed
-            for item in DhikrProgress.objects.filter(user=user, dhikr__in=dhikr_items, deleted_at__isnull=True)
+            for item in DhikrProgress.objects.filter(
+                user=user,
+                dhikr__in=dhikr_items,
+                deleted_at__isnull=True,
+            )
         }
-        total_completed = sum(dhikr_progress.get(item.id, 0) for item in dhikr_items)
+        total_completed = sum(
+            dhikr_progress.get(item.id, 0)
+            for item in dhikr_items
+        )
         total_targets = sum(item.target for item in dhikr_items)
-        completed_goals = sum(1 for item in dhikr_items if dhikr_progress.get(item.id, 0) >= item.target)
+        completed_goals = sum(
+            1
+            for item in dhikr_items
+            if dhikr_progress.get(item.id, 0) >= item.target
+        )
         return Response(
             {
                 "userId": str(user.id),
@@ -44,11 +60,15 @@ class CurrentAppStateView(APIView):
                     "completedLessons": completed_count,
                 },
                 "quran": {
-                    "readingPosition": None if reading_position is None else {
-                        "surahNumber": reading_position.surah.number,
-                        "ayahNumber": reading_position.ayah_number,
-                        "updatedAt": reading_position.updated_at.isoformat(),
-                    },
+                    "readingPosition": (
+                        None
+                        if reading_position is None
+                        else {
+                            "surahNumber": reading_position.surah.number,
+                            "ayahNumber": reading_position.ayah_number,
+                            "updatedAt": reading_position.updated_at.isoformat(),
+                        }
+                    ),
                     "bookmarkCount": bookmark_count,
                 },
                 "dhikr": {
@@ -57,8 +77,16 @@ class CurrentAppStateView(APIView):
                     "completedGoals": completed_goals,
                     "goalCount": len(dhikr_items),
                 },
-                "umrah": {\n                    "overallProgress": umrah["overallProgress"],\n                    "currentStageId": umrah["currentStageId"],\n                },
-                "profile": {"preferences": {"notificationsEnabled": True, "showArabicTransliteration": True}},
+                "umrah": {
+                    "overallProgress": umrah["overallProgress"],
+                    "currentStageId": umrah["currentStageId"],
+                },
+                "profile": {
+                    "preferences": {
+                        "notificationsEnabled": True,
+                        "showArabicTransliteration": True,
+                    }
+                },
                 "syncedAt": timezone.now().isoformat(),
             }
         )

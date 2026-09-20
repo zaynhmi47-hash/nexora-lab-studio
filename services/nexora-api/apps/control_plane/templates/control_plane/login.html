@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Nexora Control Center Login</title>
+  <style>
+    body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b1020;color:#edf2ff;font:14px system-ui,sans-serif}
+    .card{width:min(460px,calc(100% - 32px));background:#121a2d;border:1px solid #26324d;border-radius:16px;padding:24px}
+    h1{margin:0 0 8px}.muted{color:#8f9bb5}.error{margin:14px 0;padding:10px;border:1px solid #6b2935;border-radius:10px;color:#ff9aa5}
+    textarea{width:100%;min-height:140px;margin:16px 0;padding:12px;box-sizing:border-box;background:#0b1020;color:#edf2ff;border:1px solid #26324d;border-radius:10px}
+    button{width:100%;padding:11px;border:0;border-radius:10px;background:#edf2ff;color:#0b1020;font-weight:700;cursor:pointer}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="muted">NEXORA PLATFORM</div>
+    <h1>Control Center</h1>
+    <p class="muted">Internal owner/operator access. A verified Firebase ID token is required.</p>
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    <form method="post">
+      {% csrf_token %}
+      <textarea name="id_token" autocomplete="off" spellcheck="false" placeholder="Paste Firebase ID token"></textarea>
+      <button type="submit">Authenticate</button>
+    </form>
+  </main>
+</body>
+</html>

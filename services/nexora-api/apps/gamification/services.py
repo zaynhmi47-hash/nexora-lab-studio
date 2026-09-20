@@ -23,6 +23,8 @@ class XPRewardRules:
 
     @classmethod
     def quiz(cls, passed: bool, configured_reward: int = 0) -> int:
+        if not passed:
+            return 0
         return max(0, configured_reward)
 
     @classmethod

@@ -1,6 +1,6 @@
 # Nexora Current State
 
-Last maintained: 2026-09-15
+Last maintained: 2026-09-20
 
 ## Repository foundation
 
@@ -56,3 +56,28 @@ The planned sequence includes strengthening authorization/RBAC, audit/security r
 ## State maintenance rule
 
 Whenever a task changes architecture, security foundations, identity, provider integrations, deployment boundaries, or major product structure, update this file with the new verified state.
+
+
+## Local backend Control Plane
+
+Verified on 2026-09-20:
+
+- Added `apps.control_plane` to Nexora Core.
+- Added development-only `/ops/` dashboard and `/ops/snapshot/` JSON endpoint.
+- Dashboard dynamically inventories Django API routes, reports database/Firebase configuration status, lists core/domain services, and displays bounded recent request telemetry.
+- Telemetry stores only method, path, status code, and duration in process memory; no request bodies or credentials are recorded.
+- Control Plane is disabled when `DEBUG=False`.
+- Architectural decision recorded in `docs/decisions/ADR-local-control-plane.md`.
+
+
+## Security hardening — verified implementation
+
+The backend default DRF policy is now deny-by-default:
+
+- Firebase bearer-token authentication is the default authentication class.
+- `AuthenticatedNexoraUserPermission` is the default permission class.
+- Public endpoints must explicitly opt out/declare public access.
+- Existing health/liveness endpoints retain explicit public behavior.
+- The Control Plane remains DEBUG-only and does not inherit production API access.
+- Focused tests cover the default authentication/permission policy and public health behavior.
+\n## Learning gamification integration — verified on 2026-09-20\n\n- `apps.gamification` is registered in Django `INSTALLED_APPS`.\n- Gamification API is exposed under `/api/v1/gamification/`.\n- Control Center application registry includes the gamification platform service.\n- Learning quiz completion now returns the XP actually recorded by the gamification ledger.\n- Gamification migrations already exist and are now discoverable by Django migration tooling.\n

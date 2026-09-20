@@ -37,20 +37,34 @@ jobs:
       - name: Django system checks
         env:
           DJANGO_SETTINGS_MODULE: config.settings.testing
+          SECRET_KEY: ci-only-secret-key-for-django-tests-2026
+          DEBUG: "False"
+          ALLOWED_HOSTS: localhost,127.0.0.1
         run: python manage.py check
 
       - name: Check migrations are up to date
         env:
           DJANGO_SETTINGS_MODULE: config.settings.testing
+          SECRET_KEY: ci-only-secret-key-for-django-tests-2026
+          DEBUG: "False"
+          ALLOWED_HOSTS: localhost,127.0.0.1
         run: python manage.py makemigrations --check --dry-run
 
       - name: Apply migrations
         env:
           DJANGO_SETTINGS_MODULE: config.settings.testing
+          SECRET_KEY: ci-only-secret-key-for-django-tests-2026
+          DEBUG: "False"
+          ALLOWED_HOSTS: localhost,127.0.0.1
         run: python manage.py migrate --noinput
 
       - name: Ruff
         run: ruff check .
 
       - name: Tests
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.testing
+          SECRET_KEY: ci-only-secret-key-for-django-tests-2026
+          DEBUG: "False"
+          ALLOWED_HOSTS: localhost,127.0.0.1
         run: pytest -q
