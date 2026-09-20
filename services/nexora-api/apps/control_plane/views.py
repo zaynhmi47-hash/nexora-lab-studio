@@ -16,6 +16,7 @@ from rest_framework.views import APIView
 
 from infrastructure.firebase.health import check_firebase_configuration
 
+from .registry import application_snapshot
 from .telemetry import recent_requests
 
 
@@ -26,10 +27,25 @@ def _route_inventory():
         for item in patterns:
             route = prefix + str(item.pattern)
             if isinstance(item, URLPattern):
+                view = getattr(item, "callback", None)
+                view_class = getattr(view, "view_class", None)
+                permissions = getattr(view_class, "permission_classes", None)
+                auth_classes = getattr(view_class, "authentication_classes", None)
+                permission_names = [f"{cls.__module__}.{cls.__name__}" for cls in permissions or []]
+                auth_names = [f"{cls.__module__}.{cls.__name__}" for cls in auth_classes or []]
+                if any(name.endswith("AllowAny") or name.endswith("PublicEndpointPermission") for name in permission_names):
+                    access = "public"
+                elif permission_names:
+                    access = "authenticated"
+                else:
+                    access = "default"
                 routes.append({
                     "route": "/" + route.lstrip("/"),
                     "name": item.name or "",
                     "kind": "endpoint",
+                    "access": access,
+                    "permissions": permission_names,
+                    "authentication": auth_names,
                 })
             elif isinstance(item, URLResolver):
                 walk(item.url_patterns, route)
@@ -69,6 +85,7 @@ def _snapshot():
         "api_route_count": sum(prefix_counts.values()),
         "api_groups": [{"name": name, "routes": count} for name, count in sorted(prefix_counts.items())],
         "routes": routes,
+        "applications": application_snapshot(routes),
         "recent_requests": recent_requests(50),
         "services": [
             {
