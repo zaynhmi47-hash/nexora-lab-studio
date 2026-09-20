@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from collections import Counter
 from time import monotonic
+from threading import Lock
+
 
 from django.conf import settings
 from django.db import connection
@@ -26,6 +28,22 @@ from .services import (
     manage_control_plane_principal,
 )
 from .telemetry import recent_requests
+
+_LOGIN_ATTEMPTS: dict[str, list[float]] = {}
+_LOGIN_ATTEMPTS_LOCK = Lock()
+
+def _login_rate_limited(request) -> bool:
+    now = monotonic()
+    key = request.META.get("REMOTE_ADDR", "unknown")
+    with _LOGIN_ATTEMPTS_LOCK:
+        attempts = [t for t in _LOGIN_ATTEMPTS.get(key, []) if now - t < 60]
+        if len(attempts) >= settings.CONTROL_PLANE_LOGIN_RATE_LIMIT:
+            _LOGIN_ATTEMPTS[key] = attempts
+            return True
+        attempts.append(now)
+        _LOGIN_ATTEMPTS[key] = attempts
+        return False
+
 
 
 def _route_inventory():
@@ -154,6 +172,8 @@ class ControlPlaneLoginView(View):
     def post(self, request):
         if not settings.DEBUG:
             return HttpResponseForbidden("Control Plane is available only in DEBUG mode.")
+        if _login_rate_limited(request):
+            return render(request, "control_plane/login.html", {"error": "Too many login attempts. Try again later."}, status=429)
         token = request.POST.get("id_token", "").strip()
         if not token:
             return render(request, "control_plane/login.html", {"error": "Firebase ID token is required."}, status=400)
@@ -162,13 +182,15 @@ class ControlPlaneLoginView(View):
         except ControlPlaneAccessDenied as exc:
             return render(request, "control_plane/login.html", {"error": str(exc)}, status=403)
         request.session.cycle_key()
+        request.session.set_expiry(settings.CONTROL_PLANE_SESSION_AGE)
         request.session["control_plane_user_id"] = str(user.id)
         return redirect("control_plane:dashboard")
 
 
 class ControlPlaneLogoutView(View):
+    @method_decorator(csrf_protect)
     def post(self, request):
-        request.session.pop("control_plane_user_id", None)
+        request.session.flush()
         return redirect("control_plane:login")
 
 
