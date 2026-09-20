@@ -1,0 +1,6 @@
+{
+  "name": "Education Super Platform",
+  "description": "A comprehensive education super-platform prototype with adaptive learning engine, course marketplace, gamified practice & assessments, AI personal learning tutor, education community & collaboration, and project-based learning with professional portfolio builder.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
