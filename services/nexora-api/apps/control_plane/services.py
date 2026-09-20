@@ -23,20 +23,37 @@ def _bootstrap_emails() -> set[str]:
 
 
 def authenticate_control_plane_token(token: str) -> NexoraUser:
-    user = IdentityService(FirebaseProviderRegistry().identity()).authenticate_token(token)
+    provider = FirebaseProviderRegistry().identity()
+    claims = provider.verify_token(token)
+
+    if not claims.email or not claims.email_verified:
+        raise ControlPlaneAccessDenied("A verified email identity is required.")
+
     account = (
         IdentityProviderAccount.objects
-        .filter(user=user, provider="firebase", deleted_at__isnull=True)
-        .order_by("-last_verified_at")
+        .select_related("user")
+        .filter(
+            provider=claims.provider,
+            provider_subject=claims.provider_subject,
+            deleted_at__isnull=True,
+        )
         .first()
     )
-    if account is None or not account.email_verified:
-        raise ControlPlaneAccessDenied("A verified identity is required.")
+
+    if account is None:
+        if claims.email.lower() not in _bootstrap_emails():
+            raise ControlPlaneAccessDenied("This identity is not authorized for Control Center.")
+        user = IdentityService(provider).reconcile_claims(claims)
+    else:
+        user = account.user
+
+    if user.status != NexoraUser.Status.ACTIVE or user.deleted_at is not None:
+        raise ControlPlaneAccessDenied("The NEXORA identity is not active.")
 
     try:
         principal = user.control_plane_principal
     except ControlPlanePrincipal.DoesNotExist:
-        if (user.email or "").lower() not in _bootstrap_emails():
+        if user.email.lower() not in _bootstrap_emails():
             raise ControlPlaneAccessDenied("This identity is not authorized for Control Center.")
         principal = ControlPlanePrincipal.objects.create(user=user)
 
