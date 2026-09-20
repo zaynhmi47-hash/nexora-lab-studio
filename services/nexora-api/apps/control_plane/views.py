@@ -50,11 +50,16 @@ def _login_rate_limited(request) -> bool:
         return False
 
 
+def _request_correlation_id(request) -> str:
+    value = getattr(request, "correlation_id", "") or getattr(request, "request_id", "")
+    return str(value)[:128]
+
+
 def _control_plane_internal_error(request):
     return JsonResponse(
         {
             "detail": "Control Center request could not be completed.",
-            "correlation_id": request.headers.get("X-Request-ID", "")[:128],
+            "correlation_id": _request_correlation_id(request),
         },
         status=500,
     )
