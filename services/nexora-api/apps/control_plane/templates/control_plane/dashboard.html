@@ -34,14 +34,16 @@
     <div class="panel"><div class="label">Requests</div><div class="metric" id="requests">—</div></div>
   </div>
 
-  <section class="section panel"><h2>Services</h2><div class="services" id="services"></div></section>
+  <section class="section panel"><h2>Connected applications</h2><div class="services" id="applications"></div></section>
+
+  <section class="section panel"><h2>Core services</h2><div class="services" id="services"></div></section>
 
   <section class="section two">
     <div class="panel"><h2>API groups</h2><div class="scroll"><table><thead><tr><th>Group</th><th>Routes</th></tr></thead><tbody id="groups"></tbody></table></div></div>
     <div class="panel"><h2>Recent requests</h2><div class="scroll"><table><thead><tr><th>Method</th><th>Path</th><th>Status</th><th>ms</th></tr></thead><tbody id="activity"></tbody></table></div></div>
   </section>
 
-  <section class="section panel"><h2>Route inventory</h2><div class="scroll"><table><thead><tr><th>Route</th><th>Name</th><th>Kind</th></tr></thead><tbody id="routeList"></tbody></table></div></section>
+  <section class="section panel"><h2>Route inventory</h2><div class="scroll"><table><thead><tr><th>Route</th><th>Name</th><th>Access</th><th>Kind</th></tr></thead><tbody id="routeList"></tbody></table></div></section>
 </div>
 <script>
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -57,6 +59,9 @@ async function refresh() {
     document.getElementById("requests").textContent = d.recent_requests.length;
     document.getElementById("updated").textContent = new Date().toLocaleTimeString();
 
+    document.getElementById("applications").innerHTML = d.applications.map(a =>
+      '<div class="service"><div class="row"><strong>'+esc(a.name)+'</strong><span class="status '+statusClass(a.status)+'">'+esc(a.status)+'</span></div><div class="muted">'+esc(a.kind)+' • '+a.route_count+' routes</div><div style="margin-top:8px">'+esc(a.description)+'</div></div>'
+    ).join("");
     document.getElementById("services").innerHTML = d.services.map(s =>
       '<div class="service"><div class="row"><strong>'+esc(s.name)+'</strong><span class="status '+statusClass(s.status)+'">'+esc(s.status)+'</span></div><div class="muted">'+esc(s.kind)+'</div><div style="margin-top:8px">'+esc(s.description)+'</div></div>'
     ).join("");
@@ -66,7 +71,7 @@ async function refresh() {
       '<tr><td>'+esc(x.method)+'</td><td><code>'+esc(x.path)+'</code></td><td class="'+statusClass(x.status_code)+'">'+x.status_code+'</td><td>'+x.duration_ms+'</td></tr>'
     ).join("") || '<tr><td colspan="4" class="muted">No requests yet</td></tr>';
     document.getElementById("routeList").innerHTML = d.routes.map(x =>
-      '<tr><td><code>'+esc(x.route)+'</code></td><td>'+esc(x.name)+'</td><td>'+esc(x.kind)+'</td></tr>'
+      '<tr><td><code>'+esc(x.route)+'</code></td><td>'+esc(x.name)+'</td><td class="'+statusClass(x.access)+'">'+esc(x.access)+'</td><td>'+esc(x.kind)+'</td></tr>'
     ).join("");
   } catch (e) {
     document.getElementById("updated").textContent = "offline";
