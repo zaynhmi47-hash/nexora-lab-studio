@@ -6,6 +6,8 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views import View
+from django.views.decorators.csrf import csrf_protect
+from django.utils.decorators import method_decorator
 
 from .audit import ControlPlaneAuditEvent, ControlPlaneAuditEventType, record_control_plane_audit
 from .diagnostics import (
@@ -140,6 +142,7 @@ class ControlPlaneOperationsOverviewView(View):
 class ControlPlaneClearTelemetryView(View):
     """Clear only bounded in-memory request telemetry; never touches application data."""
 
+    @method_decorator(csrf_protect)
     def post(self, request):
         actor, error = _guard(request, ControlPlanePermission.OPERATIONS_MANAGE)
         if error:
