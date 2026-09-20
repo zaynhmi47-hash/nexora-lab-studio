@@ -24,6 +24,14 @@ class ControlPlaneAuditEventType(models.TextChoices):
 class ControlPlaneAuditEvent(models.Model):
     """Append-only security events for the internal Control Center."""
 
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise RuntimeError("Control Plane audit events are immutable.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise RuntimeError("Control Plane audit events cannot be deleted.")
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     event_type = models.CharField(max_length=64, choices=ControlPlaneAuditEventType.choices, db_index=True)
     actor = models.ForeignKey(
