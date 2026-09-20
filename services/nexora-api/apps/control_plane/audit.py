@@ -56,7 +56,7 @@ class ControlPlaneAuditEvent(models.Model):
         NexoraUser,
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name="control_plane_audit_targets",
     )
     success = models.BooleanField(default=True)
