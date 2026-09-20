@@ -5,27 +5,23 @@ import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { SectionTitle } from '@/components/SectionTitle';
 import { colors, radius, spacing, typography } from '@/constants/theme';
-import { mockTajwid, nexoraCoreTajwidRepository, type TajwidProgress, type TajwidTopic } from '@/lib/tajwid';
-import { useAuth } from '@/lib/auth/AuthProvider';
+import { mockTajwid, type TajwidProgress, type TajwidTopic } from '@/lib/tajwid';
 
 const DEMO_USER_ID = '00000000-0000-0000-0000-000000000001';
 
 export default function TajwidScreen() {
   const router = useRouter();
-  const { session } = useAuth();
   const [topics, setTopics] = useState<TajwidTopic[]>([]);
   const [progress, setProgress] = useState<TajwidProgress | null>(null);
 
   useEffect(() => {
-    const repository = session?.user.provider === 'firebase' ? nexoraCoreTajwidRepository(session) : mockTajwid;
-    const userId = session?.user.id ?? DEMO_USER_ID;
-    void Promise.all([repository.getTopics(), repository.getProgress(userId)]).then(
+    void Promise.all([mockTajwid.getTopics(), mockTajwid.getProgress(DEMO_USER_ID)]).then(
       ([loadedTopics, loadedProgress]) => {
         setTopics(loadedTopics);
         setProgress(loadedProgress);
       },
     );
-  }, [session]);
+  }, []);
 
   const completedCount = progress?.completedTopicIds.length ?? 0;
   const completion = useMemo(

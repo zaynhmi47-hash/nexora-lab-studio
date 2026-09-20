@@ -6,26 +6,10 @@
     "orientation": "portrait",
     "scheme": "nexoramuslim",
     "userInterfaceStyle": "automatic",
-    "platforms": [
-      "android",
-      "ios",
-      "web"
-    ],
-    "plugins": [
-      "expo-router",
-      "expo-notifications"
-    ],
-    "experiments": {
-      "typedRoutes": true
-    },
-    "android": {
-      "package": "com.nexora.muslim"
-    },
-    "ios": {
-      "bundleIdentifier": "com.nexora.muslim"
-    },
-    "web": {
-      "bundler": "metro"
-    }
+    "plugins": ["expo-router"],
+    "experiments": { "typedRoutes": true },
+    "android": { "package": "com.nexora.muslim" },
+    "ios": { "bundleIdentifier": "com.nexora.muslim" },
+    "web": { "bundler": "metro" }
   }
 }

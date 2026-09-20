@@ -1,5 +1,4 @@
 import type {
-  TajwidAssessmentResult,
   TajwidPort,
   TajwidPracticeItem,
   TajwidProgress,
@@ -141,8 +140,6 @@ const practice: Record<TajwidTopicId, TajwidPracticeItem[]> = {
   ],
 };
 
-const completedPracticeIds = new Set<string>(['makharij-1']);
-
 let progress: TajwidProgress = {
   userId: DEMO_USER_ID,
   completedTopicIds: ['makharij'],
@@ -175,19 +172,6 @@ export const mockTajwid: TajwidPort = {
     }));
   },
 
-  async completePractice(userId, practiceId, correct) {
-    if (userId !== progress.userId) progress = { ...progress, userId };
-    if (!completedPracticeIds.has(practiceId)) {
-      completedPracticeIds.add(practiceId);
-      progress = {
-        ...progress,
-        practiceCompleted: progress.practiceCompleted + 1,
-        xpEarned: progress.xpEarned + (correct ? 5 : 0),
-      };
-    }
-    return cloneProgress();
-  },
-
   async completeTopic(userId, topicId) {
     if (userId !== progress.userId) progress = { ...progress, userId };
 
@@ -203,9 +187,9 @@ export const mockTajwid: TajwidPort = {
     return cloneProgress();
   },
 
-  async completeAssessment(userId, correctAnswers, totalQuestions): Promise<TajwidAssessmentResult> {
+  async completeAssessment(userId, correctAnswers, totalQuestions) {
     if (userId !== progress.userId) progress = { ...progress, userId };
-    const passed = totalQuestions > 0 && correctAnswers >= 0 && correctAnswers <= totalQuestions && correctAnswers / totalQuestions >= 0.7;
+    const passed = totalQuestions > 0 && correctAnswers / totalQuestions >= 0.7;
     const reward = passed && !progress.assessmentCompleted ? 100 : 0;
 
     progress = {
@@ -214,11 +198,6 @@ export const mockTajwid: TajwidPort = {
       xpEarned: progress.xpEarned + reward,
     };
 
-    return {
-      correctAnswers,
-      totalQuestions,
-      passed,
-      xpEarned: reward,
-    };
+    return cloneProgress();
   },
 };

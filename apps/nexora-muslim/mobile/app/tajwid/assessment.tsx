@@ -4,34 +4,31 @@ import { useRouter } from 'expo-router';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/constants/theme';
-import { mockTajwid, nexoraCoreTajwidRepository, type TajwidAssessmentResult, type TajwidPracticeItem } from '@/lib/tajwid';
-import { useAuth } from '@/lib/auth/AuthProvider';
+import { mockTajwid, type TajwidPracticeItem } from '@/lib/tajwid';
 
 const DEMO_USER_ID = '00000000-0000-0000-0000-000000000001';
 
 export default function TajwidAssessmentScreen() {
   const router = useRouter();
-  const { session } = useAuth();
   const [items, setItems] = useState<TajwidPracticeItem[]>([]);
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [checked, setChecked] = useState(false);
   const [correct, setCorrect] = useState(0);
   const [finished, setFinished] = useState(false);
-  const [result, setResult] = useState<TajwidAssessmentResult | null>(null);
+  const [passed, setPassed] = useState(false);
 
   useEffect(() => {
-    const repository = session?.user.provider === 'firebase' ? nexoraCoreTajwidRepository(session) : mockTajwid;
     void Promise.all([
-      repository.getPractice('makharij'),
-      repository.getPractice('sifat-huruf'),
-      repository.getPractice('nun-sukun-tanwin'),
-      repository.getPractice('mim-sukun'),
-      repository.getPractice('mad'),
-      repository.getPractice('qalqalah'),
-      repository.getPractice('waqaf-ibtida'),
+      mockTajwid.getPractice('makharij'),
+      mockTajwid.getPractice('sifat-huruf'),
+      mockTajwid.getPractice('nun-sukun-tanwin'),
+      mockTajwid.getPractice('mim-sukun'),
+      mockTajwid.getPractice('mad'),
+      mockTajwid.getPractice('qalqalah'),
+      mockTajwid.getPractice('waqaf-ibtida'),
     ]).then((groups) => setItems(groups.flat()));
-  }, [session]);
+  }, []);
 
   const item = items[index];
   const score = useMemo(() => (items.length ? Math.round((correct / items.length) * 100) : 0), [correct, items.length]);
@@ -52,10 +49,11 @@ export default function TajwidAssessmentScreen() {
       return;
     }
 
-    const repository = session?.user.provider === 'firebase' ? nexoraCoreTajwidRepository(session) : mockTajwid;
-    const assessmentResult = await repository.completeAssessment(session?.user.id ?? DEMO_USER_ID, nextCorrect, items.length);
+    const finalScore = items.length ? Math.round((nextCorrect / items.length) * 100) : 0;
+    const didPass = finalScore >= 70;
+    await mockTajwid.completeAssessment(DEMO_USER_ID, nextCorrect, items.length);
     setCorrect(nextCorrect);
-    setResult(assessmentResult);
+    setPassed(didPass);
     setFinished(true);
   };
 
@@ -63,15 +61,12 @@ export default function TajwidAssessmentScreen() {
     return (
       <Screen>
         <Text style={styles.eyebrow}>ASSESSMENT SELESAI</Text>
-        <Text style={styles.title}>{result?.passed ? 'Assessment lulus 🎉' : 'Terus berlatih'}</Text>
+        <Text style={styles.title}>{passed ? 'Assessment lulus 🎉' : 'Terus berlatih'}</Text>
         <Card>
-          <Text style={styles.score}>{result?.totalQuestions ? Math.round((result.correctAnswers / result.totalQuestions) * 100) : 0}%</Text>
-          <Text style={styles.result}>{result?.correctAnswers ?? correct} dari {result?.totalQuestions ?? items.length} jawaban benar</Text>
-          <View style={styles.xpBadge}>
-            <Text style={styles.xpText}>+{result?.xpEarned ?? 0} XP</Text>
-          </View>
+          <Text style={styles.score}>{score}%</Text>
+          <Text style={styles.result}>{correct} dari {items.length} jawaban benar</Text>
           <Text style={styles.explanation}>
-            {result?.passed ? 'Kamu memenuhi batas kelulusan 70%.' : 'Batas kelulusan adalah 70%. Ulangi latihan topik yang masih terasa sulit.'}
+            {passed ? 'Kamu memenuhi batas kelulusan 70%. Materi berikutnya dapat dikembangkan sebagai tahap lanjutan.' : 'Batas kelulusan adalah 70%. Ulangi latihan topik yang masih terasa sulit.'}
           </Text>
         </Card>
         <Pressable style={styles.primaryButton} onPress={() => router.back()}>
@@ -156,6 +151,4 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.45 },
   score: { color: colors.primaryDark, fontSize: 42, fontWeight: '900', textAlign: 'center' },
   result: { color: colors.text, fontSize: typography.body, fontWeight: '700', marginTop: spacing.sm, textAlign: 'center' },
-  xpBadge: { alignSelf: 'center', backgroundColor: colors.primarySoft, borderRadius: radius.pill, marginTop: spacing.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  xpText: { color: colors.primaryDark, fontSize: typography.body, fontWeight: '900' },
 });

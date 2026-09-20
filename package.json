@@ -7,12 +7,7 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "typecheck": "turbo run typecheck",
-    "muslim": "node scripts/nexora-muslim.mjs",
-    "muslim:android": "pnpm --filter nexora-muslim-mobile android",
-    "muslim:web": "pnpm --filter nexora-muslim-mobile web",
-    "muslim:ios": "pnpm --filter nexora-muslim-mobile ios",
-    "muslim:typecheck": "pnpm --filter nexora-muslim-mobile typecheck"
+    "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
     "turbo": "^2.5.6"

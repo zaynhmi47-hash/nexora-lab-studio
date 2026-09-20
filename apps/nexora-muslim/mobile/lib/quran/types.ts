@@ -49,26 +49,4 @@ export interface QuranPort {
   saveBookmark(bookmark: Bookmark): Promise<void>;
   removeBookmark(bookmarkId: string): Promise<void>;
   listRecitations(): Promise<Recitation[]>;
-  getReadingGoal(): Promise<QuranReadingGoal>;
-  updateReadingGoal(value: QuranReadingGoal): Promise<QuranReadingGoal>;
-  getReadingStatistics(): Promise<QuranReadingStatistics>;
-  logReading(log: QuranReadingLog): Promise<QuranReadingLog>;
 }
-
-
-export type QuranReadingGoal = { dailyTargetPages: number; dailyTargetMinutes: number };
-
-export type QuranReadingStatistics = {
-  goal: QuranReadingGoal;
-  today: {
-    date: string;
-    pages: number;
-    minutes: number;
-    pagesProgress: number;
-    minutesProgress: number;
-  };
-  total: { pages: number; minutes: number };
-  currentStreak: number;
-};
-
-export type QuranReadingLog = { date: string; pages: number; minutes: number };

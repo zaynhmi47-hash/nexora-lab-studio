@@ -3,8 +3,6 @@ import type {
   LearningPort,
   LearningProgress,
   QuizQuestion,
-  LearningAchievement,
-  LearningHub,
 } from './types';
 
 const courses: LearningCourse[] = [
@@ -40,13 +38,6 @@ const initialProgress: LearningProgress = {
   completedLessonIds: ['arabic-alphabet', 'harakat'],
 };
 
-const progressByUser = new Map<string, LearningProgress>();
-const achievementCatalog: LearningAchievement[] = [
-  { id:'first-lesson', key:'first-lesson', title:'First Step', description:'Complete your first learning lesson.', earnedAt:'' },
-  { id:'xp-100', key:'xp-100', title:'100 XP', description:'Reach 100 XP.', earnedAt:'' },
-  { id:'streak-7', key:'streak-7', title:'Seven Day Streak', description:'Maintain a seven day learning streak.', earnedAt:'' },
-];
-
 const quizzes: Record<string, QuizQuestion[]> = {
   harakat: [
     {
@@ -57,177 +48,25 @@ const quizzes: Record<string, QuizQuestion[]> = {
       correctOptionIndex: 0,
       explanation: 'Harakat are Arabic vowel marks used in reading practice.',
     },
-    {
-      id: 'harakat-q2',
-      lessonId: 'harakat',
-      prompt: 'What is the main purpose of learning harakat in this path?',
-      options: ['Support accurate reading practice', 'Calculate prayer times', 'Track travel distance', 'Store bookmarks'],
-      correctOptionIndex: 0,
-      explanation: 'The lesson uses vowel-mark recognition as a foundation for reading practice.',
-    },
-  ],
-  makharij: [
-    {
-      id: 'makharij-q1',
-      lessonId: 'makharij',
-      prompt: 'What does this practice focus on?',
-      options: ['Articulation points', 'Travel planning', 'Book lending', 'Account settings'],
-      correctOptionIndex: 0,
-      explanation: 'Makharij practice focuses on the articulation points used when producing letters.',
-    },
-    {
-      id: 'makharij-q2',
-      lessonId: 'makharij',
-      prompt: 'What is the intended outcome of articulation practice?',
-      options: ['More accurate pronunciation practice', 'A longer reading streak automatically', 'A new user account', 'A saved audio file'],
-      correctOptionIndex: 0,
-      explanation: 'The goal is guided practice toward more accurate articulation.',
-    },
-  ],
-  'tajwid-foundations': [
-    {
-      id: 'tajwid-q1',
-      lessonId: 'tajwid-foundations',
-      prompt: 'What does this lesson introduce?',
-      options: ['Core tajwid rules', 'Travel checklists', 'Qibla coordinates', 'Profile settings'],
-      correctOptionIndex: 0,
-      explanation: 'This learning activity is the foundation for deeper tajwid practice.',
-    },
-    {
-      id: 'tajwid-q2',
-      lessonId: 'tajwid-foundations',
-      prompt: 'Why is this lesson placed before deeper practice?',
-      options: ['It establishes foundational concepts', 'It unlocks unrelated account settings', 'It replaces the Quran reader', 'It changes the device language'],
-      correctOptionIndex: 0,
-      explanation: 'Foundational concepts are introduced before more advanced guided practice.',
-    },
-  ],
-  tahsin: [
-    {
-      id: 'tahsin-q1',
-      lessonId: 'tahsin',
-      prompt: 'What is the focus of this activity?',
-      options: ['Improving reading accuracy', 'Managing travel documents', 'Creating a bookmark folder', 'Changing notification settings'],
-      correctOptionIndex: 0,
-      explanation: 'Tahsin is represented here as guided practice for improving reading accuracy.',
-    },
-    {
-      id: 'tahsin-q2',
-      lessonId: 'tahsin',
-      prompt: 'How is improvement represented in this prototype?',
-      options: ['Through guided practice', 'By skipping all lessons', 'By changing the profile name', 'By opening a map'],
-      correctOptionIndex: 0,
-      explanation: 'The prototype models tahsin as guided learning and practice.',
-    },
   ],
 };
 
-function cloneProgress(progress: LearningProgress): LearningProgress {
-  return {
-    ...progress,
-    completedLessonIds: [...progress.completedLessonIds],
-  };
-}
-
 export const mockLearning: LearningPort = {
   async getCourses() {
-    return courses.map((course) => ({
-      ...course,
-      lessons: course.lessons.map((lesson) => ({ ...lesson })),
-    }));
-  },
-  async getHub(): Promise<LearningHub> {
-    const progress = await this.getProgress(initialProgress.userId);
-    return {
-      userId: progress.userId,
-      totalXp: progress.xp + 45 + 80,
-      level: Math.floor((progress.xp + 45 + 80) / 50) + 1,
-      xpIntoLevel: (progress.xp + 45 + 80) % 50,
-      xpToNextLevel: 50 - ((progress.xp + 45 + 80) % 50),
-      xpPerLevel: 50,
-      progressPercent: Math.round((((progress.xp + 45 + 80) % 50) / 50) * 100),
-      currentStreak: progress.currentStreak,
-      rewards: [
-        { key: 'xp-100', title: 'Learning Momentum', description: 'Reach 100 total learning XP.', earned: progress.xp + 125 >= 100 },
-        { key: 'xp-250', title: 'Dedicated Learner', description: 'Reach 250 total learning XP.', earned: progress.xp + 125 >= 250 },
-        { key: 'xp-500', title: 'Learning Mastery', description: 'Reach 500 total learning XP.', earned: progress.xp + 125 >= 500 },
-      ],
-      achievements: [
-        { id: 'first-activity', key: 'first-activity', title: 'First Activity', description: 'Complete your first activity in any learning domain.', earnedAt: new Date().toISOString() },
-        { id: 'streak-7', key: 'streak-7', title: 'Seven Day Streak', description: 'Maintain a seven day learning streak.', earnedAt: new Date().toISOString() },
-        { id: 'xp-100', key: 'xp-100', title: '100 Total XP', description: 'Reach 100 XP across all learning domains.', earnedAt: new Date().toISOString() },
-      ],
-      domains: {
-        learning: { xp: progress.xp, level: progress.level, streak: progress.currentStreak, completedCount: progress.completedLessonIds.length },
-        tajwid: { xp: 45, streak: 0, completedCount: 1, practiceCompleted: 2, assessmentCompleted: false },
-        arabic: { xp: 80, streak: 5, completedCount: 2 },
-      },
-    };
+    return courses;
   },
   async getProgress(userId) {
-    const existing = progressByUser.get(userId);
-    if (existing) return cloneProgress(existing);
-
-    const progress = cloneProgress({ ...initialProgress, userId });
-    progressByUser.set(userId, progress);
-    return cloneProgress(progress);
+    return { ...initialProgress, userId, completedLessonIds: [...initialProgress.completedLessonIds] };
   },
   async getQuiz(lessonId) {
-    return (quizzes[lessonId] ?? []).map((question) => ({
-      ...question,
-      options: [...question.options],
-    }));
-  },
-  async completeQuiz(lessonId, answers) {
-    const questions = quizzes[lessonId] ?? [];
-    const correctAnswers = questions.reduce(
-      (count, question, index) => count + (answers[index] === question.correctOptionIndex ? 1 : 0),
-      0,
-    );
-    const totalQuestions = questions.length;
-    const scorePercent = totalQuestions ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
-    return {
-      attemptId: `mock-${Date.now()}`,
-      lessonId,
-      correctAnswers,
-      totalQuestions,
-      scorePercent,
-      passed: scorePercent >= 70,
-      xpEarned: 0,
-      completedAt: new Date().toISOString(),
-    };
-  },
-  async getAchievements() {
-    const progress = await this.getProgress(initialProgress.userId);
-    const count = progress.completedLessonIds.length;
-    return achievementCatalog.filter(a => (a.key === 'first-lesson' && count >= 1) || (a.key === 'xp-100' && progress.xp >= 100) || (a.key === 'streak-7' && progress.currentStreak >= 7)).map(a => ({ ...a, earnedAt: progress.lastCompletedAt ?? new Date().toISOString() }));
+    return quizzes[lessonId] ?? [];
   },
   async completeLesson(userId, lessonId) {
     const progress = await this.getProgress(userId);
-    if (progress.completedLessonIds.includes(lessonId)) return progress;
-
-    const lesson = courses
-      .flatMap((course) => course.lessons)
-      .find((item) => item.id === lessonId);
-
-    if (!lesson || lesson.status === 'locked') return progress;
-
-    progress.completedLessonIds.push(lessonId);
-    progress.xp += lesson.xpReward;
-    progress.lastCompletedAt = new Date().toISOString();
-
-    lesson.status = 'completed';
-
-    const nextLesson = courses
-      .find((course) => course.id === lesson.courseId)
-      ?.lessons
-      .find((item) => item.order === lesson.order + 1);
-
-    if (nextLesson && nextLesson.status === 'locked') {
-      nextLesson.status = 'available';
+    if (!progress.completedLessonIds.includes(lessonId)) {
+      progress.completedLessonIds.push(lessonId);
+      progress.xp += 20;
     }
-
-    progressByUser.set(userId, progress);
-    return cloneProgress(progress);
+    return progress;
   },
 };

@@ -1,6 +1,6 @@
-import type { DailyPrayerSchedule, DhikrItem, PrayerName, PrayerPort } from './types';
+import type { DailyPrayerSchedule, DhikrItem } from './types';
 
-const initialPrayerSchedule: DailyPrayerSchedule = {
+export const mockPrayerSchedule: DailyPrayerSchedule = {
   dateLabel: 'Today',
   locationLabel: 'Current location',
   hijriLabel: 'Hijri date will be provided by the prayer service',
@@ -12,27 +12,6 @@ const initialPrayerSchedule: DailyPrayerSchedule = {
     { name: 'Maghrib', time: '18:02', completed: false, isNext: true },
     { name: 'Isha', time: '19:12', completed: false, isNext: false },
   ],
-};
-
-let prayerSchedule: DailyPrayerSchedule = initialPrayerSchedule;
-
-export const mockPrayerSchedule = initialPrayerSchedule;
-
-export const mockPrayerRepository: PrayerPort = {
-  async getDailySchedule() {
-    return prayerSchedule;
-  },
-
-  async setPrayerCompleted(prayerName: PrayerName, completed: boolean) {
-    prayerSchedule = {
-      ...prayerSchedule,
-      prayers: prayerSchedule.prayers.map((prayer) =>
-        prayer.name === prayerName ? { ...prayer, completed } : prayer,
-      ),
-    };
-
-    return prayerSchedule;
-  },
 };
 
 export const mockDhikr: DhikrItem[] = [

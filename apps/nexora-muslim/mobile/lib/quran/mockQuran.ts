@@ -4,7 +4,7 @@ import type {
   QuranPort,
   ReadingPosition,
   Recitation,
-  SurahSummary, QuranReadingGoal, QuranReadingLog, QuranReadingStatistics,
+  SurahSummary,
 } from './types';
 
 const surahs: SurahSummary[] = [
@@ -39,8 +39,6 @@ let readingPosition: ReadingPosition = {
 };
 
 let bookmarks: Bookmark[] = [];
-let readingGoal: QuranReadingGoal = { dailyTargetPages: 4, dailyTargetMinutes: 15 };
-let readingLog: QuranReadingLog = { date: new Date().toISOString().slice(0, 10), pages: 3, minutes: 12 };
 
 const recitations: Recitation[] = [
   { id: 'demo-1', name: 'Demo Recitation', language: 'ar', audioUrl: '' },

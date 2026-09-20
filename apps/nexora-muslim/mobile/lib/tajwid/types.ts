@@ -46,11 +46,10 @@ export interface TajwidPort {
   getTopics(): Promise<TajwidTopic[]>;
   getProgress(userId: string): Promise<TajwidProgress>;
   getPractice(topicId: TajwidTopicId): Promise<TajwidPracticeItem[]>;
-  completePractice(userId: string, practiceId: string, correct: boolean): Promise<TajwidProgress>;
   completeTopic(userId: string, topicId: TajwidTopicId): Promise<TajwidProgress>;
   completeAssessment(
     userId: string,
     correctAnswers: number,
     totalQuestions: number,
-  ): Promise<TajwidAssessmentResult>;
+  ): Promise<TajwidProgress>;
 }

@@ -22,11 +22,3 @@ class NexoraPermission(BasePermission):
 
 class CanReadOrganization(NexoraPermission):
     required_permission = "organization.read"
-
-
-class CanReadFinance(NexoraPermission):
-    required_permission = "finance.read"
-
-
-class CanWriteFinance(NexoraPermission):
-    required_permission = "finance.write"

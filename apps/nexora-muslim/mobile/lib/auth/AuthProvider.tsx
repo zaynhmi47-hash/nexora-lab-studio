@@ -1,13 +1,5 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type PropsWithChildren,
-} from 'react';
-import { createAuthPort } from './createAuthPort';
-import { resolveNexoraIdentity } from '@/lib/infrastructure/nexora-core/identity';
+import { createContext, useContext, useMemo, useState, type PropsWithChildren } from 'react';
+import { mockAuth } from './mockAuth';
 import type { AuthPort, AuthSession } from './types';
 
 const AuthContext = createContext<{
@@ -17,60 +9,32 @@ const AuthContext = createContext<{
   signOut: () => Promise<void>;
 } | null>(null);
 
-const auth: AuthPort = createAuthPort();
-
-async function resolveSessionIdentity(session: AuthSession | null) {
-  if (!session) return null;
-  return resolveNexoraIdentity(session);
-}
-
 export function AuthProvider({ children }: PropsWithChildren) {
+  const auth: AuthPort = mockAuth;
   const [session, setSession] = useState<AuthSession | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-
-    void auth
-      .getSession()
-      .then(resolveSessionIdentity)
-      .then((nextSession) => {
-        if (active) setSession(nextSession);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const value = useMemo(
-    () => ({
-      session,
-      loading,
-      async signIn() {
-        setLoading(true);
-        try {
-          const authenticatedSession = await auth.signIn();
-          setSession(await resolveSessionIdentity(authenticatedSession));
-        } finally {
-          setLoading(false);
-        }
-      },
-      async signOut() {
-        setLoading(true);
-        try {
-          await auth.signOut();
-          setSession(null);
-        } finally {
-          setLoading(false);
-        }
-      },
-    }),
-    [loading, session],
-  );
+  const value = useMemo(() => ({
+    session,
+    loading,
+    async signIn() {
+      setLoading(true);
+      try {
+        setSession(await auth.signIn());
+      } finally {
+        setLoading(false);
+      }
+    },
+    async signOut() {
+      setLoading(true);
+      try {
+        await auth.signOut();
+        setSession(null);
+      } finally {
+        setLoading(false);
+      }
+    },
+  }), [auth, loading, session]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
