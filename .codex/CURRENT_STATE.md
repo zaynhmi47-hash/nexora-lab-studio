@@ -68,3 +68,15 @@ Verified on 2026-09-20:
 - Telemetry stores only method, path, status code, and duration in process memory; no request bodies or credentials are recorded.
 - Control Plane is disabled when `DEBUG=False`.
 - Architectural decision recorded in `docs/decisions/ADR-local-control-plane.md`.
+
+
+## Security hardening — verified implementation
+
+The backend default DRF policy is now deny-by-default:
+
+- Firebase bearer-token authentication is the default authentication class.
+- `AuthenticatedNexoraUserPermission` is the default permission class.
+- Public endpoints must explicitly opt out/declare public access.
+- Existing health/liveness endpoints retain explicit public behavior.
+- The Control Plane remains DEBUG-only and does not inherit production API access.
+- Focused tests cover the default authentication/permission policy and public health behavior.
