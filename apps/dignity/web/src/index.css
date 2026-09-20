@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-main: #f8fafc;
+    --surface-main: #ffffff;
+    --surface-elevated: #ffffff;
+    --border-main: #e2e8f0;
+    --border-subtle: #f1f5f9;
+
+    --primary-main: #2563eb;
+    --primary-hover: #1d4ed8;
+    --primary-soft: #eff6ff;
+    --primary-text: #ffffff;
+
+    --secondary-main: #0f172a;
+    --secondary-soft: #f1f5f9;
+
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+
+    --color-success: #059669;
+    --color-success-soft: #ecfdf5;
+    --color-warning: #d97706;
+    --color-warning-soft: #fffbeb;
+    --color-error: #dc2626;
+    --color-error-soft: #fef2f2;
+    --color-info: #0284c7;
+    --color-info-soft: #f0f9ff;
+
+    --shadow-subtle: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+    --shadow-medium: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.07);
+    --shadow-high: 0 12px 24px -4px rgba(0, 0, 0, 0.1), 0 4px 8px -4px rgba(0, 0, 0, 0.06);
+  }
+
+  .dark {
+    --bg-main: #0b0f19;
+    --surface-main: #111827;
+    --surface-elevated: #1e293b;
+    --border-main: #1f2937;
+    --border-subtle: #172033;
+
+    --primary-main: #3b82f6;
+    --primary-hover: #60a5fa;
+    --primary-soft: rgba(59, 130, 246, 0.14);
+    --primary-text: #ffffff;
+
+    --secondary-main: #f8fafc;
+    --secondary-soft: #1e293b;
+
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #64748b;
+
+    --color-success: #10b981;
+    --color-success-soft: rgba(16, 185, 129, 0.15);
+    --color-warning: #f59e0b;
+    --color-warning-soft: rgba(245, 158, 11, 0.15);
+    --color-error: #ef4444;
+    --color-error-soft: rgba(239, 68, 68, 0.15);
+    --color-info: #38bdf8;
+    --color-info-soft: rgba(56, 189, 248, 0.15);
+
+    --shadow-subtle: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+    --shadow-medium: 0 4px 8px -1px rgba(0, 0, 0, 0.45);
+    --shadow-high: 0 14px 28px -4px rgba(0, 0, 0, 0.6);
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(150, 150, 150, 0.3);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(150, 150, 150, 0.5);
+}

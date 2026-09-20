@@ -1,0 +1,110 @@
+import { HomeDashboardData } from '../../types';
+
+export const mockHomeDashboardData: HomeDashboardData = {
+  goal: {
+    title: 'Become a Full-Stack Developer',
+    progressPercent: 68,
+    currentLevel: 'Intermediate',
+    estimatedWeeksRemaining: 8,
+  },
+  dailyMissions: [
+    {
+      id: 'mission-1',
+      title: 'Complete React lesson',
+      xp: 50,
+      completed: true,
+      type: 'lesson',
+      targetCourseTitle: 'Modern React Development',
+    },
+    {
+      id: 'mission-2',
+      title: 'Finish 5 practice questions',
+      xp: 50,
+      completed: true,
+      type: 'quiz',
+      targetCourseTitle: 'Modern React Development',
+    },
+    {
+      id: 'mission-3',
+      title: 'Review JavaScript flashcards',
+      xp: 50,
+      completed: false,
+      type: 'flashcard',
+      targetCourseTitle: 'JavaScript Core',
+    },
+  ],
+  weeklyProgress: {
+    weeklyGoalMinutes: 300, // 5 hours
+    completedMinutes: 222, // 3 hours 42 minutes (74%)
+    lessonsCompletedCount: 8,
+    averageQuizScore: 92,
+    daysActiveCount: 5,
+    daysGoalCount: 7,
+  },
+  pathSteps: [
+    {
+      id: 'step-1',
+      title: 'HTML & CSS',
+      status: 'completed',
+      description: 'Semantic markup, modern flexbox/grid, and design token pipelines.',
+      estimatedWeeks: 2,
+    },
+    {
+      id: 'step-2',
+      title: 'JavaScript Fundamentals',
+      status: 'completed',
+      description: 'Asynchronous event loops, closures, type generics, and immutability.',
+      estimatedWeeks: 4,
+    },
+    {
+      id: 'step-3',
+      title: 'React',
+      status: 'completed',
+      description: 'Custom hooks, state management, render optimizations, and component architecture.',
+      estimatedWeeks: 4,
+      courseId: 'course-107',
+    },
+    {
+      id: 'step-4',
+      title: 'Backend Development',
+      status: 'current',
+      description: 'Node.js, Express, REST API design, microservices, and middleware.',
+      estimatedWeeks: 4,
+      courseId: 'course-109',
+    },
+    {
+      id: 'step-5',
+      title: 'PostgreSQL',
+      status: 'upcoming',
+      description: 'Relational normalization, ACID transactions, and query planner optimization.',
+      estimatedWeeks: 3,
+      courseId: 'course-108',
+    },
+    {
+      id: 'step-6',
+      title: 'DevOps',
+      status: 'upcoming',
+      description: 'Docker containerization, CI/CD pipelines, and cloud deployments.',
+      estimatedWeeks: 3,
+      courseId: 'course-110',
+    },
+    {
+      id: 'step-7',
+      title: 'Final Project',
+      status: 'upcoming',
+      description: 'End-to-end full stack capstone deployment with automated monitoring.',
+      estimatedWeeks: 2,
+    },
+  ],
+  aiInsight: {
+    id: 'insight-current',
+    title: 'AI Learning Insight',
+    badgeText: 'Adaptive Analysis',
+    message: "You've improved significantly in React this week. Your current biggest skill gap is Database fundamentals. I recommend completing: PostgreSQL Fundamentals.",
+    improvedSkill: 'React',
+    skillGap: 'Database fundamentals',
+    recommendedCourseId: 'course-108',
+    recommendedCourseTitle: 'PostgreSQL Fundamentals',
+    timestamp: 'Updated 15 mins ago',
+  },
+};
