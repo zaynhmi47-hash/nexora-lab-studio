@@ -20,13 +20,13 @@ ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 
 INSTALLED_APPS = [
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes", "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
-    "rest_framework", "apps.core", "apps.identity", "apps.organizations", "apps.access", "apps.products", "apps.capabilities", "apps.learning", "apps.quran", "apps.dhikr", "apps.umrah", "apps.profile", "apps.knowledge", "apps.tajwid", "apps.arabic", "apps.fasting", "apps.dua", "apps.calendar", "apps.zakat", "apps.reminders", "apps.places", "apps.ramadan", "apps.finance",
+    "rest_framework", "apps.core", "apps.control_plane", "apps.identity", "apps.organizations", "apps.access", "apps.products", "apps.capabilities", "apps.learning", "apps.quran", "apps.dhikr", "apps.umrah", "apps.profile", "apps.knowledge", "apps.tajwid", "apps.arabic", "apps.fasting", "apps.dua", "apps.calendar", "apps.zakat", "apps.reminders", "apps.places", "apps.ramadan", "apps.finance",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware", "django.contrib.sessions.middleware.SessionMiddleware", "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware", "django.contrib.auth.middleware.AuthenticationMiddleware", "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware", "apps.core.middleware.RequestCorrelationMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware", "apps.core.middleware.RequestCorrelationMiddleware", "apps.control_plane.middleware.RequestTelemetryMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
