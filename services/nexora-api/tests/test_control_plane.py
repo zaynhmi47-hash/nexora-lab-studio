@@ -44,3 +44,17 @@ def test_control_plane_disabled_when_not_debug(settings):
     settings.DEBUG = False
     response = Client().get("/ops/")
     assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_control_plane_snapshot_reports_applications_and_route_access(settings):
+    settings.DEBUG = True
+    response = Client().get("/ops/snapshot/")
+    assert response.status_code == 200
+    payload = response.json()
+    application_names = {item["name"] for item in payload["applications"]}
+    assert {"Nexora Core", "Nexora Muslim", "Dignity", "Nexora Finance"} <= application_names
+    health = next(route for route in payload["routes"] if route["route"] == "/api/v1/health/")
+    assert health["access"] == "public"
+    identity = next(route for route in payload["routes"] if route["route"] == "/api/v1/identity/me/")
+    assert identity["access"] == "authenticated"
