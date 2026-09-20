@@ -6,7 +6,7 @@ from time import monotonic
 from django.conf import settings
 from django.db import connection
 from django.http import HttpResponseForbidden
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import URLPattern, URLResolver, get_resolver
 from django.views import View
 from django.views.decorators.cache import never_cache
