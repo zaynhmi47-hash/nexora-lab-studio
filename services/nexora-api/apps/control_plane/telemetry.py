@@ -27,5 +27,12 @@ def recent_requests(limit: int = 50) -> list[dict[str, Any]]:
         return list(_events)[:limit]
 
 
+def clear_requests() -> int:
+    with _lock:
+        cleared = len(_events)
+        _events.clear()
+        return cleared
+
+
 def timer():
     return monotonic()
