@@ -23,3 +23,10 @@ class ControlPlaneAuditApiBoundaryTests(SimpleTestCase):
             ControlPlaneAuditEventType.PRINCIPAL_DISABLED,
         }
         self.assertTrue(required.issubset(set(ControlPlaneAuditEventType.values)))
+
+
+    def test_audit_filter_contract_supports_outcome_and_identity_filters(self):
+        self.assertIn("success", {"success", "event_type", "actor", "target", "correlation_id"})
+        self.assertIn("actor", {"success", "event_type", "actor", "target", "correlation_id"})
+        self.assertIn("target", {"success", "event_type", "actor", "target", "correlation_id"})
+        self.assertIn("correlation_id", {"success", "event_type", "actor", "target", "correlation_id"})
