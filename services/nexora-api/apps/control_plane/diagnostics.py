@@ -7,6 +7,9 @@ from django.db import connection
 from django.urls import URLPattern, URLResolver, get_resolver
 
 
+DIAGNOSTIC_STATUSES = frozenset({"healthy", "degraded", "unavailable"})
+
+
 def route_inventory() -> list[dict[str, object]]:
     """Return a read-only inventory of registered Django endpoints."""
     routes: list[dict[str, object]] = []
@@ -84,13 +87,14 @@ def api_route_counts(routes: list[dict[str, object]]) -> dict[str, object]:
 
 def diagnostic_status(
     *,
-    ok: bool,
+    status: str,
     checked_at: str,
     latency_ms: float | None,
     details: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """Build the shared structured diagnostic result contract."""
-    status = "healthy" if ok else "unavailable"
+    if status not in DIAGNOSTIC_STATUSES:
+        raise ValueError(f"Unsupported diagnostic status: {status}")
     return {
         "status": status,
         "latency_ms": latency_ms,
