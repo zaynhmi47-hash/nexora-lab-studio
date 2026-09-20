@@ -6,6 +6,11 @@
     "orientation": "portrait",
     "scheme": "nexoramuslim",
     "userInterfaceStyle": "automatic",
+    "platforms": [
+      "android",
+      "ios",
+      "web"
+    ],
     "plugins": [
       "expo-router",
       "expo-notifications"
