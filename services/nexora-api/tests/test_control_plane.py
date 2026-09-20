@@ -289,3 +289,73 @@ def test_principal_management_errors_keep_expected_client_contract(settings, mon
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "Invalid Control Center role."
+
+
+@pytest.mark.django_db
+def test_control_plane_preserves_valid_request_correlation_id(settings):
+    client = authenticated_control_center_client(settings, email="correlation@example.com")
+    correlation_id = "ops-trace-123"
+    response = client.get("/ops/operations/", HTTP_X_REQUEST_ID=correlation_id)
+    assert response.status_code == 200
+    assert response.headers["X-Correlation-ID"] == correlation_id
+    assert response.headers["X-Request-ID"] == correlation_id
+
+
+@pytest.mark.django_db
+def test_telemetry_clear_audit_inherits_request_correlation_id(settings):
+    from apps.control_plane.audit import ControlPlaneAuditEvent, ControlPlaneAuditEventType
+
+    client = Client(enforce_csrf_checks=True)
+    settings.DEBUG = True
+    user = NexoraUser.objects.create(
+        email="correlation-owner@example.com",
+        display_name="Correlation Owner",
+        status=NexoraUser.Status.ACTIVE,
+    )
+    ControlPlanePrincipal.objects.create(user=user, enabled=True, role=ControlPlaneRole.OWNER)
+    session = client.session
+    session["control_plane_user_id"] = str(user.id)
+    session.save()
+    page = client.get("/ops/", HTTP_X_REQUEST_ID="page-trace")
+    assert page.status_code == 200
+    token = client.cookies["csrftoken"].value
+
+    correlation_id = "clear-trace-456"
+    response = client.post(
+        "/ops/operations/telemetry/clear/",
+        HTTP_X_CSRFTOKEN=token,
+        HTTP_X_REQUEST_ID=correlation_id,
+    )
+    assert response.status_code == 200
+    event = ControlPlaneAuditEvent.objects.get(event_type=ControlPlaneAuditEventType.TELEMETRY_CLEARED)
+    assert event.correlation_id == correlation_id
+    assert response.headers["X-Correlation-ID"] == correlation_id
+
+
+@pytest.mark.django_db
+def test_oversized_request_correlation_id_is_replaced_with_generated_id(settings):
+    client = authenticated_control_center_client(settings, email="generated-correlation@example.com")
+    oversized = "x" * 129
+    response = client.get("/ops/operations/", HTTP_X_REQUEST_ID=oversized)
+    assert response.status_code == 200
+    generated = response.headers["X-Correlation-ID"]
+    assert generated != oversized
+    assert len(generated) <= 128
+
+
+@pytest.mark.django_db
+def test_internal_error_response_uses_middleware_correlation_id(settings, monkeypatch):
+    settings.DEBUG = True
+    client = authenticated_control_center_client(settings, email="error-correlation@example.com")
+    from apps.control_plane import operations
+
+    def fail_actor(_request):
+        raise RuntimeError("secret database credential")
+
+    monkeypatch.setattr(operations, "_actor", fail_actor)
+    correlation_id = "error-trace-789"
+    response = client.get("/ops/operations/", HTTP_X_REQUEST_ID=correlation_id)
+    assert response.status_code == 500
+    assert response.json()["correlation_id"] == correlation_id
+    assert response.headers["X-Correlation-ID"] == correlation_id
+    assert "credential" not in response.content.decode()
