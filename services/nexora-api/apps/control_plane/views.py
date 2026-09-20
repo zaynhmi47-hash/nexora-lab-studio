@@ -5,11 +5,12 @@ from time import monotonic
 
 from django.conf import settings
 from django.db import connection
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import URLPattern, URLResolver, get_resolver
 from django.views import View
 from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import csrf_protect
 from django.utils.decorators import method_decorator
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -18,7 +19,12 @@ from infrastructure.firebase.health import check_firebase_configuration
 
 from .models import ControlPlanePermission, ControlPlanePrincipal
 from .registry import application_snapshot
-from .services import ControlPlaneAccessDenied, authenticate_control_plane_token
+from .services import (
+    ControlPlaneAccessDenied,
+    ControlPlaneRoleManagementError,
+    authenticate_control_plane_token,
+    manage_control_plane_principal,
+)
 from .telemetry import recent_requests
 
 
@@ -189,3 +195,60 @@ class ControlPlaneSnapshotView(APIView):
         if not user.control_plane_principal.has_permission(ControlPlanePermission.DASHBOARD_READ):
             return Response({"detail": "Control Center permission denied."}, status=403)
         return Response(_snapshot())
+
+
+class ControlPlanePrincipalManagementView(View):
+    """Owner-only endpoint for role and access management."""
+
+    @staticmethod
+    def _actor(request):
+        user_id = request.session.get("control_plane_user_id")
+        if not user_id:
+            return None
+        return (
+            ControlPlanePrincipal.objects.select_related("user")
+            .filter(user_id=user_id, enabled=True, deleted_at__isnull=True)
+            .first()
+        )
+
+    def get(self, request):
+        if not settings.DEBUG:
+            return JsonResponse({"detail": "Control Plane is disabled outside DEBUG."}, status=404)
+        actor = self._actor(request)
+        if actor is None:
+            return JsonResponse({"detail": "Control Center authentication is required."}, status=401)
+        if actor.role != "owner":
+            return JsonResponse({"detail": "Owner permission is required."}, status=403)
+        principals = ControlPlanePrincipal.objects.select_related("user").filter(deleted_at__isnull=True).order_by("user__email")
+        return JsonResponse({"principals": [
+            {"user_id": str(p.user_id), "email": p.user.email, "role": p.role, "enabled": p.enabled,
+             "last_authenticated_at": p.last_authenticated_at.isoformat() if p.last_authenticated_at else None}
+            for p in principals
+        ]})
+
+    @method_decorator(csrf_protect)
+    def post(self, request):
+        if not settings.DEBUG:
+            return JsonResponse({"detail": "Control Plane is disabled outside DEBUG."}, status=404)
+        actor = self._actor(request)
+        if actor is None:
+            return JsonResponse({"detail": "Control Center authentication is required."}, status=401)
+        if actor.role != "owner":
+            return JsonResponse({"detail": "Owner permission is required."}, status=403)
+        import json
+        try:
+            payload = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"detail": "Request body must be valid JSON."}, status=400)
+        try:
+            target = manage_control_plane_principal(
+                actor=actor,
+                target_user_id=str(payload["user_id"]),
+                role=payload.get("role"),
+                enabled=payload.get("enabled"),
+            )
+        except (KeyError, TypeError, ValueError):
+            return JsonResponse({"detail": "user_id is required."}, status=400)
+        except ControlPlaneRoleManagementError as exc:
+            return JsonResponse({"detail": str(exc)}, status=400)
+        return JsonResponse({"user_id": str(target.user_id), "email": target.user.email, "role": target.role, "enabled": target.enabled})
