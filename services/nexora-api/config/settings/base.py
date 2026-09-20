@@ -22,10 +22,10 @@ env = environ.Env(
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
+DEBUG = env("DEBUG")
 SECRET_KEY = env("SECRET_KEY", default="django-insecure-development-only")
 if not DEBUG and SECRET_KEY == "django-insecure-development-only":
     raise RuntimeError("SECRET_KEY must be explicitly configured when DEBUG=False.")
-DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 if not DEBUG and not ALLOWED_HOSTS:
     raise RuntimeError("ALLOWED_HOSTS must be explicitly configured when DEBUG=False.")
