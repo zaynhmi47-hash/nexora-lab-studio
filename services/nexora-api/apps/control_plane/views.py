@@ -19,7 +19,7 @@ from rest_framework.views import APIView
 
 from infrastructure.firebase.health import check_firebase_configuration
 
-from .models import ControlPlanePermission, ControlPlanePrincipal
+from .models import ControlPlanePermission, ControlPlanePrincipal, ControlPlaneRole
 from .registry import application_snapshot
 from .services import (
     ControlPlaneAccessDenied,
@@ -42,6 +42,10 @@ def _login_rate_limited(request) -> bool:
             return True
         attempts.append(now)
         _LOGIN_ATTEMPTS[key] = attempts
+        if len(_LOGIN_ATTEMPTS) > 2048:
+            oldest_key = min(_LOGIN_ATTEMPTS, key=lambda item: _LOGIN_ATTEMPTS[item][-1])
+            if oldest_key != key:
+                _LOGIN_ATTEMPTS.pop(oldest_key, None)
         return False
 
 
@@ -239,7 +243,7 @@ class ControlPlanePrincipalManagementView(View):
         actor = self._actor(request)
         if actor is None:
             return JsonResponse({"detail": "Control Center authentication is required."}, status=401)
-        if actor.role != "owner":
+        if actor.role != ControlPlaneRole.OWNER:
             return JsonResponse({"detail": "Owner permission is required."}, status=403)
         principals = ControlPlanePrincipal.objects.select_related("user").filter(deleted_at__isnull=True).order_by("user__email")
         return JsonResponse({"principals": [
