@@ -434,4 +434,3 @@ def learning_hub(user: NexoraUser):
             },
         },
     }
-\n
