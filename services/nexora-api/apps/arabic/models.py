@@ -73,4 +73,4 @@ class ArabicLessonCompletion(AuditableBaseModel):
     class Meta:
         db_table = "arabic_lesson_completions"
         constraints = [models.UniqueConstraint(fields=("user", "lesson"), name="arabic_user_lesson_completion_unique")]
-        indexes = [models.Index(fields=("user", "completed_at"), name="arabic_completion_user_date_idx")]
+        indexes = [models.Index(fields=("user", "completed_at"), name="arabic_lesson_user_date_idx")]

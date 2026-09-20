@@ -64,7 +64,7 @@ class LearningLessonCompletion(AuditableBaseModel):
         constraints = [
             models.UniqueConstraint(fields=("user", "lesson"), name="learning_user_lesson_completion_unique"),
         ]
-        indexes = [models.Index(fields=("user", "completed_at"), name="learning_completion_user_date_idx")]
+        indexes = [models.Index(fields=("user", "completed_at"), name="learning_lesson_user_date_idx")]
 
 
 class LearningQuizQuestion(AuditableBaseModel):
@@ -96,7 +96,7 @@ class LearningQuizAttempt(AuditableBaseModel):
     class Meta:
         db_table = "learning_quiz_attempts"
         indexes = [
-            models.Index(fields=("user", "-completed_at"), name="learning_quiz_attempt_user_date_idx"),
+            models.Index(fields=("user", "-completed_at"), name="learning_quiz_user_date_idx"),
         ]
 
 
