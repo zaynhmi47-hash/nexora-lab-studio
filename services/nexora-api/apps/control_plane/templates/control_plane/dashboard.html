@@ -66,7 +66,17 @@
     <div class="scroll" style="margin-top:12px"><table><thead><tr><th>Email</th><th>Role</th><th>Status</th><th>Last authenticated</th><th>Actions</th></tr></thead><tbody id="principals"></tbody></table></div>
   </section>
 
-  <section class="section panel"><h2>Security audit</h2><div class="scroll"><table><thead><tr><th>Time</th><th>Event</th><th>Actor</th><th>Target</th><th>Outcome</th><th>Metadata</th></tr></thead><tbody id="audit"></tbody></table></div></section>
+  <section class="section panel"><h2>Security audit</h2>
+    <div class="row" style="margin-bottom:12px;flex-wrap:wrap">
+      <select id="auditEvent" style="background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:7px"><option value="">All events</option></select>
+      <select id="auditSuccess" style="background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:7px"><option value="">All outcomes</option><option value="true">Success</option><option value="false">Failed</option></select>
+      <input id="auditActor" placeholder="Actor email" style="background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:7px">
+      <input id="auditTarget" placeholder="Target email" style="background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:7px">
+      <input id="auditCorrelation" placeholder="Correlation ID" style="background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:7px">
+      <button id="auditApply" type="button" style="background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:7px 10px;cursor:pointer">Filter</button>
+    </div>
+    <div class="scroll"><table><thead><tr><th>Time</th><th>Event</th><th>Actor</th><th>Target</th><th>Correlation</th><th>Outcome</th><th>Metadata</th></tr></thead><tbody id="audit"></tbody></table></div>
+  </section>
 
   <section class="section panel"><h2>Route inventory</h2><div class="scroll"><table><thead><tr><th>Route</th><th>Name</th><th>Access</th><th>Kind</th></tr></thead><tbody id="routeList"></tbody></table></div></section>
 </div>
@@ -181,14 +191,35 @@ async function loadPrincipals() {
 
 async function loadAudit() {
   try {
-    const auditResponse = await fetch("./audit/?limit=50", {cache:"no-store"});
+    const params = new URLSearchParams({limit:"100"});
+    const values = {
+      event_type: document.getElementById("auditEvent")?.value || "",
+      success: document.getElementById("auditSuccess")?.value || "",
+      actor: document.getElementById("auditActor")?.value.trim() || "",
+      target: document.getElementById("auditTarget")?.value.trim() || "",
+      correlation_id: document.getElementById("auditCorrelation")?.value.trim() || "",
+    };
+    Object.entries(values).forEach(([key, value]) => { if (value) params.set(key, value); });
+    const auditResponse = await fetch("./audit/?"+params.toString(), {cache:"no-store"});
     if (!auditResponse.ok) return;
     const audit = await auditResponse.json();
     document.getElementById("audit").innerHTML = audit.events.map(x =>
-      '<tr><td>'+esc(new Date(x.occurred_at).toLocaleString())+'</td><td><code>'+esc(x.event_type)+'</code></td><td>'+esc(x.actor?.email || "system")+'</td><td>'+esc(x.target?.email || "—")+'</td><td class="'+(x.success ? "ok" : "bad")+'">'+(x.success ? "success" : "failed")+'</td><td><code>'+esc(JSON.stringify(x.metadata))+'</code></td></tr>'
-    ).join("") || '<tr><td colspan="6" class="muted">No audit events yet</td></tr>';
+      '<tr><td>'+esc(new Date(x.occurred_at).toLocaleString())+'</td><td><code>'+esc(x.event_type)+'</code></td><td>'+esc(x.actor?.email || "system")+'</td><td>'+esc(x.target?.email || "—")+'</td><td><code>'+esc(x.correlation_id || "—")+'</code></td><td class="'+(x.success ? "ok" : "bad")+'">'+(x.success ? "success" : "failed")+'</td><td><code>'+esc(JSON.stringify(x.metadata))+'</code></td></tr>'
+    ).join("") || '<tr><td colspan="7" class="muted">No audit events match the current filters.</td></tr>';
   } catch (_) {}
 }
+
+async function loadAuditEventTypes() {
+  try {
+    const r = await fetch("./audit/?limit=1", {cache:"no-store"});
+    if (!r.ok) return;
+    const d = await r.json();
+    const select = document.getElementById("auditEvent");
+    select.innerHTML = '<option value="">All events</option>' + d.event_types.map(x => '<option value="'+esc(x)+'">'+esc(x)+'</option>').join("");
+  } catch (_) {}
+}
+document.getElementById("auditApply")?.addEventListener("click", loadAudit);
+loadAuditEventTypes();
 
 async function refresh() {
   try {
