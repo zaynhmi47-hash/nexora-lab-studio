@@ -9,7 +9,7 @@ def create_bootstrap_state(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("control_plane", "0002_controlplanincipal_role"),
+        ("control_plane", "0002_controlplanprincipal_role"),
     ]
 
     operations = [
