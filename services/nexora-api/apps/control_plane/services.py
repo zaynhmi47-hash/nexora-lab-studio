@@ -8,7 +8,7 @@ from apps.identity.models import IdentityProviderAccount, NexoraUser
 from infrastructure.firebase.registry import FirebaseProviderRegistry
 from apps.identity.services import IdentityService
 
-from .models import ControlPlanePrincipal, ControlPlaneRole
+from .models import ControlPlaneBootstrapState, ControlPlanePrincipal, ControlPlaneRole
 
 
 class ControlPlaneAccessDenied(Exception):
@@ -19,8 +19,41 @@ def _bootstrap_emails() -> set[str]:
     return {
         value.strip().lower()
         for value in getattr(settings, "CONTROL_PLANE_BOOTSTRAP_EMAILS", [])
-        if value.strip()
+        if value and value.strip()
     }
+
+
+def _bootstrap_allowed(email: str) -> bool:
+    return email.strip().lower() in _bootstrap_emails()
+
+
+def _bootstrap_first_owner(user: NexoraUser) -> ControlPlanePrincipal:
+    """Create the sole initial owner, then permanently close login-time bootstrap."""
+    with transaction.atomic():
+        state = ControlPlaneBootstrapState.objects.select_for_update().get(pk=1)
+        if state.locked:
+            raise ControlPlaneAccessDenied(
+                "Control Center bootstrap is locked. An existing owner must grant access."
+            )
+
+        existing_principals = ControlPlanePrincipal.objects.filter(deleted_at__isnull=True).exists()
+        if existing_principals:
+            state.locked = True
+            state.locked_at = timezone.now()
+            state.save(update_fields=["locked", "locked_at"])
+            raise ControlPlaneAccessDenied(
+                "Control Center bootstrap is already initialized."
+            )
+
+        principal = ControlPlanePrincipal.objects.create(
+            user=user,
+            role=ControlPlaneRole.OWNER,
+            enabled=True,
+        )
+        state.locked = True
+        state.locked_at = timezone.now()
+        state.save(update_fields=["locked", "locked_at"])
+        return principal
 
 
 def authenticate_control_plane_token(token: str) -> NexoraUser:
@@ -30,6 +63,7 @@ def authenticate_control_plane_token(token: str) -> NexoraUser:
     if not claims.email or not claims.email_verified:
         raise ControlPlaneAccessDenied("A verified email identity is required.")
 
+    email = claims.email.strip().lower()
     account = (
         IdentityProviderAccount.objects
         .select_related("user")
@@ -42,7 +76,7 @@ def authenticate_control_plane_token(token: str) -> NexoraUser:
     )
 
     if account is None:
-        if claims.email.lower() not in _bootstrap_emails():
+        if not _bootstrap_allowed(email):
             raise ControlPlaneAccessDenied("This identity is not authorized for Control Center.")
         user = IdentityService(provider).reconcile_claims(claims)
     else:
@@ -54,9 +88,9 @@ def authenticate_control_plane_token(token: str) -> NexoraUser:
     try:
         principal = user.control_plane_principal
     except ControlPlanePrincipal.DoesNotExist:
-        if (user.email or "").lower() not in _bootstrap_emails():
+        if not _bootstrap_allowed(user.email or ""):
             raise ControlPlaneAccessDenied("This identity is not authorized for Control Center.")
-        principal = ControlPlanePrincipal.objects.create(user=user)
+        principal = _bootstrap_first_owner(user)
 
     if not principal.enabled or principal.deleted_at is not None:
         raise ControlPlaneAccessDenied("This Control Center identity is disabled.")
