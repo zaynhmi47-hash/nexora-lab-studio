@@ -46,7 +46,7 @@ def _guard(request, permission):
         return None, JsonResponse(
             {
                 "detail": "Control Center security state could not be evaluated.",
-                "correlation_id": request.headers.get("X-Request-ID", "")[:128],
+                "correlation_id": _request_correlation_id(request),
             },
             status=500,
         )
@@ -161,7 +161,6 @@ class ControlPlaneClearTelemetryView(View):
             event_type=ControlPlaneAuditEventType.TELEMETRY_CLEARED,
             actor=actor.user,
             success=True,
-            correlation_id=request.headers.get("X-Request-ID", ""),
             metadata={"cleared_events": cleared},
         )
         return JsonResponse({"cleared_events": cleared, "detail": "Request telemetry cleared."})
