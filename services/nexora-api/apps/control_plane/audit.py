@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from typing import Any
+import json
+import re
 
 from django.db import models
 from django.utils import timezone
@@ -8,6 +10,14 @@ import uuid
 
 from apps.core.context import get_request_context
 from apps.identity.models import NexoraUser
+
+
+MAX_AUDIT_METADATA_BYTES = 8192
+MAX_AUDIT_METADATA_DEPTH = 8
+MAX_AUDIT_METADATA_ITEMS = 100
+MAX_AUDIT_METADATA_STRING = 2048
+MAX_AUDIT_CORRELATION_ID = 128
+SENSITIVE_AUDIT_KEY_TERMS = frozenset({"token", "authorization", "password", "secret", "credential", "privatekey", "apikey"})
 
 
 class ControlPlaneAuditEventType(models.TextChoices):
@@ -66,20 +76,49 @@ class ControlPlaneAuditEvent(models.Model):
 def _validate_audit_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
     if metadata is None:
         return {}
-    forbidden = {"token", "id_token", "authorization", "password", "secret", "credential", "credentials"}
-    def walk(value: Any) -> None:
-        if isinstance(value, dict):
-            for key, child in value.items():
-                if str(key).strip().lower() in forbidden:
-                    raise ValueError("Sensitive credential fields are not allowed in audit metadata.")
-                walk(child)
-        elif isinstance(value, list):
-            for child in value:
-                walk(child)
     if not isinstance(metadata, dict):
         raise TypeError("Audit metadata must be a dictionary.")
+
+    def walk(value: Any, depth: int = 0) -> None:
+        if depth > MAX_AUDIT_METADATA_DEPTH:
+            raise ValueError("Audit metadata nesting is too deep.")
+        if isinstance(value, dict):
+            if len(value) > MAX_AUDIT_METADATA_ITEMS:
+                raise ValueError("Audit metadata contains too many fields.")
+            for key, child in value.items():
+                normalized = re.sub(r"[^a-z0-9]", "", str(key).strip().lower())
+                if any(term in normalized for term in SENSITIVE_AUDIT_KEY_TERMS):
+                    raise ValueError("Sensitive credential fields are not allowed in audit metadata.")
+                if len(str(key)) > 128:
+                    raise ValueError("Audit metadata keys are too long.")
+                walk(child, depth + 1)
+        elif isinstance(value, list):
+            if len(value) > MAX_AUDIT_METADATA_ITEMS:
+                raise ValueError("Audit metadata lists are too large.")
+            for child in value:
+                walk(child, depth + 1)
+        elif isinstance(value, str) and len(value) > MAX_AUDIT_METADATA_STRING:
+            raise ValueError("Audit metadata strings are too long.")
+        elif value is not None and not isinstance(value, (bool, int, float)):
+            raise TypeError("Audit metadata contains an unsupported value type.")
+
     walk(metadata)
+    try:
+        encoded = json.dumps(metadata, ensure_ascii=False, separators=(",", ":"))
+    except (TypeError, ValueError) as exc:
+        raise TypeError("Audit metadata must be JSON serializable.") from exc
+    if len(encoded.encode("utf-8")) > MAX_AUDIT_METADATA_BYTES:
+        raise ValueError("Audit metadata exceeds the maximum size.")
     return metadata
+
+
+def normalize_audit_correlation_id(value: str | None) -> str:
+    if value is None:
+        return ""
+    normalized = str(value).strip()
+    if len(normalized) > MAX_AUDIT_CORRELATION_ID:
+        raise ValueError("Audit correlation ID is too long.")
+    return normalized
 
 
 def record_control_plane_audit(
@@ -92,14 +131,18 @@ def record_control_plane_audit(
     metadata: dict[str, Any] | None = None,
 ) -> ControlPlaneAuditEvent:
     """Write only safe, structured audit metadata; callers must never pass credentials."""
+    if event_type not in ControlPlaneAuditEventType.values:
+        raise ValueError("Unknown Control Plane audit event type.")
     resolved_correlation_id = correlation_id
     if resolved_correlation_id is None:
         resolved_correlation_id = get_request_context().correlation_id or ""
+    resolved_correlation_id = normalize_audit_correlation_id(resolved_correlation_id)
+    safe_metadata = _validate_audit_metadata(metadata)
     return ControlPlaneAuditEvent.objects.create(
         event_type=event_type,
         actor=actor,
         target=target,
         success=success,
         correlation_id=resolved_correlation_id[:128],
-        metadata=_validate_audit_metadata(metadata),
+        metadata=safe_metadata,
     )
