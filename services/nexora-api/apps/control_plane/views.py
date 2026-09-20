@@ -314,11 +314,14 @@ class ControlPlanePrincipalManagementView(View):
         if actor.role != ControlPlaneRole.OWNER:
             return JsonResponse({"detail": "Owner permission is required."}, status=403)
         principals = ControlPlanePrincipal.objects.select_related("user").filter(deleted_at__isnull=True).order_by("user__email")
-        return JsonResponse({"principals": [
-            {"user_id": str(p.user_id), "email": p.user.email, "role": p.role, "enabled": p.enabled,
-             "last_authenticated_at": p.last_authenticated_at.isoformat() if p.last_authenticated_at else None}
-            for p in principals
-        ]})
+        return JsonResponse({
+            "principals": [
+                {"user_id": str(p.user_id), "email": p.user.email, "role": p.role, "enabled": p.enabled,
+                 "last_authenticated_at": p.last_authenticated_at.isoformat() if p.last_authenticated_at else None}
+                for p in principals
+            ],
+            "roles": [{"value": value, "label": label} for value, label in ControlPlaneRole.choices],
+        })
 
     @method_decorator(csrf_protect)
     def post(self, request):
