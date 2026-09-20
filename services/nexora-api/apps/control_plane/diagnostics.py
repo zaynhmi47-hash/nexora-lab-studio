@@ -105,18 +105,27 @@ def firebase_configuration_diagnostic(*, checked_at: str | None = None) -> dict[
 
 
 def api_route_counts(routes: list[dict[str, object]]) -> dict[str, object]:
-    prefix_counts = Counter(
-        str(route["route"]).split("/")[3] if len(str(route["route"]).split("/")) > 3 else "root"
-        for route in routes
-        if str(route["route"]).startswith("/api/")
-    )
+    """Group API routes by their first domain segment after /api/v1/."""
+    prefix_counts = Counter()
+    for route in routes:
+        value = str(route["route"])
+        if not value.startswith("/api/"):
+            continue
+        parts = [part for part in value.split("/") if part]
+        group = (
+            parts[2]
+            if len(parts) > 2 and parts[1].startswith("v")
+            else parts[1] if len(parts) > 1 else "root"
+        )
+        prefix_counts[group] += 1
     return {
         "route_count": len(routes),
         "api_route_count": sum(prefix_counts.values()),
-        "api_groups": [{"name": name, "routes": count} for name, count in sorted(prefix_counts.items())],
+        "api_groups": [
+            {"name": name, "routes": count}
+            for name, count in sorted(prefix_counts.items())
+        ],
     }
-
-
 def api_route_diagnostic(routes: list[dict[str, object]], *, checked_at: str | None = None) -> dict[str, object]:
     counts = api_route_counts(routes)
     return diagnostic_status(
