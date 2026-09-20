@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from time import monotonic
 
 from django.conf import settings
-from django.db import connection
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views import View
@@ -12,10 +10,10 @@ from django.views import View
 from infrastructure.firebase.health import check_firebase_configuration
 
 from .audit import ControlPlaneAuditEvent, ControlPlaneAuditEventType, record_control_plane_audit
+from .diagnostics import api_route_counts, database_status, diagnostic_status, route_inventory
 from .models import ControlPlaneBootstrapState, ControlPlanePermission, ControlPlanePrincipal, ControlPlaneRole
 from .registry import application_snapshot
 from .telemetry import clear_requests, recent_requests
-from .views import _route_inventory
 
 
 def _actor(request):
@@ -83,41 +81,67 @@ class ControlPlaneSecurityOverviewView(View):
 
 
 class ControlPlaneOperationsOverviewView(View):
-    """Read-only operational health plus explicitly safe DEBUG-only actions."""
+    """Read-only operational diagnostics plus explicitly safe DEBUG-only actions."""
 
     def get(self, request):
-        actor, error = _guard(request, ControlPlanePermission.SECURITY_READ)
+        actor, error = _guard(request, ControlPlanePermission.SERVICES_READ)
         if error:
             return error
 
-        started = monotonic()
-        db_ok = False
-        db_detail = ""
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT 1")
-                cursor.fetchone()
-            db_ok = True
-            db_detail = f"{(monotonic() - started) * 1000:.1f} ms"
-        except Exception as exc:
-            db_detail = exc.__class__.__name__
+        checked_at = timezone.now().isoformat()
+        routes = route_inventory()
+        healthy_db, db_detail = database_status()
 
-        routes = _route_inventory()
-        firebase = check_firebase_configuration()
+        try:
+            latency_ms = float(db_detail.removesuffix(" ms")) if healthy_db else None
+        except ValueError:
+            latency_ms = None
+
+        firebase_started = timezone.now()
+        firebase_configured = check_firebase_configuration()
+        firebase_latency_ms = (timezone.now() - firebase_started).total_seconds() * 1000
+
+        db_diagnostic = diagnostic_status(
+            ok=healthy_db,
+            checked_at=checked_at,
+            latency_ms=latency_ms,
+            details={"detail": db_detail},
+        )
+        firebase_diagnostic = diagnostic_status(
+            ok=firebase_configured,
+            checked_at=checked_at,
+            latency_ms=firebase_latency_ms,
+            details={"configured": firebase_configured},
+        )
+
+        api_counts = api_route_counts(routes)
+        api_diagnostic = diagnostic_status(
+            ok=bool(api_counts["route_count"]),
+            checked_at=checked_at,
+            latency_ms=0.0,
+            details=api_counts,
+        )
+
+        overall_status = (
+            "healthy"
+            if db_diagnostic["status"] == "healthy" and firebase_diagnostic["status"] == "healthy"
+            else "degraded"
+        )
+
         return JsonResponse({
             "operator": {"email": actor.user.email, "role": actor.role},
-            "database": {"ok": db_ok, "detail": db_detail},
-            "firebase": {"configured": firebase},
-            "api": {
-                "route_count": len(routes),
-                "api_route_count": sum(1 for route in routes if route["route"].startswith("/api/")),
+            "status": overall_status,
+            "checked_at": checked_at,
+            "diagnostics": {
+                "database": db_diagnostic,
+                "firebase": firebase_diagnostic,
+                "api": api_diagnostic,
             },
             "applications": application_snapshot(routes),
             "recent_requests": recent_requests(50),
             "actions": {
                 "clear_request_telemetry": actor.has_permission(ControlPlanePermission.OPERATIONS_MANAGE),
             },
-            "generated_at": timezone.now().isoformat(),
         })
 
 
