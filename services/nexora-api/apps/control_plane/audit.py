@@ -146,3 +146,23 @@ def record_control_plane_audit(
         correlation_id=resolved_correlation_id[:128],
         metadata=safe_metadata,
     )
+
+
+from datetime import timedelta
+from django.conf import settings
+
+
+def audit_retention_days() -> int:
+    value = int(getattr(settings, "CONTROL_PLANE_AUDIT_RETENTION_DAYS", 0))
+    if value < 0:
+        raise ValueError("CONTROL_PLANE_AUDIT_RETENTION_DAYS cannot be negative.")
+    return value
+
+
+def audit_retention_cutoff(*, now=None):
+    if now is None:
+        now = timezone.now()
+    days = audit_retention_days()
+    if days == 0:
+        return None
+    return now - timedelta(days=days)
