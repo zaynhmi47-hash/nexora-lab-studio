@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from django.db import models, transaction
+from django.db import models
 from django.utils import timezone
 import uuid
 
