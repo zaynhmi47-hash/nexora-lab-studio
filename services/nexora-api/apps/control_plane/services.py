@@ -53,7 +53,7 @@ def authenticate_control_plane_token(token: str) -> NexoraUser:
     try:
         principal = user.control_plane_principal
     except ControlPlanePrincipal.DoesNotExist:
-        if user.email.lower() not in _bootstrap_emails():
+        if (user.email or "").lower() not in _bootstrap_emails():
             raise ControlPlaneAccessDenied("This identity is not authorized for Control Center.")
         principal = ControlPlanePrincipal.objects.create(user=user)
 
