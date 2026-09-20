@@ -86,7 +86,7 @@ class ControlPlaneOperationsOverviewView(View):
     """Read-only operational health plus explicitly safe DEBUG-only actions."""
 
     def get(self, request):
-        actor, error = _guard(request, ControlPlanePermission.SERVICES_READ)
+        actor, error = _guard(request, ControlPlanePermission.SECURITY_READ)
         if error:
             return error
 
