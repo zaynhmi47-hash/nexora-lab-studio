@@ -106,11 +106,21 @@ async function loadOperations() {
     const r = await fetch("./operations/", {cache:"no-store"});
     if (!r.ok) return;
     const d = await r.json();
+    const diagnostics = d.diagnostics || {};
+    const diagnosticCard = (name, item) => {
+      const value = item || {};
+      const status = value.status || "unavailable";
+      const latency = value.latency_ms == null ? "—" : esc(value.latency_ms)+" ms";
+      return '<div class="service"><div class="row"><strong>'+esc(name)+'</strong><span class="status '+statusClass(status)+'">'+esc(status)+'</span></div>'+
+        '<div class="muted">latency: '+latency+' • checked: '+esc(value.checked_at || d.checked_at || "—")+'</div>'+
+        '<div style="margin-top:8px"><code>'+esc(JSON.stringify(value.details || {}))+'</code></div></div>';
+    };
     document.getElementById("operations").innerHTML =
-      '<div class="service"><div class="row"><strong>Database</strong><span class="status '+(d.database.ok ? "ok":"bad")+'">'+(d.database.ok ? "healthy":"degraded")+'</span></div><div class="muted">'+esc(d.database.detail)+'</div></div>'+
-      '<div class="service"><div class="row"><strong>Firebase</strong><span class="status '+(d.firebase.configured ? "ok":"warn")+'">'+(d.firebase.configured ? "configured":"not-configured")+'</span></div></div>'+
-      '<div class="service"><div class="row"><strong>API routes</strong><span class="status ok">'+d.api.api_route_count+'</span></div><div class="muted">'+d.api.route_count+' total routes</div></div>'+
-      '<div class="service"><div class="row"><strong>Telemetry</strong><span class="status ok">'+d.recent_requests.length+' buffered</span></div><div class="muted">bounded in-memory request telemetry</div></div>';
+      diagnosticCard("Database", diagnostics.database)+
+      diagnosticCard("Firebase", diagnostics.firebase)+
+      diagnosticCard("API", diagnostics.api)+
+      '<div class="service"><div class="row"><strong>Telemetry</strong><span class="status ok">'+d.recent_requests.length+' buffered</span></div><div class="muted">bounded in-memory request telemetry</div></div>'+
+      '<div class="service"><div class="row"><strong>Overall</strong><span class="status '+statusClass(d.status)+'">'+esc(d.status)+'</span></div><div class="muted">read-only diagnostics; safe DEBUG-only actions remain separately permissioned</div></div>';
     const button = document.getElementById("clearTelemetry");
     button.style.display = d.actions.clear_request_telemetry ? "inline-block" : "none";
     button.onclick = async () => {
