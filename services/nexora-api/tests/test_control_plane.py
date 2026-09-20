@@ -219,3 +219,73 @@ def test_telemetry_clear_with_csrf_is_allowed_for_owner(settings):
     )
     assert response.status_code == 200
     assert response.json()["detail"] == "Request telemetry cleared."
+
+
+
+@pytest.mark.django_db
+def test_operations_guard_returns_sanitized_500_on_security_state_failure(settings, monkeypatch):
+    settings.DEBUG = True
+    client = authenticated_control_center_client(settings)
+    from apps.control_plane import operations
+
+    def fail_actor(_request):
+        raise RuntimeError("database password=super-secret")
+
+    monkeypatch.setattr(operations, "_actor", fail_actor)
+    response = client.get("/ops/operations/")
+    assert response.status_code == 500
+    payload = response.json()
+    assert payload["detail"] == "Control Center security state could not be evaluated."
+    assert "super-secret" not in response.content.decode()
+    assert "RuntimeError" not in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_audit_endpoint_returns_sanitized_500_on_query_failure(settings, monkeypatch):
+    settings.DEBUG = True
+    client = authenticated_control_center_client(settings, role=ControlPlaneRole.OWNER)
+    from apps.control_plane import views
+
+    class BrokenManager:
+        def select_related(self, *args, **kwargs):
+            raise RuntimeError("secret database credentials")
+
+    monkeypatch.setattr(views.ControlPlaneAuditEvent, "objects", BrokenManager())
+    response = client.get("/ops/audit/")
+    assert response.status_code == 500
+    payload = response.json()
+    assert payload["detail"] == "Control Center request could not be completed."
+    assert "credentials" not in response.content.decode()
+    assert "RuntimeError" not in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_principal_endpoint_returns_sanitized_500_on_inventory_failure(settings, monkeypatch):
+    settings.DEBUG = True
+    client = authenticated_control_center_client(settings, role=ControlPlaneRole.OWNER)
+    from apps.control_plane import views
+
+    class BrokenManager:
+        def select_related(self, *args, **kwargs):
+            raise RuntimeError("secret token material")
+
+    monkeypatch.setattr(views.ControlPlanePrincipal, "objects", BrokenManager())
+    response = client.get("/ops/principals/")
+    assert response.status_code == 500
+    payload = response.json()
+    assert payload["detail"] == "Control Center request could not be completed."
+    assert "token material" not in response.content.decode()
+    assert "RuntimeError" not in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_principal_management_errors_keep_expected_client_contract(settings, monkeypatch):
+    settings.DEBUG = True
+    client = authenticated_control_center_client(settings, role=ControlPlaneRole.OWNER)
+    response = client.post(
+        "/ops/principals/",
+        data='{"user_id":"missing","role":"not-a-role","enabled":true}',
+        content_type="application/json",
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid Control Center role."
