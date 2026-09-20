@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
                     ("BOOTSTRAP_REJECTED", "Bootstrap rejected"),
                 ], db_index=True, max_length=64)),
                 ("success", models.BooleanField(default=True)),
-                ("occurred_at", models.DateTimeField(auto_now_add=False, db_index=True)),
+                ("occurred_at", models.DateTimeField(db_index=True, default=__import__("django.utils.timezone", fromlist=["timezone"]).timezone.now)),
                 ("correlation_id", models.CharField(blank=True, db_index=True, default="", max_length=128)),
                 ("metadata", models.JSONField(default=dict)),
                 ("actor", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="control_plane_audit_events", to="identity.nexorauser")),
