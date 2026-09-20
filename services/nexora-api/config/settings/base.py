@@ -39,7 +39,7 @@ CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_AUTHENTICATION_CLASSES": ["apps.identity.authentication.FirebaseIdentityAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["apps.core.permissions.AuthenticatedNexoraUserPermission"],
 }
 
