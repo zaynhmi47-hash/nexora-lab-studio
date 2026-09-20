@@ -43,7 +43,14 @@ class ControlPlaneDiagnosticsContractTests(SimpleTestCase):
         result = api_route_counts(routes)
         self.assertEqual(result["route_count"], 4)
         self.assertEqual(result["api_route_count"], 3)
-        self.assertEqual(result["api_groups"], [{"name": "v1", "routes": 3}])
+        self.assertEqual(
+            result["api_groups"],
+            [
+                {"name": "finance", "routes": 1},
+                {"name": "quran", "routes": 1},
+                {"name": "users", "routes": 1},
+            ],
+        )
 
     def test_api_diagnostic_uses_stable_contract(self):
         result = api_route_diagnostic([{"route": "/api/v1/users/"}], checked_at="2026-09-20T00:00:00+00:00")
