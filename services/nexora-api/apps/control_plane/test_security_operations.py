@@ -33,3 +33,22 @@ class ControlPlaneSecurityOperationsBoundaryTests(SimpleTestCase):
                     ControlPlanePermission.CONFIGURATION_MANAGE,
                     ROLE_PERMISSIONS[role],
                 )
+
+
+    def test_operations_overview_requires_services_read_boundary(self):
+        for role in (
+            ControlPlaneRole.OWNER,
+            ControlPlaneRole.PLATFORM_ADMIN,
+            ControlPlaneRole.AUDITOR,
+        ):
+            self.assertIn(ControlPlanePermission.SERVICES_READ, ROLE_PERMISSIONS[role])
+
+    def test_security_admin_can_read_security_but_not_operations_management(self):
+        self.assertIn(
+            ControlPlanePermission.SECURITY_READ,
+            ROLE_PERMISSIONS[ControlPlaneRole.SECURITY_ADMIN],
+        )
+        self.assertNotIn(
+            ControlPlanePermission.OPERATIONS_MANAGE,
+            ROLE_PERMISSIONS[ControlPlaneRole.SECURITY_ADMIN],
+        )
