@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    ControlPlaneAuditLogView,
     ControlPlaneDashboardView,
     ControlPlaneLoginView,
     ControlPlanePrincipalManagementView,
@@ -16,4 +17,5 @@ urlpatterns = [
     path("logout/", ControlPlaneLogoutView.as_view(), name="logout"),
     path("snapshot/", ControlPlaneSnapshotView.as_view(), name="snapshot"),
     path("principals/", ControlPlanePrincipalManagementView.as_view(), name="principals"),
+    path("audit/", ControlPlaneAuditLogView.as_view(), name="audit"),
 ]
