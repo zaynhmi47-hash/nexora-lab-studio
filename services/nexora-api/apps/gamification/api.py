@@ -1,3 +1,5 @@
+from django.utils import timezone
+
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -5,7 +7,6 @@ from rest_framework.views import APIView
 from apps.identity.authentication import FirebaseIdentityAuthentication
 
 from .services import GamificationService
-
 
 
 class GamificationActivityView(APIView):
@@ -47,19 +48,12 @@ class GamificationDailyRewardView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        activity, claimed = GamificationService.claim_daily_reward(request.user)
+        activity = GamificationService.claim_daily_reward(request.user)
         return Response({
             "id": str(activity.id),
-            "claimed": claimed,
-            "xpEarned": activity.xp_earned if claimed else 0,
-            "awardedXp": activity.xp_earned,
+            "claimed": activity.occurred_at.date() == timezone.localdate(),
+            "xpEarned": activity.xp_earned,
             "occurredAt": activity.occurred_at.isoformat(),
         })
 
-class GamificationSummaryView(APIView):
-    authentication_classes = [FirebaseIdentityAuthentication]
-    permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        from apps.learning.services import UnifiedLearningEngine
-        return Response(UnifiedLearningEngine.snapshot(request.user))

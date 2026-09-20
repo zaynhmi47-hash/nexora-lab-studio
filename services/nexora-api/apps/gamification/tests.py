@@ -76,3 +76,41 @@ class GamificationServiceTests(TestCase):
         self.assertEqual(snapshot["domains"]["gamification"], 10)
         self.assertEqual(snapshot["totalXp"], 10)
         self.assertEqual(snapshot["level"], 1)
+
+
+    def test_current_streak_ignores_deleted_completions_and_requires_contiguous_days(self):
+        from datetime import timedelta
+        from apps.learning.services import UnifiedLearningEngine
+
+        course = LearningCourse.objects.create(key="streak-course", title="Streak Course")
+        lessons = [
+            LearningLesson.objects.create(
+                key=f"streak-lesson-{index}",
+                course=course,
+                title=f"Lesson {index}",
+            )
+            for index in range(3)
+        ]
+        for lesson, offset in zip(lessons, (2, 1, 0)):
+            LearningLessonCompletion.objects.create(
+                user=self.user,
+                lesson=lesson,
+                completed_at=timezone.now() - timedelta(days=offset),
+            )
+
+        self.assertEqual(UnifiedLearningEngine.current_streak(self.user), 3)
+
+        gap_lesson = LearningLesson.objects.create(
+            key="streak-gap",
+            course=course,
+            title="Gap",
+        )
+        LearningLessonCompletion.objects.create(
+            user=self.user,
+            lesson=gap_lesson,
+            completed_at=timezone.now() - timedelta(days=5),
+        )
+        self.assertEqual(UnifiedLearningEngine.current_streak(self.user), 3)
+
+        lessons[1].completions.filter(user=self.user).update(deleted_at=timezone.now())
+        self.assertEqual(UnifiedLearningEngine.current_streak(self.user), 1)
