@@ -97,26 +97,24 @@ class ControlPlaneOperationsOverviewView(View):
         except ValueError:
             latency_ms = None
 
-        firebase_started = timezone.now()
         firebase_configured = check_firebase_configuration()
-        firebase_latency_ms = (timezone.now() - firebase_started).total_seconds() * 1000
 
         db_diagnostic = diagnostic_status(
-            ok=healthy_db,
+            status="healthy" if healthy_db else "unavailable",
             checked_at=checked_at,
             latency_ms=latency_ms,
             details={"detail": db_detail},
         )
         firebase_diagnostic = diagnostic_status(
-            ok=firebase_configured,
+            status="healthy" if firebase_configured else "unavailable",
             checked_at=checked_at,
-            latency_ms=firebase_latency_ms,
-            details={"configured": firebase_configured},
+            latency_ms=None,
+            details={"configured": firebase_configured, "check": "configuration-only"},
         )
 
         api_counts = api_route_counts(routes)
         api_diagnostic = diagnostic_status(
-            ok=bool(api_counts["route_count"]),
+            status="healthy" if api_counts["route_count"] else "unavailable",
             checked_at=checked_at,
             latency_ms=0.0,
             details=api_counts,
