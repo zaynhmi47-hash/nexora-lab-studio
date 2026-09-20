@@ -334,15 +334,26 @@ class ControlPlanePrincipalManagementView(View):
             payload = json.loads(request.body or "{}")
         except json.JSONDecodeError:
             return JsonResponse({"detail": "Request body must be valid JSON."}, status=400)
+        if not isinstance(payload, dict):
+            return JsonResponse({"detail": "Request body must be a JSON object."}, status=400)
+
+        target_user_id = payload.get("user_id")
+        role = payload.get("role")
+        enabled = payload.get("enabled")
+        if not isinstance(target_user_id, str) or not target_user_id.strip():
+            return JsonResponse({"detail": "user_id is required."}, status=400)
+        if role is not None and (not isinstance(role, str) or role not in ControlPlaneRole.values):
+            return JsonResponse({"detail": "Invalid Control Center role."}, status=400)
+        if enabled is not None and not isinstance(enabled, bool):
+            return JsonResponse({"detail": "enabled must be a boolean."}, status=400)
+
         try:
             target = manage_control_plane_principal(
                 actor=actor,
-                target_user_id=str(payload["user_id"]),
-                role=payload.get("role"),
-                enabled=payload.get("enabled"),
+                target_user_id=target_user_id.strip(),
+                role=role,
+                enabled=enabled,
             )
-        except (KeyError, TypeError, ValueError):
-            return JsonResponse({"detail": "user_id is required."}, status=400)
         except ControlPlaneRoleManagementError as exc:
             return JsonResponse({"detail": str(exc)}, status=400)
         return JsonResponse({"user_id": str(target.user_id), "email": target.user.email, "role": target.role, "enabled": target.enabled})
