@@ -1,18 +1,18 @@
 import pytest
 from django.test import Client
 
-from apps.control_plane.models import ControlPlanePrincipal
+from apps.control_plane.models import ControlPlanePrincipal, ControlPlaneRole
 from apps.identity.models import NexoraUser
 
 
-def authenticated_control_center_client(settings):
+def authenticated_control_center_client(settings, *, role="owner", email="owner@example.com"):
     settings.DEBUG = True
     user = NexoraUser.objects.create(
-        email="owner@example.com",
-        display_name="Owner",
+        email=email,
+        display_name="Control Center User",
         status=NexoraUser.Status.ACTIVE,
     )
-    ControlPlanePrincipal.objects.create(user=user, enabled=True)
+    ControlPlanePrincipal.objects.create(user=user, enabled=True, role=role)
     client = Client()
     session = client.session
     session["control_plane_user_id"] = str(user.id)
@@ -101,3 +101,112 @@ def test_disabled_control_plane_principal_cannot_access(settings):
     session.save()
     assert client.get("/ops/").status_code == 302
     assert client.get("/ops/snapshot/").status_code == 401
+
+
+@pytest.mark.django_db
+def test_control_plane_endpoint_security_requires_authentication(settings):
+    settings.DEBUG = True
+    client = Client()
+    for method, path in (
+        ("get", "/ops/security/"),
+        ("get", "/ops/operations/"),
+        ("post", "/ops/operations/telemetry/clear/"),
+        ("get", "/ops/audit/"),
+        ("get", "/ops/principals/"),
+    ):
+        response = getattr(client, method)(path)
+        assert response.status_code == 401, (method, path, response.status_code)
+
+
+@pytest.mark.django_db
+def test_control_plane_endpoint_security_enforces_role_boundaries(settings):
+    cases = (
+        (ControlPlaneRole.OWNER, {
+            "/ops/security/": 200,
+            "/ops/operations/": 200,
+            "/ops/operations/telemetry/clear/": 200,
+            "/ops/audit/": 200,
+            "/ops/principals/": 200,
+        }),
+        (ControlPlaneRole.PLATFORM_ADMIN, {
+            "/ops/security/": 403,
+            "/ops/operations/": 200,
+            "/ops/operations/telemetry/clear/": 200,
+            "/ops/audit/": 403,
+            "/ops/principals/": 403,
+        }),
+        (ControlPlaneRole.SECURITY_ADMIN, {
+            "/ops/security/": 200,
+            "/ops/operations/": 403,
+            "/ops/operations/telemetry/clear/": 403,
+            "/ops/audit/": 200,
+            "/ops/principals/": 403,
+        }),
+        (ControlPlaneRole.AUDITOR, {
+            "/ops/security/": 200,
+            "/ops/operations/": 200,
+            "/ops/operations/telemetry/clear/": 403,
+            "/ops/audit/": 200,
+            "/ops/principals/": 403,
+        }),
+    )
+    for index, (role, expected) in enumerate(cases):
+        client = authenticated_control_center_client(
+            settings,
+            role=role,
+            email=f"{role}-{index}@example.com",
+        )
+        for path, status in expected.items():
+            method = client.post if path.endswith("/clear/") else client.get
+            response = method(path)
+            assert response.status_code == status, (role, path, response.status_code)
+
+
+@pytest.mark.django_db
+def test_control_plane_endpoints_are_disabled_outside_debug(settings):
+    settings.DEBUG = False
+    client = Client()
+    for method, path in (
+        ("get", "/ops/security/"),
+        ("get", "/ops/operations/"),
+        ("post", "/ops/operations/telemetry/clear/"),
+        ("get", "/ops/audit/"),
+        ("get", "/ops/principals/"),
+    ):
+        response = getattr(client, method)(path)
+        assert response.status_code == 404, (method, path, response.status_code)
+
+
+@pytest.mark.django_db
+def test_telemetry_clear_requires_csrf(settings):
+    client = authenticated_control_center_client(settings)
+    csrf_client = Client(enforce_csrf_checks=True)
+    csrf_client.cookies = client.cookies
+    csrf_client.session = client.session
+    response = csrf_client.post("/ops/operations/telemetry/clear/")
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_telemetry_clear_with_csrf_is_allowed_for_owner(settings):
+    client = Client(enforce_csrf_checks=True)
+    settings.DEBUG = True
+    user = NexoraUser.objects.create(
+        email="csrf-owner@example.com",
+        display_name="CSRF Owner",
+        status=NexoraUser.Status.ACTIVE,
+    )
+    ControlPlanePrincipal.objects.create(user=user, enabled=True, role=ControlPlaneRole.OWNER)
+    session = client.session
+    session["control_plane_user_id"] = str(user.id)
+    session.save()
+
+    page = client.get("/ops/")
+    assert page.status_code == 200
+    token = client.cookies["csrftoken"].value
+    response = client.post(
+        "/ops/operations/telemetry/clear/",
+        HTTP_X_CSRFTOKEN=token,
+    )
+    assert response.status_code == 200
+    assert response.json()["detail"] == "Request telemetry cleared."
