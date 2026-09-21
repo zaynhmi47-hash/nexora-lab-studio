@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "scheme": "nexoramuslim",
     "userInterfaceStyle": "automatic",
-    "plugins": ["expo-router"],
+    "plugins": ["expo-router", "expo-notifications"],
     "experiments": { "typedRoutes": true },
     "android": { "package": "com.nexora.muslim" },
     "ios": { "bundleIdentifier": "com.nexora.muslim" },
