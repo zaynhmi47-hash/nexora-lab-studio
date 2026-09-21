@@ -7,9 +7,9 @@ export type KnowledgeTopic = { id: string; title: string; description: string; s
 export type IslamicKnowledgeSnapshot = { topics: KnowledgeTopic[]; hadith: HadithItem[]; };
 export type IslamicKnowledgeProvider = {
   getSnapshot(): Promise<IslamicKnowledgeSnapshot>;
-  getTopic?(topicId: string): Promise<KnowledgeTopic | null>;
-  getHadith?(hadithId: string): Promise<HadithItem | null>;
-  listSources?(topicId?: string): Promise<SourceReference[]>;
-  listHadithFavorites?(): Promise<HadithFavorite[]>;
-  toggleHadithFavorite?(hadithId: string): Promise<boolean>;
+  getTopic(topicId: string): Promise<KnowledgeTopic | null>;
+  getHadith(hadithId: string): Promise<HadithItem | null>;
+  listSources(topicId?: string): Promise<SourceReference[]>;
+  listHadithFavorites(): Promise<HadithFavorite[]>;
+  toggleHadithFavorite(hadithId: string): Promise<boolean>;
 };
