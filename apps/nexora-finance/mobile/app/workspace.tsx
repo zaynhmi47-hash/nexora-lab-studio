@@ -67,6 +67,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '800' },
   subtitle: { fontSize: 14 },
   content: { gap: 12 },
+  list: { gap: 10, paddingVertical: 4 },
   center: { alignItems: 'center', gap: 10, paddingVertical: 16 },
   helper: { fontSize: 14, textAlign: 'center' },
   error: { fontSize: 14 },

@@ -49,7 +49,7 @@ function recalculate(journey: UmrahJourney): UmrahJourney {
   const currentIndex = stages.findIndex((stage) => stage.id === journey.currentStageId);
   const nextCurrent = stages.find((stage, index) => index > currentIndex && stage.progress < 1);
   const currentStage = stages.find((stage) => stage.id === journey.currentStageId);
-  const resolvedCurrentId = currentStage?.progress >= 1 && nextCurrent ? nextCurrent.id : journey.currentStageId;
+  const resolvedCurrentId = (currentStage?.progress ?? 0) >= 1 && nextCurrent ? nextCurrent.id : journey.currentStageId;
 
   return {
     ...journey,

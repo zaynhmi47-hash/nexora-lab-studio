@@ -2,11 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { colors } from '@/constants/theme';
 import { AuthProvider } from '@/lib/auth/AuthProvider';
+import { AppStateProvider } from '@/lib/app-state/AppStateProvider';
 
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <Tabs
+      <AppStateProvider>
+        <Tabs
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: colors.primary,
@@ -21,7 +23,8 @@ export default function RootLayout() {
         <Tabs.Screen name="prayer" options={{ title: 'Prayer', tabBarIcon: ({ color, size }) => <Ionicons name="moon-outline" color={color} size={size} /> }} />
         <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" color={color} size={size} /> }} />
         <Tabs.Screen name="travel" options={{ href: null }} />
-      </Tabs>
+        </Tabs>
+      </AppStateProvider>
     </AuthProvider>
   );
 }

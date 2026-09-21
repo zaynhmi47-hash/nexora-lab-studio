@@ -27,7 +27,7 @@ export function createNexoraApiClient(baseUrl: string, options: NexoraApiClientO
   const normalizedBaseUrl = baseUrl.replace(/\/$/, '');
 
   return {
-    async request<T>(path, init) {
+    async request<T>(path: string, init?: RequestInit) {
       const token = await options.tokenPort?.getIdToken();
       const headers = new Headers(init?.headers);
       if (token && !headers.has('Authorization')) {

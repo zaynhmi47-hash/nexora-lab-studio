@@ -36,7 +36,13 @@ export default function QuranGoalsScreen() {
   async function logToday() {
     if (!stats) return;
     await repository.logReading({
-      date: stats.today.date,
+      date: (() => {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      })(),
       pages: Math.max(0, Number(stats.today.pages)),
       minutes: Math.max(0, Number(stats.today.minutes)),
     });

@@ -18,3 +18,5 @@ export async function signInWithGoogle() {
   return signInWithPopup(getFirebaseAuth(), new GoogleAuthProvider());
 }
 export async function firebaseSignOut() { return signOut(getFirebaseAuth()); }
+
+export { isFirebaseConfigured } from './firebase';

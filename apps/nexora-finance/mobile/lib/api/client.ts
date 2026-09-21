@@ -7,5 +7,5 @@ async function readErrorMessage(response: Response): Promise<string> { try { con
 async function readPayload<T>(response: Response): Promise<ApiEnvelope<T>> { const body = await response.json() as unknown; if (body && typeof body === 'object' && 'data' in body) return body as ApiEnvelope<T>; return { data: body as T }; }
 export function createNexoraApiClient(baseUrl: string): NexoraApiClient {
   let accessToken: string | null = null;
-  return { setAccessToken(token) { accessToken = token; }, async request<T>(path, init) { const headers = new Headers(init?.headers); headers.set('Accept', 'application/json'); if (accessToken) headers.set('Authorization', 'Bearer ' + accessToken); const response = await fetch(joinUrl(baseUrl, path), { ...init, headers }); if (!response.ok) throw new NexoraApiError(await readErrorMessage(response), response.status); return readPayload<T>(response); } };
+  return { setAccessToken(token) { accessToken = token; }, async request<T>(path: string, init?: RequestInit) { const headers = new Headers(init?.headers); headers.set('Accept', 'application/json'); if (accessToken) headers.set('Authorization', 'Bearer ' + accessToken); const response = await fetch(joinUrl(baseUrl, path), { ...init, headers }); if (!response.ok) throw new NexoraApiError(await readErrorMessage(response), response.status); return readPayload<T>(response); } };
 }

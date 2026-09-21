@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { useAuth } from '@/providers/AuthProvider';
+import { useAuth } from '@/lib/auth';
 import { useTenantApi } from '@/lib/api/tenant';
 import type { FinanceComparison } from './types';
 
@@ -47,14 +47,14 @@ function mapComparison(item: ApiComparison): FinanceComparison {
 }
 
 export function useFinanceComparison(period?: { startDate?: string; endDate?: string }) {
-  const { user, initializing } = useAuth();
+  const { user, status } = useAuth();
   const tenantApi = useTenantApi();
   const [comparison, setComparison] = useState<FinanceComparison | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   const load = useCallback(async () => {
-    if (initializing || !user || !tenantApi.ready) {
+    if (status !== 'authenticated' || !user || !tenantApi.ready) {
       setComparison(null);
       return;
     }
@@ -76,7 +76,7 @@ export function useFinanceComparison(period?: { startDate?: string; endDate?: st
     } finally {
       setLoading(false);
     }
-  }, [initializing, period?.startDate, period?.endDate, tenantApi, user]);
+  }, [period?.startDate, period?.endDate, status, tenantApi, user]);
 
   useEffect(() => {
     void load();

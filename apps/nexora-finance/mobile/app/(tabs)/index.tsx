@@ -1,3 +1,5 @@
+import type { DimensionValue } from 'react-native';
+
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -112,7 +114,7 @@ export default function HomeScreen() {
                  <Text style={styles.breakdownCategory} numberOfLines={1}>{item.category}</Text>
                  <Text style={styles.breakdownPercentage}>{percentage.toFixed(0)}%</Text>
                </View>
-               <View style={styles.progressTrack}><View style={[styles.progressFill, { width: percentage + '%' }]} /></View>
+               <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${percentage}%` as DimensionValue }]} /></View>
                <Text style={styles.hint}>{item.transactionCount} transaction{item.transactionCount === 1 ? '' : 's'}</Text>
              </View>
              <Text style={styles.breakdownAmount}>{formatIdr(item.amountMinor)}</Text>
@@ -254,7 +256,7 @@ export default function HomeScreen() {
                         <View style={styles.planningRowMain}>
                           <Text style={styles.profitLossCategory} numberOfLines={1}>{budget.name}</Text>
                           <Text style={styles.hint}>{budget.category} · {budget.transactionCount} transaction{budget.transactionCount === 1 ? '' : 's'}</Text>
-                          <View style={styles.progressTrack}><View style={[styles.progressFill, { width: Math.min(100, budget.utilizationPercentage ?? 0) + '%' }]} /></View>
+                          <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${Math.min(100, budget.utilizationPercentage ?? 0)}%` as DimensionValue }]} /></View>
                         </View>
                         <View style={styles.planningRowAmount}>
                           <Text style={styles.breakdownAmount}>{formatIdr(budget.actualMinor)}</Text>
@@ -272,7 +274,7 @@ export default function HomeScreen() {
                         <View style={styles.planningRowMain}>
                           <Text style={styles.profitLossCategory} numberOfLines={1}>{goal.name}</Text>
                           <Text style={styles.hint}>{goal.daysRemaining} day{goal.daysRemaining === 1 ? '' : 's'} remaining · {goal.progressPercentage === null ? '—' : goal.progressPercentage.toFixed(0) + '%'} complete</Text>
-                          <View style={styles.progressTrack}><View style={[styles.progressFill, { width: Math.min(100, goal.progressPercentage ?? 0) + '%' }]} /></View>
+                          <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${Math.min(100, goal.progressPercentage ?? 0)}%` as DimensionValue }]} /></View>
                         </View>
                         <View style={styles.planningRowAmount}>
                           <Text style={styles.breakdownAmount}>{formatIdr(goal.plannedSavingMinor)}</Text>
@@ -452,7 +454,7 @@ export default function HomeScreen() {
                               <Text style={styles.budgetBadgeText}>{budget.status === 'over_budget' ? 'Over budget' : budget.status === 'near_limit' ? 'Near limit' : 'On track'}</Text>
                             </View>
                           </View>
-                          <View style={styles.progressTrack}><View style={[styles.progressFill, { width: Math.min(100, budget.utilizationPercentage ?? 0) + '%' }]} /></View>
+                          <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${Math.min(100, budget.utilizationPercentage ?? 0)}%` as DimensionValue }]} /></View>
                         </View>
                         <View style={styles.budgetAmountBlock}>
                           <Text style={styles.breakdownAmount}>{formatIdr(budget.actualMinor)}</Text>

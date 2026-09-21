@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { useAuth } from '@/providers/AuthProvider';
+import { useAuth } from '@/lib/auth';
 import { useTenantApi } from '@/lib/api/tenant';
 import type { FinanceProfitLoss } from './types';
 
@@ -39,14 +39,14 @@ const mapReport = (item: ApiProfitLoss): FinanceProfitLoss => ({
 });
 
 export function useFinanceProfitLoss(period?: { startDate?: string; endDate?: string }) {
-  const { user, initializing } = useAuth();
+  const { user, status } = useAuth();
   const tenantApi = useTenantApi();
   const [report, setReport] = useState<FinanceProfitLoss | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   const load = useCallback(async () => {
-    if (initializing || !user || !tenantApi.ready) {
+    if (status !== 'authenticated' || !user || !tenantApi.ready) {
       setReport(null);
       return;
     }
@@ -67,7 +67,7 @@ export function useFinanceProfitLoss(period?: { startDate?: string; endDate?: st
     } finally {
       setLoading(false);
     }
-  }, [initializing, period?.startDate, period?.endDate, tenantApi, user]);
+  }, [period?.startDate, period?.endDate, status, tenantApi, user]);
 
   useEffect(() => {
     void load();

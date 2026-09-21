@@ -1,2 +1,3 @@
 export * from './types';
-export { mockZakat, nexoraCoreZakatRepository } from './repository';
+export { mockZakat } from './mockZakat';
+export { nexoraCoreZakatRepository } from './repository';

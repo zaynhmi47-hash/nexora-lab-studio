@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { useAuth } from '@/providers/AuthProvider';
+import { useAuth } from '@/lib/auth';
 import { useTenantApi } from '@/lib/api/tenant';
 import type { FinancePlanningSummary } from './types';
 
@@ -97,7 +97,7 @@ const mapSummary = (item: ApiPlanningSummary): FinancePlanningSummary => ({
 });
 
 export function useFinancePlanning(period?: { startDate?: string; endDate?: string }) {
-  const { user, initializing } = useAuth();
+  const { user, status } = useAuth();
   const tenantApi = useTenantApi();
   const [summary, setSummary] = useState<FinancePlanningSummary | null>(null);
   const [loading, setLoading] = useState(false);
@@ -107,7 +107,7 @@ export function useFinancePlanning(period?: { startDate?: string; endDate?: stri
   const endDate = period?.endDate;
 
   const refresh = useCallback(async () => {
-    if (initializing || !user || !tenantApi.ready) {
+    if (status !== 'authenticated' || !user || !tenantApi.ready) {
       setSummary(null);
       return;
     }
@@ -129,7 +129,7 @@ export function useFinancePlanning(period?: { startDate?: string; endDate?: stri
     } finally {
       setLoading(false);
     }
-  }, [endDate, initializing, startDate, tenantApi, user]);
+  }, [endDate, startDate, status, tenantApi, user]);
 
   useEffect(() => {
     void refresh();

@@ -42,6 +42,7 @@ export async function schedulePrayerReminders(
         sound: "default",
       },
       trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
         hour: Math.floor(normalized / 60),
         minute: normalized % 60,
         repeats: true,

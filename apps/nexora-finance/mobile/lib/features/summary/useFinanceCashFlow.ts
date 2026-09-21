@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { useAuth } from '@/providers/AuthProvider';
+import { useAuth } from '@/lib/auth';
 import { useTenantApi } from '@/lib/api/tenant';
 import type { FinanceCashFlow, FinanceCashFlowLine } from './types';
 
@@ -41,14 +41,14 @@ const mapReport = (item: ApiCashFlow): FinanceCashFlow => ({
 });
 
 export function useFinanceCashFlow(period?: { startDate?: string; endDate?: string }) {
-  const { user, initializing } = useAuth();
+  const { user, status } = useAuth();
   const tenantApi = useTenantApi();
   const [cashFlow, setCashFlow] = useState<FinanceCashFlow | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   const load = useCallback(async () => {
-    if (initializing || !user || !tenantApi.ready) {
+    if (status !== 'authenticated' || !user || !tenantApi.ready) {
       setCashFlow(null);
       return;
     }
@@ -70,7 +70,7 @@ export function useFinanceCashFlow(period?: { startDate?: string; endDate?: stri
     } finally {
       setLoading(false);
     }
-  }, [initializing, period?.startDate, period?.endDate, tenantApi, user]);
+  }, [period?.startDate, period?.endDate, status, tenantApi, user]);
 
   useEffect(() => {
     void load();
