@@ -119,3 +119,64 @@ Do not silently expand a task into unrelated product work. If a requested change
 ## Completion criteria
 
 A task is not complete merely because code was written. It is complete when the implementation is coherent with the architecture, relevant tests/checks pass, security implications were considered, and durable documentation is updated when necessary.
+
+
+## Agent hierarchy and ownership
+
+This repository uses a layered agent contract. The layers are complementary, not competing:
+
+1. **Root `AGENTS.md` — ecosystem supervisor**
+   - Owns global architecture, cross-application boundaries, repository-wide quality, and conflict resolution.
+   - It does not implement application-specific UI or domain behavior merely because a product requests it.
+2. **Application `apps/<product>/AGENT.md` — product owner**
+   - Owns that product's product concept, UX, feature scope, domain boundaries, and product-specific implementation rules.
+3. **Backend `services/nexora-api/AGENT.md` — backend execution owner**
+   - Owns Django/DRF backend implementation boundaries, API contracts, domain services, repositories, migrations, provider adapters, workers, security, and backend tests.
+4. **Nested `AGENT.md` files, when introduced later — local implementation owner**
+   - May narrow instructions for a specific package/module, but may not contradict higher-level architecture or ownership.
+
+### Work ownership rule
+
+Before editing any file, an AI agent must determine which layer owns the work.
+
+- UI screens, navigation, components, client state, accessibility, mobile/web presentation → application/frontend scope.
+- HTTP endpoints, serializers, permissions, domain services, repositories, models, migrations, background jobs, provider adapters → backend scope.
+- Shared cross-product capability or canonical identity/security/integration primitive → Core scope.
+- CI, monorepo tooling, global conventions, architecture documentation → repository scope.
+- If a task crosses two scopes, coordinate the boundary rather than allowing one agent to silently absorb the other agent's responsibility.
+
+### No scope stealing
+
+A frontend agent must not implement backend business logic merely because an endpoint is missing.
+
+A backend agent must not redesign product UI merely because an API consumer needs a different presentation.
+
+A product agent must not create a second shared capability when Core already owns it.
+
+If an API contract must change to support a UI feature, the frontend agent documents the required contract and the backend agent owns the backend implementation. If both changes are required, they remain separately attributable and testable.
+
+### Ownership decision tree
+
+Before creating a new module, service, model, API, package, or UI abstraction:
+
+1. Is the capability already implemented?
+2. If yes, reuse it.
+3. If no, is it shared by multiple products?
+4. If yes, evaluate Nexora Core ownership.
+5. If product-specific, keep it inside the product boundary.
+6. If it is infrastructure/provider-specific, keep it behind the backend infrastructure/adapter boundary.
+7. If ownership is ambiguous, stop and resolve the boundary before coding.
+
+### Cross-agent contract
+
+Agents must communicate through durable repository artifacts rather than assumptions in chat:
+
+- API contracts;
+- types/schemas;
+- ADRs;
+- product AGENT.md;
+- backend AGENT.md;
+- tests;
+- current-state documentation.
+
+Do not duplicate implementation to work around an unclear contract.
