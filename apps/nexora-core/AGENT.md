@@ -734,3 +734,83 @@ Course Enrollment Payment
 ```
 
 Core provides the platform capability; products own their business meaning.
+
+# 20. Detailed product concept
+
+Nexora Core is the NEXORA UNIVERSAL PLATFORM CORE: the trusted foundation that lets many Nexora products share identity, security, organization, storage, notifications, payments, workflows, events and AI infrastructure without duplicating those capabilities.
+
+Core is a platform control plane, not a consumer application. Its priorities are correctness, security, traceability, stable contracts, composability and operational clarity.
+
+The roadmap principle is Modular Monolith → Service-Ready. Strong module boundaries must exist before any future service extraction. Do not introduce microservices merely because the ecosystem has many applications.
+
+# 21. Detailed capability map
+
+## Identity
+Core provides the canonical Nexora UUID identity and external-provider linkage. Required behavior includes idempotent identity creation, provider linking, account state, claims mapping, conflict detection, concurrent first-login safety and audited identity changes. Firebase UID is provider metadata, never the canonical Nexora identity.
+
+## Organizations and membership
+Core provides organizations, membership lifecycle, invitations, teams, organization settings and reusable organization context. Products may add product-specific roles and policies without creating another identity or membership foundation.
+
+## Authorization
+Core provides reusable RBAC and authorization primitives. A server-side decision should conceptually evaluate actor, organization, resource, action and policy. UI visibility is never authorization.
+
+## Audit
+Audit is a first-class capability for security and important administrative changes. Events should capture actor, action, resource, organization, timestamp, correlation/request context and outcome while excluding secrets.
+
+## Files and storage
+Core exposes logical file metadata, ownership, organization scope, versions, access policy, lifecycle and temporary/signed access. Storage providers remain replaceable adapters. Products such as Office, Cloud, Studio and Dignity consume the abstraction.
+
+## Notifications
+Core provides notification intent, delivery state, channels, templates/preferences where shared, retries and provider references. Products own the reason for a notification.
+
+## Payments
+Core owns generic payment intent, provider reference, webhook, refund and idempotency primitives. Finance owns accounting meaning; Nexverse owns chapter entitlement; Dignity owns enrollment meaning.
+
+## Workflows
+Core can provide reusable approval/state-transition infrastructure. Product-specific state machines remain with the product that owns their business meaning.
+
+## Events and analytics
+Core standardizes event identity, actor, tenant, timestamp, correlation and ingestion. Product teams define their domain events and KPIs.
+
+## Integrations
+External providers must be isolated behind ports/adapters. Provider-specific SDK objects must not leak into domain contracts.
+
+## AI Gateway
+Core provides provider-neutral model access, routing, usage, quota, cost metadata, structured-output validation and tool-authorization boundaries. Product prompts and product-specific agent workflows remain outside Core.
+
+# 22. Core administration UI/UX
+
+Primary navigation:
+Overview, Identity, Organizations, Authorization, Audit, Integrations, Files, Notifications, Payments, Workflows, Events, AI Gateway, System.
+
+Overview should answer operational questions quickly: API health, database health, provider status, worker status, authentication activity, error rate, storage state, payment integration state and AI quota/usage.
+
+Identity explorer should show safe metadata such as Nexora UUID, linked providers, account state, organizations, roles and recent security events. Never expose access tokens, refresh tokens, private keys or provider secrets.
+
+Organization explorer should show organization metadata, membership state, roles and relevant audit events according to operator permission.
+
+Audit explorer should support actor, organization, action, resource type, resource ID, time range, severity, correlation/request ID and outcome filters. Detail views should make chronology understandable.
+
+System should expose migration status, worker health, provider adapter health, configuration state and safe diagnostics. Secrets remain masked and inaccessible to ordinary operators.
+
+Every Core screen must define loading, empty, permission-denied, validation-error, provider-failure and retry states.
+
+# 23. Core domain boundaries
+
+Core owns reusable platform primitives. It must not absorb product-specific policies merely because a helper could technically be shared.
+
+Finance budgeting and ledger rules remain Finance. Dignity KRS, attendance and grades remain Dignity. Office editor semantics remain Office. Nexverse entitlement remains Nexverse. CRM pipeline remains CRM. HR leave policy remains HR.
+
+When uncertain, separate reusable mechanism from product-specific policy: put the mechanism in Core only when it is genuinely cross-product, and keep the business meaning in the owning product.
+
+# 24. Core agent execution protocol
+
+Before coding: read root AGENTS.md, this file and the backend AGENT when backend work is involved; inspect implementation and tests; search for duplicate capability; identify ownership; inspect relevant ADRs; plan the smallest coherent change.
+
+During coding: reuse existing abstractions, preserve boundaries, keep providers behind adapters, avoid speculative frameworks and avoid duplicate models/services.
+
+After coding: run targeted tests, Django checks for backend work, lint/type checks as applicable, review migrations, authorization, tenant isolation, audit, concurrency/idempotency and provider failures. Update durable documentation when architecture changes.
+
+# 25. Core non-goals
+
+Core is not Finance, Office, Dignity, Business Suite, Nexverse, CRM or HR. It is not a generic dumping ground and it is not a direct Firebase wrapper. Do not create product-specific models in Core without an explicit ownership decision.
