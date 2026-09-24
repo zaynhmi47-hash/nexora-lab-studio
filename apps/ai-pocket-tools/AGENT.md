@@ -1,12 +1,16 @@
 # AI Pocket Tools / Smart Kit — AGENT.md
 
-## Concept
-Focused AI utilities for rewriting, summarization, document assistance, text processing, and quick everyday AI tasks.
+## 1. Mission
+A collection of narrowly focused AI utilities for rewriting, summarization, extraction, document assistance, classification, and quick everyday tasks.
 
-## Instructions
-- Keep each tool narrowly scoped.
-- Use provider-neutral AI adapters.
-- Minimize API calls and token usage.
-- Never expose API keys in clients.
-- Tell users when external AI processing occurs.
-- Avoid storing prompts/documents unless persistence is explicit.
+## 2. Architecture
+Use a provider-neutral AI adapter. Keep tools independently testable. Minimize prompt/token costs and network calls. API keys must never be embedded in client bundles.
+
+## 3. Privacy
+Tell users when their content is sent to an external AI provider. Do not persist prompts or documents by default. If persistence is required, make storage and retention explicit.
+
+## 4. AI-agent instructions
+Validate structured AI output against schemas. Handle timeouts, rate limits, malformed responses, provider changes, and partial results. Do not let generated text overwrite source content without user action.
+
+## 5. Product principles
+Each tool should have one obvious job, predictable inputs, and useful output. Avoid turning this project into a second full Nexora AI workspace.

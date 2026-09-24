@@ -1,11 +1,19 @@
 # Nexora News — AGENT.md
 
-## Concept
-Publisher platform for news and sports content with publisher/creator accounts, uploads, distribution, advertising, analytics, and configurable royalty/revenue rules.
+## 1. Mission
+Nexora News is a publishing/distribution platform for news and sports content with publisher accounts, creators, editorial workflows, advertising, analytics, and configurable revenue/royalty mechanisms.
 
-## Instructions
-- Separate editorial content, publishing workflow, audience data, advertising, and revenue accounting.
-- Support draft, review, scheduling, publication, correction, and archive states.
-- Keep royalty calculations transparent and auditable.
-- Protect unpublished content and publisher credentials.
-- Keep workflows configurable per publisher.
+## 2. Editorial lifecycle
+Draft → review → scheduled → published → corrected/updated → archived. Breaking or sensitive content should still pass through configurable review controls where required.
+
+## 3. Domains
+Content, authors, publishers, categories, editorial workflow, media, distribution, audience analytics, advertising, revenue, moderation, corrections, reports.
+
+## 4. Accuracy and transparency
+The application should distinguish published reporting, editorial opinion, sponsored content, corrections, and user-generated content. Do not silently rewrite published material; preserve correction/version history.
+
+## 5. AI-agent instructions
+Never fabricate sources, quotes, statistics, or events. AI may assist drafting, summarization, tagging, transcription, or moderation, but editorial publication remains governed by explicit workflow. Protect unpublished stories and credentials. Test publication permissions, scheduling, revisions, and tenant isolation.
+
+## 6. Revenue
+Advertising and publisher revenue must be tracked separately from editorial data. Revenue rules must be auditable and versioned.

@@ -1,12 +1,16 @@
 # No-Backend AI Studio Apps — AGENT.md
 
-## Concept
-Collection of small AI applications prototyped primarily with Google AI Studio or similar tools, using minimal/no custom backend for fast validation and simple monetization.
+## 1. Mission
+Experimental collection of small AI apps built with Google AI Studio or similar rapid-generation tools, targeting fast validation, minimal infrastructure, and simple monetization.
 
-## Instructions
-- Keep prototypes isolated from production Core until requirements stabilize.
-- Prefer client-only/local processing where feasible.
-- Never embed backend secrets in clients.
-- Keep each experiment independently deployable.
-- Document APIs, quotas, costs, and data handling.
-- Do not let experimental code become an accidental shared dependency.
+## 2. Architecture
+Prefer client/local processing for non-sensitive tasks. If a secret or privileged API is required, move it to a secure backend/service. Do not put API keys in browser/mobile source.
+
+## 3. Experiment rules
+Each app must remain independently understandable and deployable. Document external APIs, quotas, pricing, data handling, prompts, and known limitations. Do not create hidden dependencies between experiments.
+
+## 4. AI-agent instructions
+Treat generated code as untrusted until reviewed. Check dependency versions, secrets, authentication, network calls, error handling, accessibility, and license implications. Do not move experimental patterns into Core without a deliberate architecture review.
+
+## 5. Graduation path
+Prototype → validate UX → define requirements → add tests → harden security → choose production architecture → integrate with Core only when justified.

@@ -1,12 +1,16 @@
 # Nexora Toolbox — AGENT.md
 
-## Concept
-Lightweight utility app containing calculators, converters, QR/barcode tools, text utilities, notes, to-do tools, and everyday helpers.
+## 1. Mission
+Nexora Toolbox is a lightweight collection of everyday utilities: calculator, unit conversion, QR/barcode, text tools, notes, to-do, and other small helpers.
 
-## Instructions
-- Prefer offline-first operation.
-- Minimize backend requirements and network calls.
-- Keep tools independently testable.
-- Do not require accounts for features that do not need cloud data.
-- Ads/premium must not break core utility behavior.
-- Optimize for low memory, fast startup, and small bundles.
+## 2. Architecture
+Default to local-first and offline. Each utility should be a small isolated module with clear inputs/outputs and tests. Shared navigation/settings can be reused, but utilities should not depend on one another unnecessarily.
+
+## 3. AI-agent instructions
+Do not add a backend merely because the monorepo has one. Avoid accounts for local-only features. Keep dependencies small. Validate user input and handle malformed data. Preserve local data across app updates where supported.
+
+## 4. Monetization
+Ads and premium features are optional layers. They must not compromise utility behavior or collect unnecessary data.
+
+## 5. Quality
+Optimize startup, memory, battery, accessibility, and small bundle size. Test offline operation, orientation/responsive layouts, malformed input, and persistence.

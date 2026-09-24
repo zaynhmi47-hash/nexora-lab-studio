@@ -1,11 +1,16 @@
 # Property App — AGENT.md
 
-## Concept
-Experimental property platform exploring discovery, listings, service connections, transactions, and business models that can start without large upfront capital.
+## 1. Mission
+Experimental property platform for discovery, listings, service connections, offers, and potential transaction workflows.
 
-## Instructions
-- Treat this as experimental until requirements stabilize.
-- Separate listings, ownership, verification, offers, and transactions.
-- Do not claim ownership or legal status without verified records.
-- Make location/listing data permission-aware.
-- Keep payment and legal integrations replaceable and auditable.
+## 2. Concept
+The first product may focus on verified listings and discovery rather than trying to become a full property marketplace immediately. Future modules can include agents, services, offers, financing/payment integrations, and transaction support.
+
+## 3. Trust
+Separate listing claims, owner identity, verification evidence, offers, and legal/transaction status. Never imply ownership or legal validity from an unverified listing.
+
+## 4. AI-agent instructions
+Treat this as experimental. Keep requirements and domain models isolated. Location data must respect privacy. Avoid storing unnecessary precise private addresses. Any payment/legal integration must be provider-neutral and auditable.
+
+## 5. UX
+Prioritize search, filters, property details, media, location context, contact, reporting, and verification status. Make uncertainty visible instead of hiding it.
