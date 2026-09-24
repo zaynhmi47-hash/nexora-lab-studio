@@ -4,7 +4,7 @@
 
 Nexora Core is the **shared platform foundation and architectural authority for reusable platform capabilities**. The repository root `AGENTS.md` remains the final ecosystem-level supervisor. This file is the detailed product/domain contract for Core.
 
-An AI agent working inside `apps/nexora-core/` must treat this file as mandatory instructions before modifying Core code.
+An AI agent working inside `apps/nexora-core/` must treat this file as mandatory instructions before modifying Core code. The product concept, feature map, UI/UX specification, technology direction, and roadmap are defined in `apps/nexora-core/PRODUCT_SPEC.md`; agents must read that document before implementing or changing Core product behavior.
 
 Core does not own every backend feature. Core owns **shared primitives and cross-product capabilities**. Product-specific business behavior remains with the product that owns it.
 
