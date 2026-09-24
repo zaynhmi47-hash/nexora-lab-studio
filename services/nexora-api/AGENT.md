@@ -544,3 +544,116 @@ do not silently implement the architectural decision.
 Document the issue and follow the repository's architecture/ADR process.
 
 The backend agent is an implementation owner, not the sole authority for ecosystem architecture.
+
+# 23. Detailed backend product concept
+
+services/nexora-api/ is the single primary Django backend execution layer for the Nexora ecosystem. It is shared infrastructure hosting clearly separated product/domain modules; it is not a separate backend tree for every application.
+
+The target remains Modular Monolith → Service-Ready. One coherent deployment is acceptable while modules maintain explicit ownership and contracts so that a future extraction can be deliberate.
+
+# 24. Backend domain map
+
+Core modules cover identity, organizations, membership, authorization, audit, files, notifications, payment primitives, integrations, workflows, events and AI gateway infrastructure.
+
+Product modules cover Finance, Office, Business Suite orchestration, Dignity, Nexverse, CRM, HR, Cloud and other approved product domains.
+
+Infrastructure adapters cover Firebase, storage, payment, messaging, AI and other external providers.
+
+The actual physical Django structure remains authoritative. Never create a second backend tree under apps/.
+
+# 25. Product backend responsibilities
+
+Core: canonical identity mapping, organization/membership primitives, RBAC, audit, files/storage contracts, notifications, generic payments, workflows, events and AI gateway.
+
+Office: document/file metadata, document lifecycle, versions, sharing integration, processing jobs, OCR/conversion orchestration and APIs.
+
+Business Suite: organization-scoped operational workflows, registration/approval orchestration and Business Suite-specific process state. It consumes Finance/CRM/HR/Dignity/Nexverse contracts instead of duplicating their core models.
+
+Finance: accounts, financial transactions, accounting/ledger semantics, goals/budgets, invoices/receipts/POS where in scope, reconciliation, reporting data, integrations, webhook processing and financial audit behavior.
+
+Dignity: learning models and academic records including courses, lessons, attempts, progress, enrollment, KRS, attendance, grades, research, library and tutoring workflows. Official academic records require explicit lifecycle and authorization.
+
+# 26. API organization
+
+APIs must be organized around stable domain contracts rather than database tables.
+
+Preferred form: /api/v1/<domain>/<resource>/.
+
+Every endpoint must define authentication, authorization and tenant scope, request schema, response schema, pagination/filter/sort where applicable, validation/domain errors and idempotency where effects may be retried.
+
+Consequential actions should use explicit application services rather than arbitrary model CRUD. Examples include posting a financial transaction, approving KRS, finalizing an official grade, sharing a private document or processing a payment webhook.
+
+# 27. Financial backend integrity
+
+Use exact decimal handling and explicit currency. Protect financial invariants with database constraints and transactions.
+
+Carefully define transaction boundaries for posting/reversal, balance transfers, reconciliation decisions, invoice state changes, payment callbacks and POS session closing.
+
+Retries must not create duplicate financial effects. Persist provider references and idempotency records where appropriate.
+
+# 28. Academic backend integrity
+
+Dignity endpoints must distinguish learning activity from official academic state. KRS, attendance and grades require explicit transition rules. Official records preserve correction history and audit context. Client-supplied status is input, never authority.
+
+# 29. Office processing architecture
+
+OCR, conversion, compression, large file operations and report generation should be asynchronous when they can exceed normal request latency.
+
+Each background job requires durable state, retry strategy, idempotency strategy, failure result and observability. Do not blindly retry non-idempotent external effects.
+
+# 30. Tenant isolation architecture
+
+Every organization-scoped request resolves authenticated actor and authorized organization context before domain access.
+
+Repositories/services should make tenant scope difficult to omit. Avoid generic unscoped queries for tenant-owned data.
+
+Resources with personal and organization scope must model the distinction explicitly. Frontend routes never establish authorization.
+
+# 31. Firebase/provider architecture
+
+Firebase may provide Authentication, Firestore, Realtime Database, Storage, BigQuery or App Check according to the approved design.
+
+Authentication flow:
+Firebase token → provider verification → provider identity → Nexora UUID → authorization context.
+
+Provider UID is linkage metadata, not the canonical identity. SDK objects and provider exceptions are translated at infrastructure boundaries.
+
+# 32. Background workers and asynchronous operations
+
+Use workers for email/push delivery, OCR, document processing, large files, analytics/event processing, external synchronization, reconciliation and long-running report generation.
+
+Jobs must expose structured operational state, retries and failures without leaking secrets or unnecessary personal data.
+
+# 33. API security model
+
+Every sensitive endpoint evaluates authenticated actor, authorized tenant/context, resource ownership/access and requested action.
+
+Critical areas include cross-tenant access, private file access, financial records, academic records, membership/role changes, administrative actions, payment callbacks, provider credentials and AI tool execution.
+
+Never rely on frontend route guards.
+
+# 34. Observability
+
+Structured logs and correlation/request IDs should allow a production request to be traced through authentication, authorization, domain service, persistence and provider interactions without recording secrets.
+
+Health checks should distinguish application health from dependency health. A running HTTP process with an unavailable database should not report full dependency health.
+
+# 35. Contract testing and compatibility
+
+Backend contracts must be testable independently from frontend implementation. A requested frontend capability should first identify endpoint, method, request, response, authorization, states and errors.
+
+Prefer additive API evolution. Breaking changes require explicit coordination and durable documentation.
+
+# 36. Backend agent protocol
+
+Before implementation: read root AGENTS.md, owning product AGENT.md and this file; inspect models/services/repositories/adapters/tests; search for duplicates; identify data ownership and tenant scope; define contract; plan transactions and failure behavior.
+
+After implementation: run targeted pytest, Django checks and Ruff; inspect migrations; test permissions/cross-tenant denial; test idempotency/concurrency where relevant; test provider failures; inspect logs for secret leakage; update architecture documentation when needed.
+
+# 37. Backend non-goals
+
+Do not create a backend copy under apps/. Do not duplicate identity, organization, payment or audit systems. Do not make Firebase the domain model. Do not place product-specific rules in Core without ownership review. Do not implement UI behavior in Django. Do not expose raw database structure as the public API. Do not bypass authorization. Do not introduce microservices without a concrete operational or ownership reason.
+
+# 38. Definition of done
+
+A backend feature is complete when its domain owner is clear, API contract is explicit, persistence is safe, authorization is enforced, tenant scope is tested, migrations are reviewed, failure/idempotency behavior is defined, audit implications are considered, provider boundaries are preserved and relevant tests/checks pass.
