@@ -157,3 +157,15 @@ Requirements:
 ## 12. Definition of Done
 
 A feature is complete only when context separation, privacy, authorization, safety/moderation, block/report behavior, messaging controls, AI boundaries, accessibility, and tests are addressed.
+
+## 13. Canonical networking boundary
+
+Nexora Social is the canonical general social and professional networking layer. This product does not create a parallel professional profile, connection graph, or professional messaging system.
+
+This product owns:
+- dating context/profile and preferences;
+- dating discovery;
+- likes and mutual matches;
+- dating-specific conversations and safety state.
+
+Professional context may consume authorized Social identity/network data, but dating context must remain isolated by default. Never automatically expose dating preferences, matches, conversations, or dating activity to Social or professional networking surfaces.
