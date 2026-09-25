@@ -81,3 +81,11 @@ Frontend owns chat/project/agent UI and presentation. Backend owns AI orchestrat
 ## Definition of done
 
 AI features require a provider boundary, permission model, data-flow description, usage limits, failure handling, prompt/tool validation, privacy consideration and tests.
+
+## 11. AI workspace boundary
+
+Nexora AI is the canonical general-purpose AI workspace. It owns conversational and workspace-level AI experiences such as chats, projects, knowledge, research, coding assistance, general agents, and user-facing AI orchestration.
+
+AI Agent Business is a specialized business-automation product. It must not be duplicated inside Nexora AI. Nexora AI may deep-link to or hand off business-agent work to AI Agent Business when a workflow requires business-domain tools, approvals, schedules, or high-impact actions.
+
+General AI agents in Nexora AI must not silently gain privileged access to CRM, Finance, ERP, HR, or other business systems.
