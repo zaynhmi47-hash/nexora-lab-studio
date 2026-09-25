@@ -814,3 +814,28 @@ After coding: run targeted tests, Django checks for backend work, lint/type chec
 # 25. Core non-goals
 
 Core is not Finance, Office, Dignity, Business Suite, Nexverse, CRM or HR. It is not a generic dumping ground and it is not a direct Firebase wrapper. Do not create product-specific models in Core without an explicit ownership decision.
+
+## 10. Canonical AI and storage boundaries
+
+Core provides shared primitives and provider-neutral contracts; it does not own every product's user-facing semantics.
+
+### AI
+
+Core owns the shared AI Gateway contract and infrastructure primitives for provider selection, credentials references, usage/quota controls, safety policy hooks, routing and observability. Product domains own their AI experiences and orchestration.
+
+- Nexora AI owns the general AI workspace.
+- AI Agent Business owns business-agent automation.
+- AI Pocket Tools consumes the shared gateway for focused utilities.
+
+No product may create a competing provider/credential gateway when the shared capability already exists.
+
+### Storage
+
+Core owns provider-neutral storage/file primitives, authorization hooks and shared metadata contracts.
+
+- Nexora Cloud owns the user-facing cloud file workspace.
+- Office owns document/spreadsheet/presentation/PDF semantics.
+- Photo owns image/document processing semantics.
+- Launch owns device-facing file access experiences.
+
+These products must not create parallel storage backends merely to implement their product experience.
