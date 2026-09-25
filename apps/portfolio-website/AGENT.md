@@ -147,3 +147,15 @@ Requirements:
 ## 11. Definition of Done
 
 A portfolio feature is complete only when public/private visibility, source ownership, publishing lifecycle, responsive UX, accessibility, SEO, security, contact abuse protection, and tests are addressed.
+
+## 12. Canonical source boundary
+
+Portfolio Website is a presentation/publishing surface, not the canonical source for professional identity or business records.
+
+Where practical, it references:
+- Social for public social/professional identity;
+- Creator for creator identity, services and creator work;
+- Studio for client/project work that is approved for public presentation;
+- Education/Dignity for public-safe education or achievement references.
+
+Portfolio-specific presentation metadata may exist locally, but it must not silently become the authoritative source for another product's domain.
