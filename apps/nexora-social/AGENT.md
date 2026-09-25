@@ -170,3 +170,18 @@ Do not make Nexora Social the source of truth for:
 ## 9. Definition of Done
 
 A Social feature is complete only when its audience/visibility rules, authorization, moderation implications, loading/empty/error states, notifications where relevant, audit requirements, tests, and mobile/web behavior have been addressed.
+
+## 10. Canonical networking boundary
+
+Nexora Social is the canonical general social and professional networking layer.
+
+It owns:
+- general social profiles and visibility;
+- professional identity presentation used for networking;
+- social/professional connections and follows;
+- communities and social messaging;
+- social moderation and relationship controls.
+
+The Dating Social Professional product must not create a second professional-networking system. It may consume/reuse professional identity and networking primitives from Social while owning its separate dating context, dating preferences, matches and dating-specific safety workflows.
+
+Do not expose dating-context information through Social unless an explicit user-controlled integration permits it.
