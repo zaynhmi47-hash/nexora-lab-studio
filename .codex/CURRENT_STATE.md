@@ -81,3 +81,35 @@ The backend default DRF policy is now deny-by-default:
 - The Control Plane remains DEBUG-only and does not inherit production API access.
 - Focused tests cover the default authentication/permission policy and public health behavior.
 \n## Learning gamification integration — verified on 2026-09-20\n\n- `apps.gamification` is registered in Django `INSTALLED_APPS`.\n- Gamification API is exposed under `/api/v1/gamification/`.\n- Control Center application registry includes the gamification platform service.\n- Learning quiz completion now returns the XP actually recorded by the gamification ledger.\n- Gamification migrations already exist and are now discoverable by Django migration tooling.\n
+## Architecture audit — verified 2026-09-25
+
+The repository was audited against the root AGENTS contract, .codex project rules, product AGENT files, and the current backend tree.
+
+Verified inventory:
+- 30 directories currently exist under apps/.
+- 28 product AGENT files were previously documented.
+- apps/nexora-muslim/ is an active Expo product and now has a dedicated AGENT contract.
+- apps/nexora-business/ is an empty/reserved placeholder and is explicitly prevented from duplicating Nexora Business Suite.
+- apps/nexora-health-ai/ is not present in the current repository inventory and is not treated as an active app.
+
+Verified backend inventory includes shared/core foundations plus identity, organizations, access, capabilities, products, learning, gamification, finance and Islamic-domain applications including quran, prayer, qibla, dhikr, dua, fasting, zakat, umrah, places, reminders, ramadan and tajwid.
+
+Verified security baseline:
+- DRF defaults to Firebase bearer authentication and authenticated Nexora user permission.
+- Public endpoints require explicit public permission behavior.
+- NexoraUser is the internal identity model and Firebase/provider subjects are linked through provider accounts.
+- UUID/timestamp/soft-delete/audit foundations are present through AuditableBaseModel.
+- Firebase integration is isolated under infrastructure/firebase.
+- Storage ports exist under infrastructure/storage.
+
+Verified finance baseline:
+- Finance transactions are organization-scoped.
+- Transaction amounts use integer minor units.
+- Initial contract currently restricts transaction currency to IDR.
+- Active idempotency keys are unique per organization.
+- Finance transactions reject hard deletion.
+
+Architecture boundaries were hardened for Social vs Dating Professional, Nexora AI vs AI Agent Business, Core AI Gateway, Core/Cloud storage, Creator vs Social/Portfolio, and Business Suite vs specialized business domains.
+
+No application runtime code was changed by this audit. Test execution was not performed through the GitHub connector, so this audit does not claim a fresh local test pass.
+
