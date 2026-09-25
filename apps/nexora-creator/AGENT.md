@@ -182,3 +182,11 @@ Requirements:
 ## 10. Definition of Done
 
 A Creator feature is complete only when ownership, attribution, privacy, workflow transitions, integration boundaries, financial references, permissions, auditability, tests, and responsive UI behavior are covered.
+
+## 11. Canonical identity/content boundary
+
+Creator owns creator-specific identity, creator services, creator operations, audience/creator analytics, collaborations and creator monetization references.
+
+Nexora Social owns canonical general social/professional networking identity and relationships. Portfolio Website is a public presentation surface and should reference canonical Creator, Social, Studio and Education data rather than become a competing source of professional history.
+
+Creator may orchestrate content published through Nexverse, News, Education or Social, but must not duplicate their canonical content records.
