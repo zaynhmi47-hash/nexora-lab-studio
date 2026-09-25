@@ -179,3 +179,18 @@ Entitlements and billing state must integrate with Nexora Finance/Core rather th
 ## 12. Definition of Done
 
 An AI Agent Business feature is complete only when agent scope, tool permissions, approval gates, tenant isolation, execution states, auditability, usage accounting, failure handling, and security tests are addressed.
+
+## 13. Canonical AI workspace boundary
+
+Nexora AI is the canonical general-purpose AI workspace. AI Agent Business is the canonical product for business-specific agent automation.
+
+AI Agent Business owns:
+- business agent definitions and policies;
+- business knowledge/tool bindings;
+- business runs, tasks and schedules;
+- approvals and high-impact action gates;
+- business execution audit and usage records.
+
+Nexora AI owns general chat/project/research/knowledge experiences. Do not create a second general AI workspace inside this product.
+
+Business agents may consume Nexora AI/Core AI capabilities, but business systems remain authoritative for their own records.
