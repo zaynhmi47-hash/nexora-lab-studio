@@ -657,3 +657,26 @@ Do not create a backend copy under apps/. Do not duplicate identity, organizatio
 # 38. Definition of done
 
 A backend feature is complete when its domain owner is clear, API contract is explicit, persistence is safe, authorization is enforced, tenant scope is tested, migrations are reviewed, failure/idempotency behavior is defined, audit implications are considered, provider boundaries are preserved and relevant tests/checks pass.
+
+## 23. Canonical shared-capability boundaries
+
+The backend must preserve the following ownership boundaries:
+
+### AI
+- Core AI Gateway: provider-neutral gateway infrastructure, credentials references, usage/quota and shared policy primitives.
+- Nexora AI: general AI workspace and orchestration.
+- AI Agent Business: business-agent execution, approvals, schedules and business automation.
+- Pocket Tools: focused AI utilities consuming the shared gateway.
+
+### Storage
+- Core: provider-neutral storage/file primitives.
+- Nexora Cloud: user-facing cloud workspace, sharing, sync and recovery.
+- Office: document/PDF/spreadsheet/presentation semantics.
+- Photo: image/document processing.
+- Launch: device-facing file experience.
+
+### Networking
+- Social: canonical general social/professional networking.
+- Dating Social Professional: dating context and dating-specific workflows; reuse authorized professional networking capabilities rather than creating a parallel professional graph.
+
+Before adding a model, service or API in these areas, search the owning domain and reuse its contract.
