@@ -103,3 +103,22 @@ Finance, CRM, HR, Dignity, Nexverse and Office retain canonical domain ownership
 # 15. Definition of done
 
 A feature is complete only when organization scope, roles, state transitions, audit behavior, API contract, failure states, data ownership and cross-product dependencies are explicit and tested.
+
+## 16. Orchestration boundary
+
+Business Suite is an organization operating workspace and orchestration surface, not a replacement for specialized domain systems.
+
+Canonical ownership remains with:
+- CRM → customer relationships and sales pipeline;
+- Finance → financial records and ledger;
+- ERP → operational procurement/inventory/enterprise workflows;
+- HR → workforce/employment records;
+- Dignity → official academic records;
+- Nexverse/News/Creator → their respective content/creator domains;
+- Office → document semantics.
+
+Business Suite may aggregate, configure, initiate or approve workflows through explicit contracts, but must not create duplicate canonical records merely for dashboard convenience.
+
+## 17. Workflow boundary
+
+Nexora Core may provide generic workflow, approval, event and audit primitives. Business Suite and specialized products own the meaning, states and business rules of their workflows.
