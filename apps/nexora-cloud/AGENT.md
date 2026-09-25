@@ -133,3 +133,11 @@ AI must not silently delete, move, share, or expose private files.
 ## 10. Definition of Done
 
 A Cloud feature is complete only when storage ownership, access control, synchronization/conflict behavior, deletion/recovery, privacy, auditability, platform behavior, and failure states are addressed.
+
+## 11. Canonical storage boundary
+
+Nexora Cloud is the canonical user-facing cloud file workspace. It consumes Core's provider-neutral storage primitives and backend storage adapters.
+
+Core owns storage contracts, shared file metadata primitives, authorization hooks and provider boundaries. Cloud owns folders, sharing UX, sync behavior, recovery, storage usage and connected-app file management.
+
+Office, Photo and Launch consume these capabilities where appropriate and must not create parallel cloud storage services.
