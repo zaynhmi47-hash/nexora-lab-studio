@@ -12,13 +12,38 @@ export type DiscoveryProfile = {
 export type DiscoveryResponse = { items: DiscoveryProfile[]; nextCursor: string | null };
 export type SwipeAction = 'like' | 'pass';
 
+type ApiError = Error & { status?: number };
+
 class DatingApi {
-  async getDiscovery(): Promise<DiscoveryResponse> {
-    return { items: [], nextCursor: null };
+  constructor(private readonly baseUrl: string, private readonly token: string | null) {}
+
+  private async request<T>(path: string, init?: RequestInit): Promise<T> {
+    const response = await fetch(this.baseUrl + path, {
+      ...init,
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        ...(this.token ? { Authorization: 'Bearer ' + this.token } : {}),
+        ...(init?.headers ?? {}),
+      },
+    });
+    if (!response.ok) {
+      const error = new Error('Nexora Dating API request failed.') as ApiError;
+      error.status = response.status;
+      throw error;
+    }
+    return response.json() as Promise<T>;
   }
 
-  async swipe(_profileId: string, _action: SwipeAction) {
-    return { status: 'accepted' as const, matched: false };
+  getDiscovery() {
+    return this.request<DiscoveryResponse>('/api/v1/dating/discovery/');
+  }
+
+  swipe(profileId: string, action: SwipeAction) {
+    return this.request<{ status: 'accepted'; matched: boolean; matchId: string | null }>('/api/v1/dating/swipes/', {
+      method: 'POST',
+      body: JSON.stringify({ target_profile_id: profileId, action }),
+    });
   }
 }
 
@@ -26,7 +51,8 @@ const ApiContext = createContext<DatingApi | null>(null);
 
 export function DatingApiProvider({ children }: PropsWithChildren) {
   const queryClient = useMemo(() => new QueryClient(), []);
-  const api = useMemo(() => new DatingApi(), []);
+  const baseUrl = process.env.EXPO_PUBLIC_NEXORA_API_URL ?? '';
+  const api = useMemo(() => new DatingApi(baseUrl, null), [baseUrl]);
 
   return <QueryClientProvider client={queryClient}><ApiContext.Provider value={api}>{children}</ApiContext.Provider></QueryClientProvider>;
 }
