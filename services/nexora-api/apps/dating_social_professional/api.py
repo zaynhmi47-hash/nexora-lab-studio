@@ -392,6 +392,10 @@ class ConversationDetailView(APIView):
         return Response({"id": str(conversation.id), "matchId": str(conversation.match_id), "active": conversation.active, "counterpart": DatingProfileSerializer(profile).data if profile else None})
 
 
+class MessageInputSerializer(serializers.Serializer):
+    body = serializers.CharField(max_length=4000, trim_whitespace=True)
+
+
 class ConversationMessagesView(APIView):
     permission_classes = [AuthenticatedNexoraUserPermission]
 
