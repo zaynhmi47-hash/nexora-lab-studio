@@ -1,5 +1,7 @@
 from django.db import transaction
 
+from apps.identity.models import NexoraUser
+
 from ..models import DatingConversationPresence, DatingNotification, DatingNotificationPreference, DatingPushToken
 from .expo import ExpoPushProvider
 from .ports import PushMessage
@@ -29,8 +31,8 @@ class DatingNotificationService:
 
     @staticmethod
     def dispatch(*, notification_id) -> None:
-        notification = DatingNotification.objects.filter(id=notification_id).first()
-        if not notification:
+        notification = DatingNotification.objects.filter(id=notification_id).select_related("recipient").first()
+        if not notification or notification.recipient.status != NexoraUser.Status.ACTIVE:
             return
 
         preferences, _ = DatingNotificationPreference.objects.get_or_create(user_id=notification.recipient_id)
