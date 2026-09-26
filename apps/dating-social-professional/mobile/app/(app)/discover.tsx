@@ -29,10 +29,10 @@ export default function DiscoverScreen() {
 
   const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage } = useInfiniteQuery({
     queryKey: ['dating', 'discovery', appliedFilters],
-    initialPageParam: '0',
+    initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) => api.getDiscovery({
       ...Object.fromEntries(Object.entries(appliedFilters).filter(([, value]) => value)),
-      cursor: pageParam,
+      ...(pageParam ? { cursor: pageParam } : {}),
       limit: '20',
     }),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
