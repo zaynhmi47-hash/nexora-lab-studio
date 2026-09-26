@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 
@@ -62,13 +64,20 @@ class DatingSwipeService:
 
 
 def discovery_for(actor: NexoraUser, limit: int = 20):
+    actor_profile = DatingProfile.objects.filter(user=actor).first()
     excluded = DatingSwipe.objects.filter(actor=actor).values_list("target_id", flat=True)
     blocked_ids = set(DatingBlock.objects.filter(Q(blocker=actor) | Q(blocked=actor)).values_list("blocker_id", flat=True)) | set(DatingBlock.objects.filter(Q(blocker=actor) | Q(blocked=actor)).values_list("blocked_id", flat=True))
-    return (
+    queryset = (
         DatingProfile.objects.filter(discovery_enabled=True)
         .exclude(user=actor)
         .exclude(user_id__in=blocked_ids)
         .exclude(id__in=excluded)
         .exclude(user__status__in=[NexoraUser.Status.SUSPENDED, NexoraUser.Status.DISABLED, NexoraUser.Status.DELETED])
-        .order_by("-updated_at")[:limit]
+        .order_by("-updated_at")
     )
+    if actor_profile:
+        today = date.today()
+        latest_birth_date = today.replace(year=today.year - actor_profile.preferred_min_age)
+        earliest_birth_date = today.replace(year=today.year - actor_profile.preferred_max_age - 1)
+        queryset = queryset.filter(birth_date__gt=earliest_birth_date, birth_date__lte=latest_birth_date)
+    return queryset[:limit]
