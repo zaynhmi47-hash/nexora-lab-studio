@@ -52,6 +52,8 @@ class DatingApi {
   getConversation(conversationId: string) { return this.request<{ id: string; matchId: string; active: boolean; counterpart: DiscoveryProfile }>(`/api/v1/dating/conversations/${conversationId}/`); }
   unmatch(matchId: string) { return this.request<{ status: 'unmatched' }>(`/api/v1/dating/matches/${matchId}/unmatch/`, { method: 'POST' }); }
   blockConversation(conversationId: string) { return this.request<{ status: 'blocked' }>(`/api/v1/dating/conversations/${conversationId}/block/`, { method: 'POST' }); }
+  blockUser(userId: string) { return this.request<{ status: 'blocked' }>('/api/v1/dating/blocks/', { method: 'POST', body: JSON.stringify({ target_user_id: userId }) }); }
+  reportUser(userId: string, reason: string, details = '') { return this.request<{ status: 'reported'; report_id: string }>('/api/v1/dating/reports/', { method: 'POST', body: JSON.stringify({ target_user_id: userId, reason, details }) }); }
   reportConversation(conversationId: string, reason: string, details = '') { return this.request<{ status: 'reported'; report_id: string }>(`/api/v1/dating/conversations/${conversationId}/report/`, { method: 'POST', body: JSON.stringify({ reason, details }) }); }
 }
 
