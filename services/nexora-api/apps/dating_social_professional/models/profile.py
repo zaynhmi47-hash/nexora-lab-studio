@@ -41,7 +41,8 @@ class DatingProfileMedia(AuditableBaseModel):
         IMAGE = "image", "Image"
 
     profile = models.ForeignKey(DatingProfile, on_delete=models.CASCADE, related_name="media")
-    url = models.URLField(max_length=2048)
+    url = models.URLField(max_length=2048, blank=True)
+    storage_key = models.CharField(max_length=512, blank=True)
     media_type = models.CharField(max_length=16, choices=MediaType.choices, default=MediaType.IMAGE)
     sort_order = models.PositiveSmallIntegerField(default=0)
     is_primary = models.BooleanField(default=False)
