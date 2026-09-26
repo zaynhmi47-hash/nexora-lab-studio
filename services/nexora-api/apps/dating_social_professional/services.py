@@ -196,7 +196,7 @@ def _ranked_candidates_for(
         .exclude(user=actor)
         .exclude(user_id__in=blocked_user_ids)
         .exclude(id__in=excluded)
-        .exclude(user__status__in=[NexoraUser.Status.SUSPENDED, NexoraUser.Status.DISABLED, NexoraUser.Status.DELETED])
+        .filter(user__status=NexoraUser.Status.ACTIVE)
     )
     if actor_profile:
         effective_intent = intent or actor_profile.relationship_intent
