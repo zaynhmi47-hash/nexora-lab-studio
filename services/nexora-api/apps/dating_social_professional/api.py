@@ -10,7 +10,7 @@ from apps.core.permissions import AuthenticatedNexoraUserPermission
 
 from apps.identity.models import NexoraUser
 
-from .models import DatingConversation, DatingMatch, DatingNotification, DatingProfile, DatingPushToken, DatingSwipe
+from .models import DatingConversation, DatingConversationPresence, DatingMatch, DatingNotification, DatingNotificationPreference, DatingProfile, DatingPushToken, DatingSwipe
 from .models.safety import DatingReport
 from .conversation_service import DatingConversationService
 from .services import DatingSafetyService, DatingSwipeService, discovery_for
@@ -179,6 +179,48 @@ class PushTokenView(APIView):
         else:
             DatingPushToken.objects.filter(user=request.user).update(active=False)
         return Response({"status": "unregistered"})
+
+
+class NotificationPreferenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DatingNotificationPreference
+        fields = ("push_enabled", "match_push_enabled", "message_push_enabled", "safety_push_enabled")
+
+
+class NotificationPreferencesView(APIView):
+    permission_classes = [AuthenticatedNexoraUserPermission]
+
+    def get(self, request):
+        preferences, _ = DatingNotificationPreference.objects.get_or_create(user=request.user)
+        return Response(NotificationPreferenceSerializer(preferences).data)
+
+    def patch(self, request):
+        preferences, _ = DatingNotificationPreference.objects.get_or_create(user=request.user)
+        serializer = NotificationPreferenceSerializer(preferences, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        return Response(NotificationPreferenceSerializer(serializer.save()).data)
+
+
+class ConversationPresenceView(APIView):
+    permission_classes = [AuthenticatedNexoraUserPermission]
+
+    def post(self, request, conversation_id):
+        conversation = DatingConversation.objects.select_related("match").filter(id=conversation_id, active=True).first()
+        if not conversation or request.user.id not in {conversation.match.user_a_id, conversation.match.user_b_id}:
+            return Response({"detail": "Conversation not found."}, status=status.HTTP_404_NOT_FOUND)
+        presence, _ = DatingConversationPresence.objects.get_or_create(user=request.user)
+        presence.conversation = conversation
+        presence.active = True
+        presence.last_seen_at = timezone.now()
+        presence.save(update_fields=["conversation", "active", "last_seen_at", "updated_at"])
+        return Response({"status": "active"})
+
+    def delete(self, request, conversation_id):
+        DatingConversationPresence.objects.filter(
+            user=request.user,
+            conversation_id=conversation_id,
+        ).update(active=False, last_seen_at=timezone.now())
+        return Response({"status": "inactive"})
 
 
 class NotificationView(APIView):
