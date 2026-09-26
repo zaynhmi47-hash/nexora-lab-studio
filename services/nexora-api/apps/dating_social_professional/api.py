@@ -163,6 +163,10 @@ class ProfileMediaView(APIView):
 
         if item.is_primary:
             DatingProfileMedia.objects.filter(profile=profile).exclude(id=item.id).update(is_primary=False)
+            profile.photo_url = item.url
+            if item.storage_key:
+                profile.photo_url = ""
+            profile.save(update_fields=["photo_url", "updated_at"])
         return Response(self._serialize(item, access_url=self._access_url(item)), status=status.HTTP_201_CREATED)
 
     def patch(self, request, profile_id):
@@ -187,6 +191,8 @@ class ProfileMediaView(APIView):
         item.save(update_fields=["sort_order", "is_primary", "updated_at"])
         if item.is_primary:
             DatingProfileMedia.objects.filter(profile=profile).exclude(id=item.id).update(is_primary=False)
+            profile.photo_url = item.url if not item.storage_key else ""
+            profile.save(update_fields=["photo_url", "updated_at"])
         return Response(self._serialize(item, access_url=self._access_url(item)))
 
     def delete(self, request, profile_id):
@@ -211,5 +217,10 @@ class ProfileMediaView(APIView):
             if replacement:
                 replacement.is_primary = True
                 replacement.save(update_fields=["is_primary", "updated_at"])
+                profile.photo_url = replacement.url if not replacement.storage_key else ""
+                profile.save(update_fields=["photo_url", "updated_at"])
+            else:
+                profile.photo_url = ""
+                profile.save(update_fields=["photo_url", "updated_at"])
         return Response({"status": "deleted"})
 
