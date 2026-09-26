@@ -6,6 +6,8 @@ from rest_framework.views import APIView
 
 from apps.core.permissions import AuthenticatedNexoraUserPermission
 
+from apps.identity.models import NexoraUser
+
 from .models import DatingConversation, DatingMatch, DatingProfile, DatingSwipe
 from .models.safety import DatingReport
 from .conversation_service import DatingConversationService
@@ -80,6 +82,17 @@ class SwipeView(APIView):
         return Response({"status": "accepted", "swipe_id": str(swipe.id), "matched": match is not None, "match_id": str(match.id) if match else None}, status=status.HTTP_201_CREATED)
 
 
+class MatchLifecycleView(APIView):
+    permission_classes = [AuthenticatedNexoraUserPermission]
+
+    def post(self, request, match_id):
+        try:
+            DatingSafetyService.unmatch(actor=request.user, match_id=match_id)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"status": "unmatched"})
+
+
 class MatchesView(APIView):
     permission_classes = [AuthenticatedNexoraUserPermission]
 
@@ -142,6 +155,47 @@ class BlockView(APIView):
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"status": "blocked"}, status=status.HTTP_201_CREATED)
+
+
+class ConversationDetailView(APIView):
+    permission_classes = [AuthenticatedNexoraUserPermission]
+
+    def get(self, request, conversation_id):
+        conversation = DatingConversation.objects.select_related("match").filter(id=conversation_id, active=True).first()
+        if not conversation or request.user.id not in {conversation.match.user_a_id, conversation.match.user_b_id}:
+            return Response({"detail": "Conversation not found."}, status=status.HTTP_404_NOT_FOUND)
+        counterpart_id = conversation.match.user_b_id if request.user.id == conversation.match.user_a_id else conversation.match.user_a_id
+        profile = DatingProfile.objects.filter(user_id=counterpart_id).first()
+        if not profile:
+            return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"id": str(conversation.id), "matchId": str(conversation.match_id), "active": conversation.active, "counterpart": DatingProfileSerializer(profile).data})
+
+
+class ConversationBlockView(APIView):
+    permission_classes = [AuthenticatedNexoraUserPermission]
+
+    def post(self, request, conversation_id):
+        conversation = DatingConversation.objects.select_related("match").filter(id=conversation_id).first()
+        if not conversation or request.user.id not in {conversation.match.user_a_id, conversation.match.user_b_id}:
+            return Response({"detail": "Conversation not found."}, status=status.HTTP_404_NOT_FOUND)
+        counterpart_id = conversation.match.user_b_id if request.user.id == conversation.match.user_a_id else conversation.match.user_a_id
+        target = NexoraUser.objects.get(id=counterpart_id)
+        DatingSafetyService.block(actor=request.user, target=target)
+        return Response({"status": "blocked"})
+
+
+class ConversationReportView(APIView):
+    permission_classes = [AuthenticatedNexoraUserPermission]
+
+    def post(self, request, conversation_id):
+        conversation = DatingConversation.objects.select_related("match").filter(id=conversation_id).first()
+        if not conversation or request.user.id not in {conversation.match.user_a_id, conversation.match.user_b_id}:
+            return Response({"detail": "Conversation not found."}, status=status.HTTP_404_NOT_FOUND)
+        counterpart_id = conversation.match.user_b_id if request.user.id == conversation.match.user_a_id else conversation.match.user_a_id
+        serializer = ReportInputSerializer(data={**request.data, "target_user_id": str(counterpart_id)})
+        serializer.is_valid(raise_exception=True)
+        report = DatingSafetyService.report(actor=request.user, target=NexoraUser.objects.get(id=counterpart_id), reason=serializer.validated_data["reason"], details=serializer.validated_data.get("details", ""))
+        return Response({"status": "reported", "report_id": str(report.id)}, status=status.HTTP_201_CREATED)
 
 
 class ConversationView(APIView):
