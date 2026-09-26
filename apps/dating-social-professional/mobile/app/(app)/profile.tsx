@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useDatingApi } from '@/src/api/provider';
@@ -8,6 +8,8 @@ export default function ProfileScreen() {
   const api = useDatingApi();
   const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ['dating', 'profile'], queryFn: () => api.getMyProfile() });
+  const mediaQuery = useQuery({ queryKey: ['dating', 'profile-media', data?.id], queryFn: () => api.getProfileMedia(data!.id), enabled: !!data?.id });
+  const [mediaUrl, setMediaUrl] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
   const [intent, setIntent] = useState('dating');
@@ -24,8 +26,15 @@ export default function ProfileScreen() {
     onSuccess: (next) => queryClient.setQueryData(['dating', 'profile'], next),
   });
 
-  return <View style={styles.container}>
+  const addMedia = async () => { if (!data || !mediaUrl.trim()) return; try { await api.addProfileMedia(data.id, { url: mediaUrl.trim(), media_type: 'image', sort_order: mediaQuery.data?.items.length ?? 0, is_primary: !(mediaQuery.data?.items.length) }); setMediaUrl(''); await mediaQuery.refetch(); } catch (error) { Alert.alert('Media', error instanceof Error ? error.message : 'Unable to add media.'); } };
+  const removeMedia = async (mediaId: string) => { if (!data) return; try { await api.removeProfileMedia(data.id, mediaId); await mediaQuery.refetch(); } catch (error) { Alert.alert('Media', error instanceof Error ? error.message : 'Unable to remove media.'); } };
+
+  return <ScrollView contentContainerStyle={styles.container}>
     <Text style={styles.title}>Your profile</Text>
+    <Text style={styles.label}>Profile photos</Text>
+    <View style={styles.gallery}>{mediaQuery.data?.items.map((item) => <View key={item.id} style={styles.mediaItem}><Image source={{ uri: item.url }} style={styles.mediaImage} /><Text>{item.isPrimary ? 'Primary' : `Photo ${item.sortOrder + 1}`}</Text><Pressable onPress={() => removeMedia(item.id)}><Text>Remove</Text></Pressable></View>)}</View>
+    <TextInput style={styles.input} value={mediaUrl} onChangeText={setMediaUrl} placeholder="Image URL" autoCapitalize="none" />
+    <Pressable onPress={addMedia} style={styles.save}><Text>Add photo</Text></Pressable>
     {isLoading ? <Text>Loading…</Text> : null}
     <TextInput style={styles.input} value={displayName} onChangeText={setDisplayName} placeholder="Display name" />
     <TextInput style={[styles.input, styles.bio]} value={bio} onChangeText={setBio} placeholder="Tell people about you" multiline />
@@ -41,6 +50,6 @@ export default function ProfileScreen() {
     <Pressable disabled={save.isPending} onPress={() => save.mutate()} style={styles.save}><Text>{save.isPending ? 'Saving…' : 'Save profile'}</Text></Pressable>
     {save.isSuccess ? <Text>Saved.</Text> : null}
     <Pressable onPress={() => router.push('/(app)/settings/notifications')} style={styles.settings}><Text style={styles.settingsTitle}>Notification settings</Text><Text style={styles.settingsSubtitle}>Control match, message, and safety push notifications.</Text></Pressable>
-  </View>;
+  </ScrollView>;
 }
-const styles = StyleSheet.create({ container: { flex: 1, padding: 24, gap: 14 }, title: { fontSize: 30, fontWeight: '800', marginBottom: 8 }, input: { borderWidth: 1, borderRadius: 14, padding: 14 }, bio: { minHeight: 120, textAlignVertical: 'top' }, choices: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' }, choice: { padding: 12, borderWidth: 1, borderRadius: 12 }, label: { fontWeight: '700' }, ageRow: { flexDirection: 'row', alignItems: 'center', gap: 10 }, ageInput: { flex: 1 }, selected: { opacity: 0.55 }, save: { padding: 16, borderWidth: 1, borderRadius: 14, alignItems: 'center' }, completion: { fontWeight: '700' }, settings: { borderWidth: 1, borderRadius: 14, padding: 16, gap: 4 }, settingsTitle: { fontWeight: '800' }, settingsSubtitle: { opacity: 0.6 } });
+const styles = StyleSheet.create({ gallery: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 }, mediaItem: { width: 110, gap: 6 }, mediaImage: { width: 110, height: 110, borderRadius: 14 }, container: { flex: 1, padding: 24, gap: 14 }, title: { fontSize: 30, fontWeight: '800', marginBottom: 8 }, input: { borderWidth: 1, borderRadius: 14, padding: 14 }, bio: { minHeight: 120, textAlignVertical: 'top' }, choices: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' }, choice: { padding: 12, borderWidth: 1, borderRadius: 12 }, label: { fontWeight: '700' }, ageRow: { flexDirection: 'row', alignItems: 'center', gap: 10 }, ageInput: { flex: 1 }, selected: { opacity: 0.55 }, save: { padding: 16, borderWidth: 1, borderRadius: 14, alignItems: 'center' }, completion: { fontWeight: '700' }, settings: { borderWidth: 1, borderRadius: 14, padding: 16, gap: 4 }, settingsTitle: { fontWeight: '800' }, settingsSubtitle: { opacity: 0.6 } });
