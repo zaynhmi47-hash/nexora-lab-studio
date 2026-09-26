@@ -1,6 +1,7 @@
 from datetime import date
 
 from django.utils import timezone
+from django.db.models import Q
 
 from rest_framework import serializers, status
 from rest_framework.response import Response
@@ -10,7 +11,7 @@ from apps.core.permissions import AuthenticatedNexoraUserPermission
 
 from apps.identity.models import NexoraUser
 
-from .models import DatingConversation, DatingConversationPresence, DatingMatch, DatingNotification, DatingNotificationPreference, DatingProfile, DatingPushToken, DatingSwipe
+from .models import DatingConversation, DatingConversationPresence, DatingMatch, DatingNotification, DatingNotificationPreference, DatingProfile, DatingProfileMedia, DatingPushToken, DatingSwipe
 from .models.safety import DatingReport
 from .conversation_service import DatingConversationService
 from .services import DatingSafetyService, DatingSwipeService, discovery_for
@@ -61,6 +62,56 @@ class ProfileDetailView(APIView):
         if blocked:
             return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(DatingProfileSerializer(profile).data)
+
+
+class ProfileMediaInputSerializer(serializers.Serializer):
+    url = serializers.URLField(max_length=2048)
+    media_type = serializers.ChoiceField(choices=["image"])
+    sort_order = serializers.IntegerField(min_value=0, max_value=20, required=False, default=0)
+    is_primary = serializers.BooleanField(required=False, default=False)
+
+
+class ProfileMediaView(APIView):
+    permission_classes = [AuthenticatedNexoraUserPermission]
+
+    def get(self, request, profile_id):
+        profile = DatingProfile.objects.filter(id=profile_id, discovery_enabled=True).first()
+        if not profile:
+            return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+        if DatingBlock.objects.filter(
+            Q(blocker=request.user, blocked=profile.user) | Q(blocker=profile.user, blocked=request.user)
+        ).exists():
+            return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+        items = DatingProfileMedia.objects.filter(profile=profile, active=True).order_by("sort_order", "created_at")
+        return Response({"items": [{"id": str(item.id), "url": item.url, "mediaType": item.media_type, "sortOrder": item.sort_order, "isPrimary": item.is_primary} for item in items]})
+
+    def post(self, request, profile_id):
+        profile = DatingProfile.objects.filter(id=profile_id, user=request.user).first()
+        if not profile:
+            return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = ProfileMediaInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if DatingProfileMedia.objects.filter(profile=profile, active=True).count() >= 6:
+            return Response({"detail": "A profile can have at most 6 media items."}, status=status.HTTP_400_BAD_REQUEST)
+        item = DatingProfileMedia.objects.create(
+            profile=profile,
+            url=serializer.validated_data["url"],
+            media_type=serializer.validated_data["media_type"],
+            sort_order=serializer.validated_data["sort_order"],
+            is_primary=serializer.validated_data["is_primary"],
+        )
+        if item.is_primary:
+            DatingProfileMedia.objects.filter(profile=profile).exclude(id=item.id).update(is_primary=False)
+        return Response({"id": str(item.id), "url": item.url, "mediaType": item.media_type, "sortOrder": item.sort_order, "isPrimary": item.is_primary}, status=status.HTTP_201_CREATED)
+
+    def delete(self, request, profile_id):
+        media_id = request.query_params.get("media_id")
+        item = DatingProfileMedia.objects.filter(id=media_id, profile__id=profile_id, profile__user=request.user, active=True).first()
+        if not item:
+            return Response({"detail": "Media not found."}, status=status.HTTP_404_NOT_FOUND)
+        item.active = False
+        item.save(update_fields=["active", "updated_at"])
+        return Response({"status": "deleted"})
 
 
 class MeProfileView(APIView):
