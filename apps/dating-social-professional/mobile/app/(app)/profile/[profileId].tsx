@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -14,6 +14,8 @@ export default function ProfileDetailScreen() {
     enabled: !!profileId,
   });
 
+  const mediaQuery = useQuery({ queryKey: ['dating', 'profile-media', profileId], queryFn: () => api.getProfileMedia(profileId), enabled: !!profileId });
+
   if (isLoading || !data) {
     return <View style={styles.center}><Text>Loading profile…</Text></View>;
   }
@@ -26,6 +28,7 @@ export default function ProfileDetailScreen() {
         <Text style={styles.name}>{data.displayName}{data.age ? `, ${data.age}` : ''}</Text>
         <Text style={styles.intent}>{data.relationshipIntent || 'No relationship intent set'}</Text>
       </View>
+      {mediaQuery.data?.items.length ? <View style={styles.gallery}>{mediaQuery.data.items.map((item) => <Image key={item.id} source={{ uri: item.url }} style={styles.image} accessibilityLabel="Profile photo" />)}</View> : null}
       <Text style={styles.section}>About</Text>
       <Text style={styles.body}>{data.bio || 'No bio yet.'}</Text>
       {data.interests.length ? <><Text style={styles.section}>Interests</Text><Text style={styles.body}>{data.interests.join(' · ')}</Text></> : null}
@@ -40,6 +43,8 @@ export default function ProfileDetailScreen() {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   container: { padding: 24, gap: 12 },
+  gallery: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  image: { width: 110, height: 110, borderRadius: 16 },
   hero: { padding: 24, borderWidth: 1, borderRadius: 24, gap: 8 },
   name: { fontSize: 28, fontWeight: '800' },
   intent: { textTransform: 'capitalize' },
