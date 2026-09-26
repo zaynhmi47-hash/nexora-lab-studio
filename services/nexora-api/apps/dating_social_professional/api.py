@@ -609,8 +609,22 @@ class ConversationMessagesView(APIView):
             Q(blocker_id=request.user.id, blocked_id=counterpart_id) | Q(blocker_id=counterpart_id, blocked_id=request.user.id)
         ).exists():
             return Response({"detail": "Conversation not found."}, status=status.HTTP_404_NOT_FOUND)
-        messages = DatingMessage.objects.filter(conversation=conversation).order_by("created_at")
-        return Response({"items": [{"id": str(m.id), "senderId": str(m.sender_id), "body": m.body, "createdAt": m.created_at.isoformat(), "readAt": m.read_at.isoformat() if m.read_at else None} for m in messages]})
+        try:
+            limit = min(100, max(1, int(request.query_params.get("limit", "50"))))
+        except (TypeError, ValueError):
+            return Response({"detail": "limit must be a valid integer."}, status=status.HTTP_400_BAD_REQUEST)
+        before = request.query_params.get("before")
+        queryset = DatingMessage.objects.filter(conversation=conversation)
+        if before:
+            try:
+                before_message = DatingMessage.objects.get(id=before, conversation=conversation)
+            except (DatingMessage.DoesNotExist, ValueError, TypeError):
+                return Response({"detail": "before must reference a valid message in this conversation."}, status=status.HTTP_400_BAD_REQUEST)
+            queryset = queryset.filter(created_at__lt=before_message.created_at)
+        messages = list(queryset.order_by("-created_at")[:limit])
+        messages.reverse()
+        next_before = str(messages[0].id) if len(messages) == limit else None
+        return Response({"items": [{"id": str(m.id), "senderId": str(m.sender_id), "body": m.body, "createdAt": m.created_at.isoformat(), "readAt": m.read_at.isoformat() if m.read_at else None} for m in messages], "next_before": next_before})
 
     def post(self, request, conversation_id):
         try:
