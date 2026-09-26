@@ -10,7 +10,7 @@ export type DiscoveryProfile = {
   photoUrl: string | null;
 };
 
-export type DiscoveryResponse = { items: DiscoveryProfile[]; nextCursor: string | null };
+type DiscoveryResponseWire = { items: Array<{ id: string; display_name: string; age: number | null; bio: string; photo_url: string | null }>; next_cursor: string | null };\nexport type DiscoveryResponse = { items: DiscoveryProfile[]; nextCursor: string | null };
 export type SwipeAction = 'like' | 'pass';
 
 type ApiError = Error & { status?: number };
@@ -41,7 +41,7 @@ class DatingApi {
   }
 
   swipe(profileId: string, action: SwipeAction) {
-    return this.request<{ status: 'accepted'; matched: boolean; matchId: string | null }>('/api/v1/dating/swipes/', {
+    return this.request<{ status: 'accepted'; matched: boolean; match_id: string | null }>('/api/v1/dating/swipes/', {
       method: 'POST',
       body: JSON.stringify({ target_profile_id: profileId, action }),
     });
