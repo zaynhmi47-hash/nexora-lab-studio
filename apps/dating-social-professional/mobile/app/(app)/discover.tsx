@@ -159,8 +159,15 @@ export default function DiscoverScreen() {
             </View>
             <Text style={styles.position}>{index + 1} / {items.length}</Text>
             <Text style={styles.name}>{current.displayName}{current.age !== null ? `, ${current.age}` : ''}</Text>
+            <View style={styles.contextRow}>
+              <View style={styles.compatibilityBadge}>
+                <Text style={styles.compatibilityText}>{Math.round(current.compatibilityScore)}% match</Text>
+              </View>
+              {current.distanceKm !== null ? <Text style={styles.contextText}>{current.distanceKm} km away</Text> : current.locationCity ? <Text style={styles.contextText}>{current.locationCity}</Text> : null}
+            </View>
             <Text style={styles.intent}>{current.relationshipIntent || 'Open to connect'}</Text>
             <Text style={styles.bio}>{current.bio || 'No bio yet.'}</Text>
+            {current.sharedInterests.length ? <Text style={styles.sharedInterests}>Shared interests: {current.sharedInterests.join(' · ')}</Text> : null}
             {current.interests.length ? <Text>Interests: {current.interests.join(' · ')}</Text> : null}
             {current.education ? <Text>Education: {current.education}</Text> : null}
             {current.occupation ? <Text>Work: {current.occupation}</Text> : null}
@@ -192,6 +199,11 @@ const styles = StyleSheet.create({
   position: { opacity: 0.6, marginBottom: 4 },
   name: { fontSize: 26, fontWeight: '800' },
   intent: { fontWeight: '700', textTransform: 'capitalize' },
+  contextRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  compatibilityBadge: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
+  compatibilityText: { fontWeight: '800' },
+  contextText: { opacity: 0.65 },
+  sharedInterests: { fontWeight: '700' },
   bio: { fontSize: 16, lineHeight: 23 },
   detailsHint: { marginTop: 6, opacity: 0.6 },
   actions: { flexDirection: 'row', gap: 12 },
