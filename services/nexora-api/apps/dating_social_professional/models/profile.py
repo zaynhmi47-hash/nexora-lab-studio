@@ -19,6 +19,14 @@ class DatingProfile(AuditableBaseModel):
     discovery_enabled = models.BooleanField(default=True, db_index=True)
     preferred_min_age = models.PositiveSmallIntegerField(default=18)
     preferred_max_age = models.PositiveSmallIntegerField(default=99)
+    interests = models.JSONField(default=list, blank=True)
+    education = models.CharField(max_length=160, blank=True)
+    occupation = models.CharField(max_length=160, blank=True)
+    location_city = models.CharField(max_length=120, blank=True)
+    location_country = models.CharField(max_length=120, blank=True)
+    location_latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    location_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    max_distance_km = models.PositiveIntegerField(default=100, blank=True)
 
     class Meta:
         db_table = "dating_profiles"
