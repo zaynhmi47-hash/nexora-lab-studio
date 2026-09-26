@@ -115,7 +115,7 @@ class DatingSwipeService:
                         data={"match_id": str(match.id)},
                     )
         except IntegrityError:
-            match = DatingMatch.objects.get(user_a_id=first, user_b_id=second)
+            match = DatingMatch.objects.select_for_update().get(user_a_id=first, user_b_id=second)
         return swipe, match
 
 
