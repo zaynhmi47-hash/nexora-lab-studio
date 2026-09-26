@@ -5,7 +5,7 @@ from django.db.models import Q
 
 from apps.identity.models import NexoraUser
 
-from .models import DatingBlock, DatingMatch, DatingProfile, DatingReport, DatingSwipe
+from .models import DatingBlock, DatingConversation, DatingMatch, DatingProfile, DatingReport, DatingSwipe
 
 
 class DatingSafetyService:
@@ -15,7 +15,9 @@ class DatingSafetyService:
         if actor.id == target.id:
             raise ValueError("A user cannot block themselves.")
         block, _ = DatingBlock.objects.get_or_create(blocker=actor, blocked=target)
-        DatingMatch.objects.filter(Q(user_a=actor, user_b=target) | Q(user_a=target, user_b=actor)).update(active=False)
+        matches = DatingMatch.objects.filter(Q(user_a=actor, user_b=target) | Q(user_a=target, user_b=actor))
+        matches.update(active=False)
+        DatingConversation.objects.filter(match__in=matches).update(active=False)
         return block
 
     @staticmethod
@@ -23,6 +25,17 @@ class DatingSafetyService:
         if actor.id == target.id:
             raise ValueError("A user cannot report themselves.")
         return DatingReport.objects.create(reporter=actor, reported=target, reason=reason, details=details)
+
+    @staticmethod
+    @transaction.atomic
+    def unmatch(*, actor: NexoraUser, match_id) -> DatingMatch:
+        match = DatingMatch.objects.select_for_update().filter(id=match_id).first()
+        if not match or actor.id not in {match.user_a_id, match.user_b_id}:
+            raise ValueError("Match not found.")
+        match.active = False
+        match.save(update_fields=["active", "updated_at"])
+        DatingConversation.objects.filter(match=match).update(active=False)
+        return match
 
 
 class DatingSwipeService:
@@ -58,6 +71,9 @@ class DatingSwipeService:
         try:
             with transaction.atomic():
                 match, _ = DatingMatch.objects.get_or_create(user_a_id=first, user_b_id=second)
+                if not match.active:
+                    match.active = True
+                    match.save(update_fields=["active", "updated_at"])
         except IntegrityError:
             match = DatingMatch.objects.get(user_a_id=first, user_b_id=second)
         return swipe, match
