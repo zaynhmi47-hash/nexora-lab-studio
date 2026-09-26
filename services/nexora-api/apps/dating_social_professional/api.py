@@ -650,7 +650,7 @@ class NotificationView(APIView):
     def get(self, request):
         items = DatingNotification.objects.filter(recipient=request.user).order_by("-created_at")[:50]
         unread = DatingNotification.objects.filter(recipient=request.user, read_at__isnull=True).count()
-        return Response({"items": [{"id": str(n.id), "type": n.notification_type, "title": n.title, "body": n.body, "data": n.data, "createdAt": n.created_at.isoformat(), "readAt": n.read_at.isoformat() if n.read_at else None} for n in items], "unreadCount": unread})
+        return Response({"items": [{"id": str(n.id), "type": n.type, "title": n.title, "body": n.body, "data": n.data, "createdAt": n.created_at.isoformat(), "readAt": n.read_at.isoformat() if n.read_at else None} for n in items], "unreadCount": unread})
 
     def post(self, request):
         updated = DatingNotification.objects.filter(recipient=request.user, read_at__isnull=True).update(read_at=timezone.now())
