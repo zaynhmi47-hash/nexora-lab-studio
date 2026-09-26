@@ -49,6 +49,22 @@ class DatingProfileSerializer(serializers.ModelSerializer):
         model = DatingProfile
         fields = ("id", "display_name", "birth_date", "age", "bio", "photo_url", "relationship_intent", "discovery_enabled", "preferred_min_age", "preferred_max_age", "interests", "education", "occupation", "location_city", "location_country", "max_distance_km", "profile_completion")
 
+    def validate(self, attrs):
+        birth_date = attrs.get("birth_date", getattr(self.instance, "birth_date", None))
+        if birth_date:
+            today = date.today()
+            age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+            if age < 18:
+                raise serializers.ValidationError({"birth_date": "Dating profiles require an age of at least 18."})
+            if birth_date > today:
+                raise serializers.ValidationError({"birth_date": "Birth date cannot be in the future."})
+
+        minimum = attrs.get("preferred_min_age", getattr(self.instance, "preferred_min_age", 18))
+        maximum = attrs.get("preferred_max_age", getattr(self.instance, "preferred_max_age", 99))
+        if minimum < 18 or maximum > 99 or minimum > maximum:
+            raise serializers.ValidationError({"preferred_min_age": "Preferred age range must be between 18 and 99, with minimum no greater than maximum."})
+        return attrs
+
     def get_profile_completion(self, obj):
         active_media = getattr(obj, "_active_media", None)
         has_photo = bool(obj.photo_url.strip()) or (active_media is not None and bool(active_media)) or (active_media is None and DatingProfileMedia.objects.filter(profile=obj, active=True).exists())\n        checks = [bool(obj.display_name.strip()), bool(obj.birth_date), bool(obj.bio.strip()), has_photo, bool(obj.relationship_intent), bool(obj.interests), bool(obj.education.strip()), bool(obj.occupation.strip()), bool(obj.location_city.strip())]
@@ -220,12 +236,13 @@ class ProfileMediaView(APIView):
 
         upload = request.FILES.get("file")
         if upload is not None:
-            if not upload.content_type or not upload.content_type.startswith("image/"):
-                return Response({"detail": "Only image uploads are supported."}, status=status.HTTP_400_BAD_REQUEST)
+            allowed_types = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
+            extension = allowed_types.get(upload.content_type)
+            if not extension:
+                return Response({"detail": "Only JPEG, PNG, and WebP images are supported."}, status=status.HTTP_400_BAD_REQUEST)
             if upload.size > self.max_upload_size:
                 return Response({"detail": "Image uploads must be 10 MB or smaller."}, status=status.HTTP_400_BAD_REQUEST)
             media_id = uuid4()
-            extension = (upload.name.rsplit(".", 1)[-1].lower() if "." in upload.name else "bin")[:12]
             storage_key = f"{profile.id}/{media_id}.{extension}"
             reference = ObjectReference(namespace="dating/profile-media", key=storage_key)
             FirebaseProviderRegistry().storage().upload(
