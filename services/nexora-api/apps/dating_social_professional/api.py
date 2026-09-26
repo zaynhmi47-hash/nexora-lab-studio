@@ -42,6 +42,27 @@ class DiscoveryView(APIView):
         return Response({"items": DatingProfileSerializer(discovery_for(request.user, **filters), many=True).data, "next_cursor": None})
 
 
+class ProfileDetailView(APIView):
+    permission_classes = [AuthenticatedNexoraUserPermission]
+
+    def get(self, request, profile_id):
+        profile = DatingProfile.objects.filter(
+            id=profile_id,
+            discovery_enabled=True,
+            user__status__in=[NexoraUser.Status.ACTIVE],
+        ).first()
+        if not profile:
+            return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+        if profile.user_id == request.user.id:
+            return Response(DatingProfileSerializer(profile).data)
+        blocked = DatingBlock.objects.filter(
+            Q(blocker=request.user, blocked=profile.user) | Q(blocker=profile.user, blocked=request.user)
+        ).exists()
+        if blocked:
+            return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(DatingProfileSerializer(profile).data)
+
+
 class MeProfileView(APIView):
     permission_classes = [AuthenticatedNexoraUserPermission]
 
