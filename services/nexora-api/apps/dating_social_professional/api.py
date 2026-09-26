@@ -44,7 +44,9 @@ class DiscoveryView(APIView):
     permission_classes = [AuthenticatedNexoraUserPermission]
 
     def get(self, request):
-        filters = {key: request.query_params.get(key) for key in ("intent", "education", "occupation", "city", "interest") if request.query_params.get(key)}
+        filters = {key: request.query_params.get(key) for key in ("intent", "education", "occupation", "city", "interest", "max_distance_km") if request.query_params.get(key)}
+        if "max_distance_km" in filters:
+            filters["max_distance_km"] = int(filters["max_distance_km"])
         profiles = discovery_for(request.user, **filters)
         actor_profile = DatingProfile.objects.filter(user=request.user).first()
         serialized = DatingProfileSerializer(profiles, many=True).data
