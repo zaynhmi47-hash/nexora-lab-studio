@@ -29,6 +29,7 @@ class DatingApi {
   getProfile(profileId: string) { return this.request<WireProfile>(`/api/v1/dating/profile/${profileId}/`).then(mapProfile); }
   getProfileMedia(profileId: string) { return this.request<{ items: DatingProfileMedia[] }>(`/api/v1/dating/profile/${profileId}/media/`); }
   addProfileMedia(profileId: string, payload: { url: string; media_type: 'image'; sort_order?: number; is_primary?: boolean }) { return this.request<DatingProfileMedia>(`/api/v1/dating/profile/${profileId}/media/`, { method: 'POST', body: JSON.stringify(payload) }); }
+  updateProfileMedia(profileId: string, mediaId: string, payload: { sort_order?: number; is_primary?: boolean }) { return this.request<DatingProfileMedia>(`/api/v1/dating/profile/${profileId}/media/`, { method: 'PATCH', body: JSON.stringify({ media_id: mediaId, ...payload }) }); }
   removeProfileMedia(profileId: string, mediaId: string) { return this.request<{ status: 'deleted' }>(`/api/v1/dating/profile/${profileId}/media/?media_id=${encodeURIComponent(mediaId)}`, { method: 'DELETE' }); }
   async getMyProfile(): Promise<DatingProfile> {
     const p = await this.request<WireProfile>('/api/v1/dating/profile/me/');
