@@ -5,7 +5,8 @@ from django.db.models import Q
 
 from apps.identity.models import NexoraUser
 
-from .models import DatingBlock, DatingConversation, DatingMatch, DatingNotification, DatingProfile, DatingReport, DatingSwipe
+from .models import DatingBlock, DatingConversation, DatingMatch, DatingProfile, DatingReport, DatingSwipe
+from .notifications.service import DatingNotificationService
 
 
 class DatingSafetyService:
@@ -77,10 +78,20 @@ class DatingSwipeService:
                     match.save(update_fields=["active", "updated_at"])
                     reactivated = True
                 if created or reactivated:
-                    DatingNotification.objects.bulk_create([
-                        DatingNotification(recipient_id=actor.id, type=DatingNotification.Type.MATCH, title="New match", body="You have a new match.", data={"match_id": str(match.id)}),
-                        DatingNotification(recipient_id=target_profile.user_id, type=DatingNotification.Type.MATCH, title="New match", body="You have a new match.", data={"match_id": str(match.id)}),
-                    ])
+                    DatingNotificationService.create_and_dispatch(
+                        recipient_id=actor.id,
+                        notification_type="match",
+                        title="New match",
+                        body="You have a new match.",
+                        data={"match_id": str(match.id)},
+                    )
+                    DatingNotificationService.create_and_dispatch(
+                        recipient_id=target_profile.user_id,
+                        notification_type="match",
+                        title="New match",
+                        body="You have a new match.",
+                        data={"match_id": str(match.id)},
+                    )
         except IntegrityError:
             match = DatingMatch.objects.get(user_a_id=first, user_b_id=second)
         return swipe, match
