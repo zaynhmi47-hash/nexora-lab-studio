@@ -46,7 +46,13 @@ class DiscoveryView(APIView):
     def get(self, request):
         filters = {key: request.query_params.get(key) for key in ("intent", "education", "occupation", "city", "interest", "max_distance_km") if request.query_params.get(key)}
         if "max_distance_km" in filters:
-            filters["max_distance_km"] = int(filters["max_distance_km"])
+            try:
+                filters["max_distance_km"] = max(1, int(filters["max_distance_km"]))
+            except (TypeError, ValueError):
+                return Response(
+                    {"detail": "max_distance_km must be a positive integer."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         profiles = discovery_for(request.user, **filters)
         actor_profile = DatingProfile.objects.filter(user=request.user).first()
         serialized = DatingProfileSerializer(profiles, many=True).data
