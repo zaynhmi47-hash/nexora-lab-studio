@@ -15,6 +15,8 @@ class DatingConversationService:
         match = DatingMatch.objects.select_for_update().filter(id=match_id, active=True).first()
         if not match or actor.id not in {match.user_a_id, match.user_b_id}:
             raise ValueError("Active match not found.")
+        if match.user_a.status != NexoraUser.Status.ACTIVE or match.user_b.status != NexoraUser.Status.ACTIVE:
+            raise ValueError("Active match not found.")
         if DatingBlock.objects.filter(
             Q(blocker_id=match.user_a_id, blocked_id=match.user_b_id)
             | Q(blocker_id=match.user_b_id, blocked_id=match.user_a_id)
@@ -30,7 +32,12 @@ class DatingConversationService:
         if not conversation:
             raise ValueError("Conversation not found.")
         match = conversation.match
-        if not match.active or actor.id not in {match.user_a_id, match.user_b_id}:
+        if (
+            not match.active
+            or match.user_a.status != NexoraUser.Status.ACTIVE
+            or match.user_b.status != NexoraUser.Status.ACTIVE
+            or actor.id not in {match.user_a_id, match.user_b_id}
+        ):
             raise ValueError("Conversation is unavailable.")
         if DatingBlock.objects.filter(
             Q(blocker_id=match.user_a_id, blocked_id=match.user_b_id)
