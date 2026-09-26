@@ -6,6 +6,7 @@ import { useDatingSession } from '@/src/auth/session';
 export type DiscoveryProfile = { id: string; displayName: string; age: number | null; birthDate: string | null; bio: string; photoUrl: string | null; relationshipIntent: string };
 export type DatingProfile = DiscoveryProfile & { discoveryEnabled: boolean; preferredMinAge: number; preferredMaxAge: number };
 export type Match = { id: string; userA: string; userB: string; matchedAt: string };
+export type DatingMessage = { id: string; senderId: string; body: string; createdAt: string; readAt: string | null };
 type WireProfile = { id: string; display_name: string; birth_date: string | null; age: number | null; bio: string; photo_url: string | null; relationship_intent: string; discovery_enabled?: boolean; preferred_min_age: number; preferred_max_age: number };
 
 const mapProfile = (item: WireProfile): DiscoveryProfile => ({ id: item.id, displayName: item.display_name, age: item.age, birthDate: item.birth_date, bio: item.bio, photoUrl: item.photo_url, relationshipIntent: item.relationship_intent });
@@ -33,6 +34,10 @@ class DatingApi {
     return this.request<{ status: 'accepted'; matched: boolean; match_id: string | null }>('/api/v1/dating/swipes/', { method: 'POST', body: JSON.stringify({ target_profile_id: profileId, action }) });
   }
   getMatches() { return this.request<{ items: Match[] }>('/api/v1/dating/matches/'); }
+  createConversation(matchId: string) { return this.request<{ id: string; matchId: string }>('/api/v1/dating/conversations/', { method: 'POST', body: JSON.stringify({ match_id: matchId }) }); }
+  getMessages(conversationId: string) { return this.request<{ items: DatingMessage[] }>(`/api/v1/dating/conversations/${conversationId}/messages/`); }
+  sendMessage(conversationId: string, body: string) { return this.request<DatingMessage>(`/api/v1/dating/conversations/${conversationId}/messages/`, { method: 'POST', body: JSON.stringify({ body }) }); }
+  markConversationRead(conversationId: string) { return this.request<{ status: 'read'; updated: number }>(`/api/v1/dating/conversations/${conversationId}/read/`, { method: 'POST' }); }
 }
 
 const ApiContext = createContext<DatingApi | null>(null);
