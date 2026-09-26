@@ -6,7 +6,7 @@ from django.db.models import Q, Prefetch
 
 from apps.identity.models import NexoraUser
 
-from .models import DatingBlock, DatingConversation, DatingMatch, DatingProfile, DatingProfileMedia, DatingReport, DatingSwipe
+from .models import DatingBlock, DatingConversation, DatingConversationPresence, DatingMatch, DatingProfile, DatingProfileMedia, DatingReport, DatingSwipe
 from .notifications.service import DatingNotificationService
 
 
@@ -19,7 +19,9 @@ class DatingSafetyService:
         block, _ = DatingBlock.objects.get_or_create(blocker=actor, blocked=target)
         matches = DatingMatch.objects.filter(Q(user_a=actor, user_b=target) | Q(user_a=target, user_b=actor))
         matches.update(active=False)
-        DatingConversation.objects.filter(match__in=matches).update(active=False)
+        conversations = DatingConversation.objects.filter(match__in=matches)
+        conversations.update(active=False)
+        DatingConversationPresence.objects.filter(conversation__in=conversations, active=True).update(active=False)
         return block
 
     @staticmethod
@@ -36,7 +38,9 @@ class DatingSafetyService:
             raise ValueError("Match not found.")
         match.active = False
         match.save(update_fields=["active", "updated_at"])
-        DatingConversation.objects.filter(match=match).update(active=False)
+        conversations = DatingConversation.objects.filter(match=match)
+        conversations.update(active=False)
+        DatingConversationPresence.objects.filter(conversation__in=conversations, active=True).update(active=False)
         return match
 
 
