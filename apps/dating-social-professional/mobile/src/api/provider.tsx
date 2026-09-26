@@ -28,6 +28,9 @@ class DatingApi {
       normalized.max_distance_km = normalized.distance;
       delete normalized.distance;
     }
+    Object.keys(normalized).forEach((key) => {
+      if (!normalized[key]) delete normalized[key];
+    });
     const query = new URLSearchParams(normalized).toString();
     const wire = await this.request<{ items: WireProfile[]; next_cursor: string | null }>(`/api/v1/dating/discovery/${query ? `?${query}` : ''}`);
     return { items: wire.items.map(mapProfile), nextCursor: wire.next_cursor };
