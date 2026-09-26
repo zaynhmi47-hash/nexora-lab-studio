@@ -156,7 +156,7 @@ def _compatibility_score(actor: DatingProfile, candidate: DatingProfile, today: 
     return round(min(score, 100.0), 2)
 
 
-def discovery_for(actor: NexoraUser, limit: int = 20, *, intent: str | None = None, education: str | None = None, occupation: str | None = None, city: str | None = None, interest: str | None = None):
+def discovery_for(actor: NexoraUser, limit: int = 20, *, intent: str | None = None, education: str | None = None, occupation: str | None = None, city: str | None = None, interest: str | None = None, max_distance_km: int | None = None):
     actor_profile = DatingProfile.objects.filter(user=actor).first()
     excluded = DatingSwipe.objects.filter(actor=actor).values_list("target_id", flat=True)
     blocked_ids = set(
@@ -211,7 +211,8 @@ def discovery_for(actor: NexoraUser, limit: int = 20, *, intent: str | None = No
         ):
             continue
         distance = _distance_km(actor_profile, candidate)
-        if distance is not None and distance > actor_profile.max_distance_km:
+        effective_max_distance = max_distance_km if max_distance_km is not None else actor_profile.max_distance_km
+        if distance is not None and distance > effective_max_distance:
             continue
         ranked.append((_compatibility_score(actor_profile, candidate, today), candidate))
 
