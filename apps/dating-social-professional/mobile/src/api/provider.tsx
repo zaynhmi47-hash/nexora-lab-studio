@@ -17,7 +17,8 @@ const mapProfile = (item: WireProfile): DiscoveryProfile => ({ id: item.id, disp
 class DatingApi {
   constructor(private readonly baseUrl: string, private readonly token: string | null) {}
   private async request<T>(path: string, init?: RequestInit): Promise<T> {
-    const response = await fetch(this.baseUrl + path, { ...init, headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(this.token ? { Authorization: 'Bearer ' + this.token } : {}), ...(init?.headers ?? {}) } });
+    const isFormData = typeof FormData !== 'undefined' && init?.body instanceof FormData;
+    const response = await fetch(this.baseUrl + path, { ...init, headers: { Accept: 'application/json', ...(isFormData ? {} : { 'Content-Type': 'application/json' }), ...(this.token ? { Authorization: 'Bearer ' + this.token } : {}), ...(init?.headers ?? {}) } });
     if (!response.ok) throw new Error('Nexora Dating API request failed.');
     return response.json() as Promise<T>;
   }
@@ -29,6 +30,7 @@ class DatingApi {
   getProfile(profileId: string) { return this.request<WireProfile>(`/api/v1/dating/profile/${profileId}/`).then(mapProfile); }
   getProfileMedia(profileId: string) { return this.request<{ items: DatingProfileMedia[] }>(`/api/v1/dating/profile/${profileId}/media/`); }
   addProfileMedia(profileId: string, payload: { url: string; media_type: 'image'; sort_order?: number; is_primary?: boolean }) { return this.request<DatingProfileMedia>(`/api/v1/dating/profile/${profileId}/media/`, { method: 'POST', body: JSON.stringify(payload) }); }
+  uploadProfileMedia(profileId: string, asset: { uri: string; name: string; mimeType?: string | null }) { const form = new FormData(); form.append('file', { uri: asset.uri, name: asset.name, type: asset.mimeType ?? 'image/jpeg' } as unknown as Blob); return this.request<DatingProfileMedia>(`/api/v1/dating/profile/${profileId}/media/`, { method: 'POST', body: form }); }
   updateProfileMedia(profileId: string, mediaId: string, payload: { sort_order?: number; is_primary?: boolean }) { return this.request<DatingProfileMedia>(`/api/v1/dating/profile/${profileId}/media/`, { method: 'PATCH', body: JSON.stringify({ media_id: mediaId, ...payload }) }); }
   removeProfileMedia(profileId: string, mediaId: string) { return this.request<{ status: 'deleted' }>(`/api/v1/dating/profile/${profileId}/media/?media_id=${encodeURIComponent(mediaId)}`, { method: 'DELETE' }); }
   async getMyProfile(): Promise<DatingProfile> {
