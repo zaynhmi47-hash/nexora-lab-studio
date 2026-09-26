@@ -1,6 +1,6 @@
 from django.db import transaction
 
-from ..models import DatingNotification, DatingPushToken
+from ..models import DatingConversationPresence, DatingNotification, DatingNotificationPreference, DatingPushToken
 from .expo import ExpoPushProvider
 from .ports import PushMessage
 
@@ -32,6 +32,24 @@ class DatingNotificationService:
         notification = DatingNotification.objects.filter(id=notification_id).first()
         if not notification:
             return
+
+        preferences, _ = DatingNotificationPreference.objects.get_or_create(user_id=notification.recipient_id)
+        enabled = {
+            "match": preferences.match_push_enabled,
+            "message": preferences.message_push_enabled,
+            "safety": preferences.safety_push_enabled,
+        }.get(notification.type, False)
+        if not preferences.push_enabled or not enabled:
+            return
+
+        if notification.type == "message":
+            conversation_id = notification.data.get("conversation_id")
+            if conversation_id and DatingConversationPresence.objects.filter(
+                user_id=notification.recipient_id,
+                conversation_id=conversation_id,
+                active=True,
+            ).exists():
+                return
 
         tokens = list(
             DatingPushToken.objects.filter(
