@@ -288,13 +288,18 @@ class ProfileMediaView(APIView):
             serializer.is_valid(raise_exception=True)
             if not serializer.validated_data["url"]:
                 return Response({"detail": "url or file is required."}, status=status.HTTP_400_BAD_REQUEST)
-            item = DatingProfileMedia.objects.create(
-                profile=profile,
-                url=serializer.validated_data["url"],
-                media_type=serializer.validated_data["media_type"],
-                sort_order=serializer.validated_data["sort_order"],
-                is_primary=serializer.validated_data["is_primary"],
-            )
+            with transaction.atomic():
+                locked_profile = DatingProfile.objects.select_for_update().get(pk=profile.pk)
+                active_media = DatingProfileMedia.objects.filter(profile=locked_profile, active=True)
+                if active_media.count() >= 6:
+                    return Response({"detail": "A profile can have at most 6 media items."}, status=status.HTTP_400_BAD_REQUEST)
+                item = DatingProfileMedia.objects.create(
+                    profile=locked_profile,
+                    url=serializer.validated_data["url"],
+                    media_type=serializer.validated_data["media_type"],
+                    sort_order=serializer.validated_data["sort_order"],
+                    is_primary=serializer.validated_data["is_primary"],
+                )
 
         if item.is_primary:
             DatingProfileMedia.objects.filter(profile=profile).exclude(id=item.id).update(is_primary=False)
