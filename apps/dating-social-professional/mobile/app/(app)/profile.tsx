@@ -24,7 +24,9 @@ export default function ProfileScreen() {
     {isLoading ? <Text>Loading…</Text> : null}
     <TextInput style={styles.input} value={displayName} onChangeText={setDisplayName} placeholder="Display name" />
     <TextInput style={[styles.input, styles.bio]} value={bio} onChangeText={setBio} placeholder="Tell people about you" multiline />
-    <View style={styles.choices}>{['dating', 'relationship', 'friendship'].map((value) => <Pressable key={value} onPress={() => setIntent(value)} style={[styles.choice, intent === value && styles.selected]}><Text>{value}</Text></Pressable>)}</View>\n    <Text style={styles.label}>Preferred age range</Text>\n    <View style={styles.ageRow}><TextInput style={[styles.input, styles.ageInput]} value={minAge} onChangeText={setMinAge} keyboardType="number-pad" /><Text>to</Text><TextInput style={[styles.input, styles.ageInput]} value={maxAge} onChangeText={setMaxAge} keyboardType="number-pad" /></View>
+    <View style={styles.choices}>{['dating', 'relationship', 'friendship'].map((value) => <Pressable key={value} onPress={() => setIntent(value)} style={[styles.choice, intent === value && styles.selected]}><Text>{value}</Text></Pressable>)}</View>
+    <Text style={styles.label}>Preferred age range</Text>
+    <View style={styles.ageRow}><TextInput style={[styles.input, styles.ageInput]} value={minAge} onChangeText={setMinAge} keyboardType="number-pad" /><Text>to</Text><TextInput style={[styles.input, styles.ageInput]} value={maxAge} onChangeText={setMaxAge} keyboardType="number-pad" /></View>
     <Pressable disabled={save.isPending} onPress={() => save.mutate()} style={styles.save}><Text>{save.isPending ? 'Saving…' : 'Save profile'}</Text></Pressable>
     {save.isSuccess ? <Text>Saved.</Text> : null}
   </View>;
