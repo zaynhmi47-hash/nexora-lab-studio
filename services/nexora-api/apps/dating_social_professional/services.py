@@ -48,6 +48,8 @@ class DatingSwipeService:
     @staticmethod
     @transaction.atomic
     def record(*, actor: NexoraUser, target_profile: DatingProfile, action: str) -> tuple[DatingSwipe, DatingMatch | None]:
+        if actor.status != NexoraUser.Status.ACTIVE:
+            raise ValueError("This account is unavailable.")
         if target_profile.user_id == actor.id:
             raise ValueError("A user cannot swipe on their own profile.")
         if target_profile.user.status != NexoraUser.Status.ACTIVE:
