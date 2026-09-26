@@ -1,8 +1,9 @@
 from django.db import transaction
+from django.db.models import Q
 
 from apps.identity.models import NexoraUser
 
-from ..models import DatingConversationPresence, DatingNotification, DatingNotificationPreference, DatingPushToken
+from ..models import DatingBlock, DatingConversation, DatingConversationPresence, DatingNotification, DatingNotificationPreference, DatingPushToken
 from .expo import ExpoPushProvider
 from .ports import PushMessage
 
@@ -46,7 +47,21 @@ class DatingNotificationService:
 
         if notification.type == "message":
             conversation_id = notification.data.get("conversation_id")
-            if conversation_id and DatingConversationPresence.objects.filter(
+            conversation = DatingConversation.objects.select_related("match").filter(
+                id=conversation_id,
+                active=True,
+                match__active=True,
+                match__user_a__status=NexoraUser.Status.ACTIVE,
+                match__user_b__status=NexoraUser.Status.ACTIVE,
+            ).first() if conversation_id else None
+            if not conversation:
+                return
+            if DatingBlock.objects.filter(
+                Q(blocker_id=conversation.match.user_a_id, blocked_id=conversation.match.user_b_id)
+                | Q(blocker_id=conversation.match.user_b_id, blocked_id=conversation.match.user_a_id)
+            ).exists():
+                return
+            if DatingConversationPresence.objects.filter(
                 user_id=notification.recipient_id,
                 conversation_id=conversation_id,
                 active=True,
