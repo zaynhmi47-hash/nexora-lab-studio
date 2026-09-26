@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.identity.models import NexoraUser
@@ -14,7 +15,10 @@ class DatingConversationService:
         match = DatingMatch.objects.select_for_update().filter(id=match_id, active=True).first()
         if not match or actor.id not in {match.user_a_id, match.user_b_id}:
             raise ValueError("Active match not found.")
-        if DatingBlock.objects.filter(blocker_id__in=[match.user_a_id, match.user_b_id], blocked_id__in=[match.user_a_id, match.user_b_id]).exists():
+        if DatingBlock.objects.filter(
+            Q(blocker_id=match.user_a_id, blocked_id=match.user_b_id)
+            | Q(blocker_id=match.user_b_id, blocked_id=match.user_a_id)
+        ).exists():
             raise ValueError("This conversation is unavailable.")
         conversation, _ = DatingConversation.objects.get_or_create(match=match)
         return conversation
@@ -28,7 +32,10 @@ class DatingConversationService:
         match = conversation.match
         if not match.active or actor.id not in {match.user_a_id, match.user_b_id}:
             raise ValueError("Conversation is unavailable.")
-        if DatingBlock.objects.filter(blocker_id__in=[match.user_a_id, match.user_b_id], blocked_id__in=[match.user_a_id, match.user_b_id]).exists():
+        if DatingBlock.objects.filter(
+            Q(blocker_id=match.user_a_id, blocked_id=match.user_b_id)
+            | Q(blocker_id=match.user_b_id, blocked_id=match.user_a_id)
+        ).exists():
             raise ValueError("Messaging is unavailable.")
         normalized = body.strip()
         if not normalized:
