@@ -10,7 +10,7 @@ from apps.core.permissions import AuthenticatedNexoraUserPermission
 
 from apps.identity.models import NexoraUser
 
-from .models import DatingConversation, DatingMatch, DatingNotification, DatingProfile, DatingSwipe
+from .models import DatingConversation, DatingMatch, DatingNotification, DatingProfile, DatingPushToken, DatingSwipe
 from .models.safety import DatingReport
 from .conversation_service import DatingConversationService
 from .services import DatingSafetyService, DatingSwipeService, discovery_for
@@ -157,6 +157,29 @@ class BlockView(APIView):
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"status": "blocked"}, status=status.HTTP_201_CREATED)
+
+class PushTokenView(APIView):
+    permission_classes = [AuthenticatedNexoraUserPermission]
+
+    def post(self, request):
+        token = str(request.data.get("token", "")).strip()
+        platform = str(request.data.get("platform", "unknown")).strip()[:32]
+        if not token:
+            return Response({"detail": "token is required."}, status=status.HTTP_400_BAD_REQUEST)
+        push_token, _ = DatingPushToken.objects.update_or_create(
+            token=token,
+            defaults={"user": request.user, "platform": platform or "unknown", "active": True},
+        )
+        return Response({"id": str(push_token.id), "status": "registered"})
+
+    def delete(self, request):
+        token = str(request.data.get("token", "")).strip()
+        if token:
+            DatingPushToken.objects.filter(user=request.user, token=token).update(active=False)
+        else:
+            DatingPushToken.objects.filter(user=request.user).update(active=False)
+        return Response({"status": "unregistered"})
+
 
 class NotificationView(APIView):
     permission_classes = [AuthenticatedNexoraUserPermission]
