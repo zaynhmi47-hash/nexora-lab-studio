@@ -172,16 +172,10 @@ def discovery_for(actor: NexoraUser, limit: int = 20, *, intent: str | None = No
     )
     if actor_profile:
         today = date.today()
-        actor_age = _age_on_date(actor_profile.birth_date, today)
-        if actor_profile.birth_date:
-            minimum = actor_profile.preferred_min_age
-            maximum = actor_profile.preferred_max_age
-            queryset = queryset.filter(
-                birth_date__isnull=False,
-            )
         effective_intent = intent or actor_profile.relationship_intent
         if effective_intent:
             queryset = queryset.filter(relationship_intent=effective_intent)
+        queryset = queryset.filter(birth_date__isnull=False)
     if education:
         queryset = queryset.filter(education__icontains=education)
     if occupation:
@@ -191,7 +185,7 @@ def discovery_for(actor: NexoraUser, limit: int = 20, *, intent: str | None = No
     if interest:
         queryset = queryset.filter(interests__icontains=interest)
 
-    candidates = list(queryset.select_related("user"))
+    candidates = list(queryset.select_related("user").only("id", "user_id", "relationship_intent", "birth_date", "preferred_min_age", "preferred_max_age", "interests", "education", "occupation", "location_city", "location_latitude", "location_longitude", "max_distance_km", "updated_at"))
     if not actor_profile:
         return candidates[:limit]
 
