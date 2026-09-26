@@ -25,6 +25,7 @@ class DatingApi {
     const wire = await this.request<{ items: WireProfile[]; next_cursor: string | null }>(`/api/v1/dating/discovery/${query ? `?${query}` : ''}`);
     return { items: wire.items.map(mapProfile), nextCursor: wire.next_cursor };
   }
+  getProfile(profileId: string) { return this.request<WireProfile>(`/api/v1/dating/profile/${profileId}/`).then(mapProfile); }
   async getMyProfile(): Promise<DatingProfile> {
     const p = await this.request<WireProfile>('/api/v1/dating/profile/me/');
     return { ...mapProfile(p), discoveryEnabled: p.discovery_enabled ?? true, preferredMinAge: p.preferred_min_age, preferredMaxAge: p.preferred_max_age };
