@@ -8,6 +8,7 @@ export type DatingProfile = DiscoveryProfile & { discoveryEnabled: boolean; pref
 export type Match = { id: string; userA: string; userB: string; matchedAt: string };
 export type DatingMessage = { id: string; senderId: string; body: string; createdAt: string; readAt: string | null };
 export type DatingNotification = { id: string; type: string; title: string; body: string; data: Record<string, unknown>; createdAt: string; readAt: string | null };
+export type DatingProfileMedia = { id: string; url: string; mediaType: 'image'; sortOrder: number; isPrimary: boolean };
 export type DatingNotificationPreferences = { push_enabled: boolean; match_push_enabled: boolean; message_push_enabled: boolean; safety_push_enabled: boolean };
 type WireProfile = { id: string; display_name: string; birth_date: string | null; age: number | null; bio: string; photo_url: string | null; relationship_intent: string; discovery_enabled?: boolean; preferred_min_age: number; preferred_max_age: number; interests?: string[]; education?: string; occupation?: string; location_city?: string; location_country?: string; max_distance_km?: number; profile_completion?: number };
 
@@ -26,6 +27,9 @@ class DatingApi {
     return { items: wire.items.map(mapProfile), nextCursor: wire.next_cursor };
   }
   getProfile(profileId: string) { return this.request<WireProfile>(`/api/v1/dating/profile/${profileId}/`).then(mapProfile); }
+  getProfileMedia(profileId: string) { return this.request<{ items: DatingProfileMedia[] }>(`/api/v1/dating/profile/${profileId}/media/`); }
+  addProfileMedia(profileId: string, payload: { url: string; media_type: 'image'; sort_order?: number; is_primary?: boolean }) { return this.request<DatingProfileMedia>(`/api/v1/dating/profile/${profileId}/media/`, { method: 'POST', body: JSON.stringify(payload) }); }
+  removeProfileMedia(profileId: string, mediaId: string) { return this.request<{ status: 'deleted' }>(`/api/v1/dating/profile/${profileId}/media/?media_id=${encodeURIComponent(mediaId)}`, { method: 'DELETE' }); }
   async getMyProfile(): Promise<DatingProfile> {
     const p = await this.request<WireProfile>('/api/v1/dating/profile/me/');
     return { ...mapProfile(p), discoveryEnabled: p.discovery_enabled ?? true, preferredMinAge: p.preferred_min_age, preferredMaxAge: p.preferred_max_age };
