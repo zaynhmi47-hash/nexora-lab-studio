@@ -1,5 +1,7 @@
 from datetime import date
 
+from django.utils import timezone
+
 from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -8,7 +10,7 @@ from apps.core.permissions import AuthenticatedNexoraUserPermission
 
 from apps.identity.models import NexoraUser
 
-from .models import DatingConversation, DatingMatch, DatingProfile, DatingSwipe
+from .models import DatingConversation, DatingMatch, DatingNotification, DatingProfile, DatingSwipe
 from .models.safety import DatingReport
 from .conversation_service import DatingConversationService
 from .services import DatingSafetyService, DatingSwipeService, discovery_for
@@ -155,6 +157,19 @@ class BlockView(APIView):
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"status": "blocked"}, status=status.HTTP_201_CREATED)
+
+class NotificationView(APIView):
+    permission_classes = [AuthenticatedNexoraUserPermission]
+
+    def get(self, request):
+        items = DatingNotification.objects.filter(recipient=request.user).order_by("-created_at")[:50]
+        unread = DatingNotification.objects.filter(recipient=request.user, read_at__isnull=True).count()
+        return Response({"items": [{"id": str(n.id), "type": n.type, "title": n.title, "body": n.body, "data": n.data, "createdAt": n.created_at.isoformat(), "readAt": n.read_at.isoformat() if n.read_at else None} for n in items], "unreadCount": unread})
+
+    def post(self, request):
+        DatingNotification.objects.filter(recipient=request.user, read_at__isnull=True).update(read_at=timezone.now())
+        return Response({"status": "read"})
+
 
 
 class ConversationDetailView(APIView):
