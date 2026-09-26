@@ -16,6 +16,10 @@ class DatingSafetyService:
     def block(*, actor: NexoraUser, target: NexoraUser) -> DatingBlock:
         if actor.id == target.id:
             raise ValueError("A user cannot block themselves.")
+        if actor.status != NexoraUser.Status.ACTIVE:
+            raise ValueError("This account is unavailable.")
+        if target.status != NexoraUser.Status.ACTIVE:
+            raise ValueError("This profile is unavailable.")
         block, _ = DatingBlock.objects.get_or_create(blocker=actor, blocked=target)
         matches = DatingMatch.objects.filter(Q(user_a=actor, user_b=target) | Q(user_a=target, user_b=actor))
         matches.update(active=False)
@@ -28,6 +32,10 @@ class DatingSafetyService:
     def report(*, actor: NexoraUser, target: NexoraUser, reason: str, details: str = "") -> DatingReport:
         if actor.id == target.id:
             raise ValueError("A user cannot report themselves.")
+        if actor.status != NexoraUser.Status.ACTIVE:
+            raise ValueError("This account is unavailable.")
+        if target.status != NexoraUser.Status.ACTIVE:
+            raise ValueError("This profile is unavailable.")
         return DatingReport.objects.create(reporter=actor, reported=target, reason=reason, details=details)
 
     @staticmethod
@@ -36,6 +44,8 @@ class DatingSafetyService:
         match = DatingMatch.objects.select_for_update().filter(id=match_id).first()
         if not match or actor.id not in {match.user_a_id, match.user_b_id}:
             raise ValueError("Match not found.")
+        if actor.status != NexoraUser.Status.ACTIVE:
+            raise ValueError("This account is unavailable.")
         match.active = False
         match.save(update_fields=["active", "updated_at"])
         conversations = DatingConversation.objects.filter(match=match)
@@ -83,6 +93,7 @@ class DatingSwipeService:
         try:
             with transaction.atomic():
                 match, created = DatingMatch.objects.get_or_create(user_a_id=first, user_b_id=second)
+                match = DatingMatch.objects.select_for_update().get(pk=match.pk)
                 reactivated = False
                 if not match.active:
                     match.active = True
