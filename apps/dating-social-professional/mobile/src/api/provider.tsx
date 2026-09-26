@@ -37,6 +37,8 @@ class DatingApi {
   getMatches() { return this.request<{ items: Match[] }>('/api/v1/dating/matches/'); }
   getNotifications() { return this.request<{ items: DatingNotification[]; unreadCount: number }>('/api/v1/dating/notifications/'); }
   markNotificationsRead() { return this.request<{ status: 'read' }>('/api/v1/dating/notifications/', { method: 'POST' }); }
+  registerPushToken(token: string, platform: string) { return this.request<{ id: string; status: 'registered' }>('/api/v1/dating/push-tokens/', { method: 'POST', body: JSON.stringify({ token, platform }) }); }
+  unregisterPushToken(token: string) { return this.request<{ status: 'unregistered' }>('/api/v1/dating/push-tokens/', { method: 'DELETE', body: JSON.stringify({ token }) }); }
   createConversation(matchId: string) { return this.request<{ id: string; matchId: string }>('/api/v1/dating/conversations/', { method: 'POST', body: JSON.stringify({ match_id: matchId }) }); }
   getMessages(conversationId: string) { return this.request<{ items: DatingMessage[] }>(`/api/v1/dating/conversations/${conversationId}/messages/`); }
   sendMessage(conversationId: string, body: string) { return this.request<DatingMessage>(`/api/v1/dating/conversations/${conversationId}/messages/`, { method: 'POST', body: JSON.stringify({ body }) }); }
