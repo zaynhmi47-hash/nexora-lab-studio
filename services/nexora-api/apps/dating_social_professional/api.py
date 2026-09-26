@@ -21,7 +21,11 @@ class DatingProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DatingProfile
-        fields = ("id", "display_name", "birth_date", "age", "bio", "photo_url", "relationship_intent", "discovery_enabled", "preferred_min_age", "preferred_max_age")
+        fields = ("id", "display_name", "birth_date", "age", "bio", "photo_url", "relationship_intent", "discovery_enabled", "preferred_min_age", "preferred_max_age", "interests", "education", "occupation", "location_city", "location_country", "max_distance_km", "profile_completion")
+
+    def get_profile_completion(self, obj):
+        checks = [bool(obj.display_name.strip()), bool(obj.birth_date), bool(obj.bio.strip()), bool(obj.photo_url.strip()), bool(obj.relationship_intent), bool(obj.interests), bool(obj.education.strip()), bool(obj.occupation.strip()), bool(obj.location_city.strip())]
+        return round(sum(checks) / len(checks) * 100)
 
     def get_age(self, obj):
         if not obj.birth_date:
@@ -34,7 +38,8 @@ class DiscoveryView(APIView):
     permission_classes = [AuthenticatedNexoraUserPermission]
 
     def get(self, request):
-        return Response({"items": DatingProfileSerializer(discovery_for(request.user), many=True).data, "next_cursor": None})
+        filters = {key: request.query_params.get(key) for key in ("intent", "education", "occupation", "city", "interest") if request.query_params.get(key)}
+        return Response({"items": DatingProfileSerializer(discovery_for(request.user, **filters), many=True).data, "next_cursor": None})
 
 
 class MeProfileView(APIView):
