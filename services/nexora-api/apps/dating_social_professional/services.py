@@ -2,11 +2,11 @@ from datetime import date
 from math import asin, cos, radians, sin, sqrt
 
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 
 from apps.identity.models import NexoraUser
 
-from .models import DatingBlock, DatingConversation, DatingMatch, DatingProfile, DatingReport, DatingSwipe
+from .models import DatingBlock, DatingConversation, DatingMatch, DatingProfile, DatingProfileMedia, DatingReport, DatingSwipe
 from .notifications.service import DatingNotificationService
 
 
@@ -156,22 +156,36 @@ def _compatibility_score(actor: DatingProfile, candidate: DatingProfile, today: 
     return round(min(score, 100.0), 2)
 
 
-def discovery_for(actor: NexoraUser, limit: int = 20, *, intent: str | None = None, education: str | None = None, occupation: str | None = None, city: str | None = None, interest: str | None = None, max_distance_km: int | None = None):
+def _ranked_candidates_for(
+    actor: NexoraUser,
+    *,
+    intent: str | None = None,
+    education: str | None = None,
+    occupation: str | None = None,
+    city: str | None = None,
+    interest: str | None = None,
+    max_distance_km: int | None = None,
+):
     actor_profile = DatingProfile.objects.filter(user=actor).first()
     excluded = DatingSwipe.objects.filter(actor=actor).values_list("target_id", flat=True)
     blocked_pairs = DatingBlock.objects.filter(
         Q(blocker=actor) | Q(blocked=actor)
     ).values_list("blocker_id", "blocked_id")
     blocked_user_ids = {user_id for pair in blocked_pairs for user_id in pair}
+
     queryset = (
         DatingProfile.objects.filter(discovery_enabled=True)
         .exclude(user=actor)
         .exclude(user_id__in=blocked_user_ids)
         .exclude(id__in=excluded)
-        .exclude(user__status__in=[NexoraUser.Status.SUSPENDED, NexoraUser.Status.DISABLED, NexoraUser.Status.DELETED])
+        .exclude(user__status__in=[
+            NexoraUser.Status.SUSPENDED,
+            NexoraUser.Status.DISABLED,
+            NexoraUser.Status.DELETED,
+        ])
     )
+
     if actor_profile:
-        today = date.today()
         effective_intent = intent or actor_profile.relationship_intent
         if effective_intent:
             queryset = queryset.filter(relationship_intent=effective_intent)
@@ -185,30 +199,89 @@ def discovery_for(actor: NexoraUser, limit: int = 20, *, intent: str | None = No
     if interest:
         queryset = queryset.filter(interests__icontains=interest)
 
-    candidates = list(queryset.select_related("user").only("id", "user_id", "relationship_intent", "birth_date", "preferred_min_age", "preferred_max_age", "interests", "education", "occupation", "location_city", "location_latitude", "location_longitude", "max_distance_km", "updated_at"))
+    candidates = list(
+        queryset.select_related("user")
+        .prefetch_related(
+            Prefetch(
+                "media",
+                queryset=DatingProfileMedia.objects.filter(active=True).only("id", "profile_id", "active"),
+                to_attr="_active_media",
+            )
+        )
+        .only(
+            "id", "user_id", "display_name", "birth_date", "bio", "photo_url",
+            "relationship_intent", "discovery_enabled", "preferred_min_age", "preferred_max_age",
+            "interests", "education", "occupation", "location_city", "location_country",
+            "location_latitude", "location_longitude", "max_distance_km", "updated_at",
+        )
+    )
+
     if not actor_profile:
-        return candidates[:limit]
+        return [(0.0, candidate) for candidate in candidates]
 
     today = date.today()
     ranked = []
+    actor_age = _age_on_date(actor_profile.birth_date, today)
+    effective_max_distance = max_distance_km if max_distance_km is not None else actor_profile.max_distance_km
+
     for candidate in candidates:
         candidate_age = _age_on_date(candidate.birth_date, today)
         if candidate_age is None:
             continue
         if not _age_matches_preference(candidate_age, actor_profile.preferred_min_age, actor_profile.preferred_max_age):
             continue
-        if not _age_matches_preference(
-            _age_on_date(actor_profile.birth_date, today),
-            candidate.preferred_min_age,
-            candidate.preferred_max_age,
-        ):
+        if not _age_matches_preference(actor_age, candidate.preferred_min_age, candidate.preferred_max_age):
             continue
+
         distance = _distance_km(actor_profile, candidate)
-        effective_max_distance = max_distance_km if max_distance_km is not None else actor_profile.max_distance_km
         if distance is not None and distance > effective_max_distance:
             continue
+
         ranked.append((_compatibility_score(actor_profile, candidate, today), candidate))
 
-    ranked.sort(key=lambda pair: (-pair[0], -pair[1].updated_at.timestamp()))
-    return [candidate for _, candidate in ranked[:limit]]
+    ranked.sort(key=lambda pair: (-pair[0], -pair[1].updated_at.timestamp(), str(pair[1].id)))
+    return ranked
 
+
+def ranked_discovery_for(
+    actor: NexoraUser,
+    *,
+    intent: str | None = None,
+    education: str | None = None,
+    occupation: str | None = None,
+    city: str | None = None,
+    interest: str | None = None,
+    max_distance_km: int | None = None,
+):
+    return _ranked_candidates_for(
+        actor,
+        intent=intent,
+        education=education,
+        occupation=occupation,
+        city=city,
+        interest=interest,
+        max_distance_km=max_distance_km,
+    )
+
+
+def discovery_for(
+    actor: NexoraUser,
+    limit: int = 20,
+    *,
+    intent: str | None = None,
+    education: str | None = None,
+    occupation: str | None = None,
+    city: str | None = None,
+    interest: str | None = None,
+    max_distance_km: int | None = None,
+):
+    ranked = ranked_discovery_for(
+        actor,
+        intent=intent,
+        education=education,
+        occupation=occupation,
+        city=city,
+        interest=interest,
+        max_distance_km=max_distance_km,
+    )
+    return [candidate for _, candidate in ranked[:limit]]
