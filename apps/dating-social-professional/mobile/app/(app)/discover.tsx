@@ -2,12 +2,15 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 
 import { useDatingApi } from '@/src/api/provider';
+import { useDatingSession } from '@/src/auth/session';
 
 export default function DiscoverScreen() {
   const api = useDatingApi();
+  const { token, loading: sessionLoading } = useDatingSession();
   const { data, isLoading } = useQuery({
     queryKey: ['dating', 'discovery'],
     queryFn: () => api.getDiscovery(),
+    enabled: !sessionLoading && !!token,
   });
 
   const current = data?.items[0];
@@ -15,6 +18,8 @@ export default function DiscoverScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Discover</Text>
+      {sessionLoading ? <Text>Loading session…</Text> : null}
+      {!sessionLoading && !token ? <Text>Sign in through Nexora Identity to start discovering.</Text> : null}
       {isLoading ? <Text>Loading profiles…</Text> : null}
       {!isLoading && !current ? <Text>No profiles available yet.</Text> : null}
       {current ? (
