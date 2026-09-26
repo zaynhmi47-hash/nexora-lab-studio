@@ -94,6 +94,13 @@ class DatingSwipeService:
             with transaction.atomic():
                 match, created = DatingMatch.objects.get_or_create(user_a_id=first, user_b_id=second)
                 match = DatingMatch.objects.select_for_update().get(pk=match.pk)
+                # Re-check safety after acquiring the match lock so a concurrent block
+                # cannot be followed by a stale rematch that reactivates the match.
+                if DatingBlock.objects.filter(
+                    Q(blocker_id=first, blocked_id=second)
+                    | Q(blocker_id=second, blocked_id=first)
+                ).exists():
+                    raise ValueError("This profile is unavailable.")
                 reactivated = False
                 if not match.active:
                     match.active = True
