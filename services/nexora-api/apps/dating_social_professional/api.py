@@ -183,12 +183,24 @@ class ProfileMediaView(APIView):
                 sort_order = int(sort_order)
             except (TypeError, ValueError):
                 return Response({"detail": "sort_order must be an integer."}, status=status.HTTP_400_BAD_REQUEST)
-            if not 0 <= sort_order <= 20:
-                return Response({"detail": "sort_order must be between 0 and 20."}, status=status.HTTP_400_BAD_REQUEST)
-            item.sort_order = sort_order
+            ordered = list(
+                DatingProfileMedia.objects.filter(profile=profile, active=True)
+                .order_by("sort_order", "created_at")
+            )
+            if item not in ordered:
+                return Response({"detail": "Media not found."}, status=status.HTTP_404_NOT_FOUND)
+            target_index = max(0, min(sort_order, len(ordered) - 1))
+            ordered.remove(item)
+            ordered.insert(target_index, item)
+            now = timezone.now()
+            for index, media in enumerate(ordered):
+                if media.sort_order != index:
+                    media.sort_order = index
+                    media.updated_at = now
+                    media.save(update_fields=["sort_order", "updated_at"])
         if "is_primary" in request.data:
             item.is_primary = bool(request.data.get("is_primary"))
-        item.save(update_fields=["sort_order", "is_primary", "updated_at"])
+        item.save(update_fields=["is_primary", "updated_at"])
         if item.is_primary:
             DatingProfileMedia.objects.filter(profile=profile).exclude(id=item.id).update(is_primary=False)
             profile.photo_url = item.url if not item.storage_key else ""
