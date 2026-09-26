@@ -37,13 +37,42 @@ export default function ChatScreen() {
       return () => { void api.clearConversationPresence(conversationId); };
     }, [api, conversationId]),
   );
-  const send = useMutation({ mutationFn: () => api.sendMessage(conversationId, body), onSuccess: () => { setBody(''); client.invalidateQueries({ queryKey: ['dating', 'messages', conversationId] }); } });
+  const send = useMutation({
+    mutationFn: () => api.sendMessage(conversationId, body.trim()),
+    onSuccess: () => {
+      setBody('');
+      client.invalidateQueries({ queryKey: ['dating', 'messages', conversationId] });
+      requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
+    },
+  });
+  const retryMessages = () => { void query.refetch(); };
+  const retryConversation = () => { void detail.refetch(); };
+  const canSend = Boolean(body.trim()) && body.trim().length <= 4000 && !send.isPending && detail.data?.active !== false;
+
   return <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}>
-    <View style={styles.header}><View><Text style={styles.title}>{detail.data?.counterpart.displayName ?? "Chat"}</Text><Text style={styles.subtitle}>{detail.data?.counterpart.age ? `${detail.data.counterpart.age} years old` : "Nexora Dating"}</Text></View><Pressable onPress={openSafety} disabled={safety.isPending} style={styles.safety}><Text>•••</Text></Pressable></View>
-    <ScrollView ref={scrollRef} style={styles.messages} contentContainerStyle={styles.messageList} onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}>
-      {query.data?.items.map((message) => <View key={message.id} style={[styles.message, message.senderId === detail.data?.counterpart.id ? styles.received : styles.sent]}><Text>{message.body}</Text><Text style={styles.meta}>{new Date(message.createdAt).toLocaleTimeString()}</Text></View>)}
-    </ScrollView>
-    <View style={styles.composer}><TextInput style={styles.input} value={body} onChangeText={setBody} placeholder="Write a message…" multiline /><Pressable disabled={send.isPending || !body.trim()} onPress={() => send.mutate()} style={styles.send}><Text>Send</Text></Pressable></View>
+    <View style={styles.header}>
+      <View>
+        <Text style={styles.title}>{detail.data?.counterpart.displayName ?? "Chat"}</Text>
+        <Text style={styles.subtitle}>{detail.data?.counterpart.age ? `${detail.data.counterpart.age} years old` : "Nexora Dating"}</Text>
+      </View>
+      <Pressable onPress={openSafety} disabled={safety.isPending} style={styles.safety}><Text>•••</Text></Pressable>
+    </View>
+    {detail.isLoading ? <View style={styles.state}><Text>Loading conversation…</Text></View> :
+      detail.isError || !detail.data ? <View style={styles.state}><Text>Could not load this conversation.</Text><Pressable onPress={retryConversation} style={styles.retry}><Text>Retry</Text></Pressable></View> :
+      <ScrollView ref={scrollRef} style={styles.messages} contentContainerStyle={styles.messageList} onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}>
+        {query.isLoading ? <View style={styles.state}><Text>Loading messages…</Text></View> :
+          query.isError ? <View style={styles.state}><Text>Could not load messages.</Text><Pressable onPress={retryMessages} style={styles.retry}><Text>Retry</Text></Pressable></View> :
+          query.data?.items.length ? query.data.items.map((message) => <View key={message.id} style={[styles.message, message.senderId === detail.data.counterpart.id ? styles.received : styles.sent]}><Text>{message.body}</Text><Text style={styles.meta}>{new Date(message.createdAt).toLocaleTimeString()}</Text></View>) :
+          <View style={styles.state}><Text>No messages yet. Start the conversation.</Text></View>}
+      </ScrollView>}
+    {send.isError && <View style={styles.errorBanner}><Text>Message failed to send. Check your connection and try again.</Text></View>}
+    <View style={styles.composer}>
+      <View style={styles.inputWrap}>
+        <TextInput style={styles.input} value={body} onChangeText={setBody} placeholder="Write a message…" multiline maxLength={4000} editable={!send.isPending && detail.data?.active !== false} />
+        <Text style={styles.counter}>{body.length}/4000</Text>
+      </View>
+      <Pressable disabled={!canSend} onPress={() => send.mutate()} style={[styles.send, !canSend && styles.sendDisabled]}><Text>{send.isPending ? "Sending…" : "Send"}</Text></Pressable>
+    </View>
   </KeyboardAvoidingView>;
 }
-const styles = StyleSheet.create({ container: { flex: 1, padding: 18, gap: 12 }, header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, title: { fontSize: 24, fontWeight: '800' }, subtitle: { opacity: 0.55, marginTop: 2 }, safety: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 }, messages: { flex: 1 }, messageList: { gap: 10, paddingVertical: 8 }, message: { borderWidth: 1, borderRadius: 14, padding: 12, maxWidth: '88%' }, received: { alignSelf: 'flex-start' }, sent: { alignSelf: 'flex-end' }, meta: { marginTop: 5, opacity: 0.55, fontSize: 11 }, composer: { flexDirection: 'row', gap: 8, alignItems: 'flex-end' }, input: { flex: 1, borderWidth: 1, borderRadius: 14, padding: 12, maxHeight: 110 }, send: { borderWidth: 1, borderRadius: 14, padding: 14 } });
+const styles = StyleSheet.create({ container: { flex: 1, padding: 18, gap: 12 }, header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, title: { fontSize: 24, fontWeight: '800' }, subtitle: { opacity: 0.55, marginTop: 2 }, safety: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 }, messages: { flex: 1 }, messageList: { gap: 10, paddingVertical: 8 }, message: { borderWidth: 1, borderRadius: 14, padding: 12, maxWidth: '88%' }, received: { alignSelf: 'flex-start' }, sent: { alignSelf: 'flex-end' }, meta: { marginTop: 5, opacity: 0.55, fontSize: 11 }, composer: { flexDirection: 'row', gap: 8, alignItems: 'flex-end' }, inputWrap: { flex: 1 }, input: { borderWidth: 1, borderRadius: 14, padding: 12, maxHeight: 110 }, counter: { textAlign: 'right', opacity: 0.5, fontSize: 10, marginTop: 3 }, send: { borderWidth: 1, borderRadius: 14, padding: 14 }, sendDisabled: { opacity: 0.45 }, state: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 24 }, retry: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 9 }, errorBanner: { borderWidth: 1, borderRadius: 10, padding: 9 } });
