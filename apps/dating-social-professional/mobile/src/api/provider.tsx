@@ -3,16 +3,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { useDatingSession } from '@/src/auth/session';
 
-export type DiscoveryProfile = { id: string; displayName: string; age: number | null; birthDate: string | null; bio: string; photoUrl: string | null; relationshipIntent: string; interests: string[]; education: string; occupation: string; locationCity: string; locationCountry: string; maxDistanceKm: number; profileCompletion: number };
+export type DiscoveryProfile = { id: string; displayName: string; age: number | null; birthDate: string | null; bio: string; photoUrl: string | null; relationshipIntent: string; interests: string[]; education: string; occupation: string; locationCity: string; locationCountry: string; maxDistanceKm: number; profileCompletion: number; compatibilityScore: number; distanceKm: number | null; sharedInterests: string[] };
 export type DatingProfile = DiscoveryProfile & { discoveryEnabled: boolean; preferredMinAge: number; preferredMaxAge: number };
 export type Match = { id: string; userA: string; userB: string; matchedAt: string };
 export type DatingMessage = { id: string; senderId: string; body: string; createdAt: string; readAt: string | null };
 export type DatingNotification = { id: string; type: string; title: string; body: string; data: Record<string, unknown>; createdAt: string; readAt: string | null };
 export type DatingProfileMedia = { id: string; url: string; mediaType: 'image'; sortOrder: number; isPrimary: boolean };
 export type DatingNotificationPreferences = { push_enabled: boolean; match_push_enabled: boolean; message_push_enabled: boolean; safety_push_enabled: boolean };
-type WireProfile = { id: string; display_name: string; birth_date: string | null; age: number | null; bio: string; photo_url: string | null; relationship_intent: string; discovery_enabled?: boolean; preferred_min_age: number; preferred_max_age: number; interests?: string[]; education?: string; occupation?: string; location_city?: string; location_country?: string; max_distance_km?: number; profile_completion?: number };
+type WireProfile = { id: string; display_name: string; birth_date: string | null; age: number | null; bio: string; photo_url: string | null; relationship_intent: string; discovery_enabled?: boolean; preferred_min_age: number; preferred_max_age: number; interests?: string[]; education?: string; occupation?: string; location_city?: string; location_country?: string; max_distance_km?: number; profile_completion?: number; compatibility_score?: number; distance_km?: number | null; shared_interests?: string[] };
 
-const mapProfile = (item: WireProfile): DiscoveryProfile => ({ id: item.id, displayName: item.display_name, age: item.age, birthDate: item.birth_date, bio: item.bio, photoUrl: item.photo_url, relationshipIntent: item.relationship_intent, interests: item.interests ?? [], education: item.education ?? "", occupation: item.occupation ?? "", locationCity: item.location_city ?? "", locationCountry: item.location_country ?? "", maxDistanceKm: item.max_distance_km ?? 100, profileCompletion: item.profile_completion ?? 0 });
+const mapProfile = (item: WireProfile): DiscoveryProfile => ({ id: item.id, displayName: item.display_name, age: item.age, birthDate: item.birth_date, bio: item.bio, photoUrl: item.photo_url, relationshipIntent: item.relationship_intent, interests: item.interests ?? [], education: item.education ?? "", occupation: item.occupation ?? "", locationCity: item.location_city ?? "", locationCountry: item.location_country ?? "", maxDistanceKm: item.max_distance_km ?? 100, profileCompletion: item.profile_completion ?? 0, compatibilityScore: item.compatibility_score ?? 0, distanceKm: item.distance_km ?? null, sharedInterests: item.shared_interests ?? [] });
 
 class DatingApi {
   constructor(private readonly baseUrl: string, private readonly token: string | null) {}
