@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 from uuid import uuid4
+import logging
 
 from django.utils import timezone
 from django.db.models import Q
@@ -22,6 +23,9 @@ from .conversation_service import DatingConversationService
 from .services import DatingSafetyService, DatingSwipeService, _compatibility_score, _distance_km, discovery_for
 
 
+logger = logging.getLogger(__name__)
+
+
 class DatingProfileSerializer(serializers.ModelSerializer):
     age = serializers.SerializerMethodField()
 
@@ -30,7 +34,7 @@ class DatingProfileSerializer(serializers.ModelSerializer):
         fields = ("id", "display_name", "birth_date", "age", "bio", "photo_url", "relationship_intent", "discovery_enabled", "preferred_min_age", "preferred_max_age", "interests", "education", "occupation", "location_city", "location_country", "max_distance_km", "profile_completion")
 
     def get_profile_completion(self, obj):
-        checks = [bool(obj.display_name.strip()), bool(obj.birth_date), bool(obj.bio.strip()), bool(obj.photo_url.strip()), bool(obj.relationship_intent), bool(obj.interests), bool(obj.education.strip()), bool(obj.occupation.strip()), bool(obj.location_city.strip())]
+        has_photo = bool(obj.photo_url.strip()) or DatingProfileMedia.objects.filter(profile=obj, active=True).exists()\n        checks = [bool(obj.display_name.strip()), bool(obj.birth_date), bool(obj.bio.strip()), has_photo, bool(obj.relationship_intent), bool(obj.interests), bool(obj.education.strip()), bool(obj.occupation.strip()), bool(obj.location_city.strip())]
         return round(sum(checks) / len(checks) * 100)
 
     def get_age(self, obj):
