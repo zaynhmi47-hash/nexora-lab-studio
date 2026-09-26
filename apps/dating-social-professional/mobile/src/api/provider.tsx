@@ -23,7 +23,12 @@ class DatingApi {
     return response.json() as Promise<T>;
   }
   async getDiscovery(filters: Record<string, string> = {}) {
-    const query = new URLSearchParams(filters).toString();
+    const normalized = { ...filters };
+    if (normalized.distance && !normalized.max_distance_km) {
+      normalized.max_distance_km = normalized.distance;
+      delete normalized.distance;
+    }
+    const query = new URLSearchParams(normalized).toString();
     const wire = await this.request<{ items: WireProfile[]; next_cursor: string | null }>(`/api/v1/dating/discovery/${query ? `?${query}` : ''}`);
     return { items: wire.items.map(mapProfile), nextCursor: wire.next_cursor };
   }
