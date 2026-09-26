@@ -443,9 +443,15 @@ class MatchesView(APIView):
             user_a__status=NexoraUser.Status.ACTIVE,
             user_b__status=NexoraUser.Status.ACTIVE,
         ).filter(Q(user_a=request.user) | Q(user_b=request.user)).select_related("user_a", "user_b").order_by("-matched_at")
-        blocked_pairs = DatingBlock.objects.filter(Q(blocker=request.user) | Q(blocked=request.user)).values_list("blocker_id", "blocked_id")
+        blocked_pairs = DatingBlock.objects.filter(
+            Q(blocker=request.user) | Q(blocked=request.user)
+        ).values_list("blocker_id", "blocked_id")
         blocked_ids = {user_id for pair in blocked_pairs for user_id in pair} - {request.user.id}
-        matches = [m for m in matches if (m.user_b_id if m.user_a_id == request.user.id else m.user_a_id) not in blocked_ids]
+        if blocked_ids:
+            matches = matches.exclude(
+                Q(user_a=request.user, user_b_id__in=blocked_ids)
+                | Q(user_b=request.user, user_a_id__in=blocked_ids)
+            )
         counterpart_ids = [
             m.user_b_id if m.user_a_id == request.user.id else m.user_a_id
             for m in matches
