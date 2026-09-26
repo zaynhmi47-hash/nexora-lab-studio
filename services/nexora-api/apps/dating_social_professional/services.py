@@ -97,7 +97,7 @@ class DatingSwipeService:
         return swipe, match
 
 
-def discovery_for(actor: NexoraUser, limit: int = 20):
+def discovery_for(actor: NexoraUser, limit: int = 20, *, intent: str | None = None, education: str | None = None, occupation: str | None = None, city: str | None = None, interest: str | None = None):
     actor_profile = DatingProfile.objects.filter(user=actor).first()
     excluded = DatingSwipe.objects.filter(actor=actor).values_list("target_id", flat=True)
     blocked_ids = set(DatingBlock.objects.filter(Q(blocker=actor) | Q(blocked=actor)).values_list("blocker_id", flat=True)) | set(DatingBlock.objects.filter(Q(blocker=actor) | Q(blocked=actor)).values_list("blocked_id", flat=True))
@@ -114,6 +114,15 @@ def discovery_for(actor: NexoraUser, limit: int = 20):
         latest_birth_date = today.replace(year=today.year - actor_profile.preferred_min_age)
         earliest_birth_date = today.replace(year=today.year - actor_profile.preferred_max_age - 1)
         queryset = queryset.filter(birth_date__gt=earliest_birth_date, birth_date__lte=latest_birth_date)
-        if actor_profile.relationship_intent:
-            queryset = queryset.filter(relationship_intent=actor_profile.relationship_intent)
+        effective_intent = intent or actor_profile.relationship_intent
+        if effective_intent:
+            queryset = queryset.filter(relationship_intent=effective_intent)
+    if education:
+        queryset = queryset.filter(education__icontains=education)
+    if occupation:
+        queryset = queryset.filter(occupation__icontains=occupation)
+    if city:
+        queryset = queryset.filter(location_city__icontains=city)
+    if interest:
+        queryset = queryset.filter(interests__icontains=interest)
     return queryset[:limit]
