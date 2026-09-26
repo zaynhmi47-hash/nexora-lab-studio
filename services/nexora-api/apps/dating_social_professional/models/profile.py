@@ -34,3 +34,20 @@ class DatingProfile(AuditableBaseModel):
 
     def __str__(self) -> str:
         return self.display_name
+
+
+class DatingProfileMedia(AuditableBaseModel):
+    class MediaType(models.TextChoices):
+        IMAGE = "image", "Image"
+
+    profile = models.ForeignKey(DatingProfile, on_delete=models.CASCADE, related_name="media")
+    url = models.URLField(max_length=2048)
+    media_type = models.CharField(max_length=16, choices=MediaType.choices, default=MediaType.IMAGE)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    is_primary = models.BooleanField(default=False)
+    active = models.BooleanField(default=True, db_index=True)
+
+    class Meta:
+        db_table = "dating_profile_media"
+        ordering = ("sort_order", "created_at")
+        indexes = [models.Index(fields=("profile", "active", "sort_order"))]
