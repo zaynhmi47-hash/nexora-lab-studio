@@ -64,4 +64,17 @@ class DatingConversationService:
         conversation = DatingConversation.objects.select_related("match").filter(id=conversation_id, active=True).first()
         if not conversation or actor.id not in {conversation.match.user_a_id, conversation.match.user_b_id}:
             raise ValueError("Conversation not found.")
+        match = conversation.match
+        if (
+            not match.active
+            or match.user_a.status != NexoraUser.Status.ACTIVE
+            or match.user_b.status != NexoraUser.Status.ACTIVE
+        ):
+            raise ValueError("Conversation not found.")
+        counterpart_id = match.user_b_id if actor.id == match.user_a_id else match.user_a_id
+        if DatingBlock.objects.filter(
+            Q(blocker_id=actor.id, blocked_id=counterpart_id)
+            | Q(blocker_id=counterpart_id, blocked_id=actor.id)
+        ).exists():
+            raise ValueError("Conversation not found.")
         return DatingMessage.objects.filter(conversation=conversation, read_at__isnull=True).exclude(sender=actor).update(read_at=timezone.now())
