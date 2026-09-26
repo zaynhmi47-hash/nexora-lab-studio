@@ -19,7 +19,7 @@ from apps.identity.models import NexoraUser
 from .models import DatingBlock, DatingConversation, DatingConversationPresence, DatingMatch, DatingNotification, DatingNotificationPreference, DatingProfile, DatingProfileMedia, DatingPushToken, DatingSwipe
 from .models.safety import DatingReport
 from .conversation_service import DatingConversationService
-from .services import DatingSafetyService, DatingSwipeService, discovery_for
+from .services import DatingSafetyService, DatingSwipeService, _compatibility_score, _distance_km, discovery_for
 
 
 class DatingProfileSerializer(serializers.ModelSerializer):
@@ -45,7 +45,28 @@ class DiscoveryView(APIView):
 
     def get(self, request):
         filters = {key: request.query_params.get(key) for key in ("intent", "education", "occupation", "city", "interest") if request.query_params.get(key)}
-        return Response({"items": DatingProfileSerializer(discovery_for(request.user, **filters), many=True).data, "next_cursor": None})
+        profiles = discovery_for(request.user, **filters)
+        actor_profile = DatingProfile.objects.filter(user=request.user).first()
+        serialized = DatingProfileSerializer(profiles, many=True).data
+        items = []
+        for profile, item in zip(profiles, serialized):
+            if actor_profile:
+                distance = _distance_km(actor_profile, profile)
+                actor_interests = {str(value).strip().casefold() for value in (actor_profile.interests or []) if str(value).strip()}
+                candidate_interests = {str(value).strip().casefold() for value in (profile.interests or []) if str(value).strip()}
+                shared_interests = sorted(
+                    {str(value).strip() for value in (profile.interests or []) if str(value).strip() and str(value).strip().casefold() in actor_interests},
+                    key=str.casefold,
+                )
+                item["compatibility_score"] = _compatibility_score(actor_profile, profile, date.today())
+                item["distance_km"] = round(distance, 1) if distance is not None else None
+                item["shared_interests"] = shared_interests
+            else:
+                item["compatibility_score"] = 0
+                item["distance_km"] = None
+                item["shared_interests"] = []
+            items.append(item)
+        return Response({"items": items, "next_cursor": None})
 
 
 class ProfileDetailView(APIView):
