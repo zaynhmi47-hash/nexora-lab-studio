@@ -6,6 +6,7 @@ import logging
 
 from django.utils import timezone
 from django.core import signing
+from django.db import transaction
 from django.db.models import Q
 
 from rest_framework import serializers, status
@@ -240,9 +241,6 @@ class ProfileMediaView(APIView):
         profile = DatingProfile.objects.filter(id=profile_id, user=request.user).first()
         if not profile:
             return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
-        if DatingProfileMedia.objects.filter(profile=profile, active=True).count() >= 6:
-            return Response({"detail": "A profile can have at most 6 media items."}, status=status.HTTP_400_BAD_REQUEST)
-
         upload = request.FILES.get("file")
         if upload is not None:
             allowed_types = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
@@ -254,23 +252,37 @@ class ProfileMediaView(APIView):
             media_id = uuid4()
             storage_key = f"{profile.id}/{media_id}.{extension}"
             reference = ObjectReference(namespace="dating/profile-media", key=storage_key)
-            FirebaseProviderRegistry().storage().upload(
-                UploadRequest(
-                    reference=reference,
-                    content=upload.file,
-                    content_type=upload.content_type,
-                    metadata={"profile_id": str(profile.id), "media_id": str(media_id), "media_type": "image"},
+            with transaction.atomic():
+                locked_profile = DatingProfile.objects.select_for_update().get(pk=profile.pk)
+                active_media = DatingProfileMedia.objects.filter(profile=locked_profile, active=True)
+                if active_media.count() >= 6:
+                    return Response({"detail": "A profile can have at most 6 media items."}, status=status.HTTP_400_BAD_REQUEST)
+                sort_order = active_media.count()
+                is_primary = not active_media.exists()
+                FirebaseProviderRegistry().storage().upload(
+                    UploadRequest(
+                        reference=reference,
+                        content=upload.file,
+                        content_type=upload.content_type,
+                        metadata={"profile_id": str(profile.id), "media_id": str(media_id), "media_type": "image"},
+                    )
                 )
-            )
-            item = DatingProfileMedia.objects.create(
-                id=media_id,
-                profile=profile,
-                url="",
-                storage_key=storage_key,
-                media_type="image",
-                sort_order=DatingProfileMedia.objects.filter(profile=profile, active=True).count(),
-                is_primary=not DatingProfileMedia.objects.filter(profile=profile, active=True).exists(),
-            )
+                try:
+                    item = DatingProfileMedia.objects.create(
+                        id=media_id,
+                        profile=locked_profile,
+                        url="",
+                        storage_key=storage_key,
+                        media_type="image",
+                        sort_order=sort_order,
+                        is_primary=is_primary,
+                    )
+                except Exception:
+                    try:
+                        FirebaseProviderRegistry().storage().delete(reference)
+                    except Exception:
+                        logger.warning("Failed to clean up dating profile media object after DB failure: %s", storage_key, exc_info=True)
+                    raise
         else:
             serializer = ProfileMediaInputSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
