@@ -314,66 +314,76 @@ class ProfileMediaView(APIView):
         if not profile:
             return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
         media_id = request.data.get("media_id")
-        item = DatingProfileMedia.objects.filter(id=media_id, profile=profile, active=True).first()
-        if not item:
-            return Response({"detail": "Media not found."}, status=status.HTTP_404_NOT_FOUND)
-        sort_order = request.data.get("sort_order")
-        if sort_order is not None:
-            try:
-                sort_order = int(sort_order)
-            except (TypeError, ValueError):
-                return Response({"detail": "sort_order must be an integer."}, status=status.HTTP_400_BAD_REQUEST)
-            ordered = list(
-                DatingProfileMedia.objects.filter(profile=profile, active=True)
-                .order_by("sort_order", "created_at")
-            )
-            if item not in ordered:
+        with transaction.atomic():
+            locked_profile = DatingProfile.objects.select_for_update().get(pk=profile.pk)
+            item = DatingProfileMedia.objects.select_for_update().filter(
+                id=media_id, profile=locked_profile, active=True
+            ).first()
+            if not item:
                 return Response({"detail": "Media not found."}, status=status.HTTP_404_NOT_FOUND)
-            target_index = max(0, min(sort_order, len(ordered) - 1))
-            ordered.remove(item)
-            ordered.insert(target_index, item)
-            now = timezone.now()
-            for index, media in enumerate(ordered):
-                if media.sort_order != index:
-                    media.sort_order = index
-                    media.updated_at = now
-                    media.save(update_fields=["sort_order", "updated_at"])
-        if "is_primary" in request.data:
-            item.is_primary = bool(request.data.get("is_primary"))
-        item.save(update_fields=["is_primary", "updated_at"])
-        if item.is_primary:
-            DatingProfileMedia.objects.filter(profile=profile).exclude(id=item.id).update(is_primary=False)
-            profile.photo_url = item.url if not item.storage_key else ""
-            profile.save(update_fields=["photo_url", "updated_at"])
+            sort_order = request.data.get("sort_order")
+            if sort_order is not None:
+                try:
+                    sort_order = int(sort_order)
+                except (TypeError, ValueError):
+                    return Response({"detail": "sort_order must be an integer."}, status=status.HTTP_400_BAD_REQUEST)
+                ordered = list(
+                    DatingProfileMedia.objects.filter(profile=locked_profile, active=True)
+                    .order_by("sort_order", "created_at")
+                )
+                target_index = max(0, min(sort_order, len(ordered) - 1))
+                ordered.remove(item)
+                ordered.insert(target_index, item)
+                now = timezone.now()
+                for index, media in enumerate(ordered):
+                    if media.sort_order != index:
+                        media.sort_order = index
+                        media.updated_at = now
+                        media.save(update_fields=["sort_order", "updated_at"])
+            if "is_primary" in request.data:
+                item.is_primary = bool(request.data.get("is_primary"))
+            item.save(update_fields=["is_primary", "updated_at"])
+            if item.is_primary:
+                DatingProfileMedia.objects.filter(profile=locked_profile).exclude(id=item.id).update(is_primary=False)
+                locked_profile.photo_url = item.url if not item.storage_key else ""
+                locked_profile.save(update_fields=["photo_url", "updated_at"])
         return Response(self._serialize(item, access_url=self._access_url(item)))
 
     def delete(self, request, profile_id):
         profile = DatingProfile.objects.filter(id=profile_id, user=request.user).first()
         media_id = request.query_params.get("media_id")
-        item = DatingProfileMedia.objects.filter(id=media_id, profile=profile, active=True).first() if profile else None
-        if not item:
-            return Response({"detail": "Media not found."}, status=status.HTTP_404_NOT_FOUND)
-        was_primary = item.is_primary
-        item.active = False
-        item.is_primary = False
-        item.save(update_fields=["active", "is_primary", "updated_at"])
-        if item.storage_key:
+        if not profile:
+            return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+        with transaction.atomic():
+            locked_profile = DatingProfile.objects.select_for_update().get(pk=profile.pk)
+            item = DatingProfileMedia.objects.select_for_update().filter(
+                id=media_id, profile=locked_profile, active=True
+            ).first()
+            if not item:
+                return Response({"detail": "Media not found."}, status=status.HTTP_404_NOT_FOUND)
+            was_primary = item.is_primary
+            storage_key = item.storage_key
+            item.active = False
+            item.is_primary = False
+            item.save(update_fields=["active", "is_primary", "updated_at"])
+            if was_primary:
+                replacement = DatingProfileMedia.objects.select_for_update().filter(
+                    profile=locked_profile, active=True
+                ).order_by("sort_order", "created_at").first()
+                if replacement:
+                    replacement.is_primary = True
+                    replacement.save(update_fields=["is_primary", "updated_at"])
+                    locked_profile.photo_url = replacement.url if not replacement.storage_key else ""
+                else:
+                    locked_profile.photo_url = ""
+                locked_profile.save(update_fields=["photo_url", "updated_at"])
+        if storage_key:
             try:
                 FirebaseProviderRegistry().storage().delete(
-                    ObjectReference(namespace="dating/profile-media", key=item.storage_key)
+                    ObjectReference(namespace="dating/profile-media", key=storage_key)
                 )
             except Exception:
-                logger.warning("Failed to delete dating profile media object: %s", item.storage_key, exc_info=True)
-        if was_primary:
-            replacement = DatingProfileMedia.objects.filter(profile=profile, active=True).order_by("sort_order", "created_at").first()
-            if replacement:
-                replacement.is_primary = True
-                replacement.save(update_fields=["is_primary", "updated_at"])
-                profile.photo_url = replacement.url if not replacement.storage_key else ""
-                profile.save(update_fields=["photo_url", "updated_at"])
-            else:
-                profile.photo_url = ""
-                profile.save(update_fields=["photo_url", "updated_at"])
+                logger.warning("Failed to delete dating profile media object: %s", storage_key, exc_info=True)
         return Response({"status": "deleted"})
 
 
