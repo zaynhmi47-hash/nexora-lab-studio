@@ -46,6 +46,11 @@ class DatingSwipeService:
     def record(*, actor: NexoraUser, target_profile: DatingProfile, action: str) -> tuple[DatingSwipe, DatingMatch | None]:
         if target_profile.user_id == actor.id:
             raise ValueError("A user cannot swipe on their own profile.")
+        if target_profile.user.status != NexoraUser.Status.ACTIVE:
+            raise ValueError("This profile is unavailable.")
+        if not target_profile.discovery_enabled: 
+            raise ValueError("This profile is unavailable.")
+            raise ValueError("A user cannot swipe on their own profile.")
         if DatingBlock.objects.filter(Q(blocker=actor, blocked=target_profile.user) | Q(blocker=target_profile.user, blocked=actor)).exists():
             raise ValueError("This profile is unavailable.")
 
