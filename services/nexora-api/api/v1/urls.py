@@ -42,7 +42,7 @@ urlpatterns = [
     path("zakat/", include("apps.zakat.urls")),
     path("reminders/", include("apps.reminders.urls")),
     path("places/", include("apps.places.urls")),
-    path("ramadan/", include("apps.ramadan.urls")),
+    path("ramadan/", include("apps.ramadan.urls")),\n    path("dating/", include("apps.dating_social_professional.urls")),
     path("search/", include("api.v1.urls_search")),
     path("organizations/", include("api.v1.urls_organizations")),
     path("products/", include("apps.products.api.urls")),
