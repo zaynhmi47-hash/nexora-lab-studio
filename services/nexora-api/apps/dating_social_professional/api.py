@@ -389,7 +389,11 @@ class SwipeView(APIView):
         serializer = SwipeInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            target = DatingProfile.objects.get(id=serializer.validated_data["target_profile_id"], discovery_enabled=True)
+            target = DatingProfile.objects.get(
+                id=serializer.validated_data["target_profile_id"],
+                discovery_enabled=True,
+                user__status=NexoraUser.Status.ACTIVE,
+            )
             swipe, match = DatingSwipeService.record(actor=request.user, target_profile=target, action=serializer.validated_data["action"])
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
@@ -402,7 +406,11 @@ class MatchesView(APIView):
     permission_classes = [AuthenticatedNexoraUserPermission]
 
     def get(self, request):
-        matches = DatingMatch.objects.filter(active=True).filter(Q(user_a=request.user) | Q(user_b=request.user)).select_related("user_a", "user_b").order_by("-matched_at")
+        matches = DatingMatch.objects.filter(
+            active=True,
+            user_a__status=NexoraUser.Status.ACTIVE,
+            user_b__status=NexoraUser.Status.ACTIVE,
+        ).filter(Q(user_a=request.user) | Q(user_b=request.user)).select_related("user_a", "user_b").order_by("-matched_at")
         counterpart_ids = [
             m.user_b_id if m.user_a_id == request.user.id else m.user_a_id
             for m in matches
