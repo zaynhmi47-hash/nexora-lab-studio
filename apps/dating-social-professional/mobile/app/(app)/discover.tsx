@@ -1,7 +1,7 @@
 import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
 import { useDatingApi } from '@/src/api/provider';
@@ -27,13 +27,19 @@ export default function DiscoverScreen() {
   const translateX = useSharedValue(0);
   const rotate = useSharedValue(0);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage } = useInfiniteQuery({
     queryKey: ['dating', 'discovery', appliedFilters],
-    queryFn: () => api.getDiscovery(Object.fromEntries(Object.entries(appliedFilters).filter(([, value]) => value))),
+    initialPageParam: '0',
+    queryFn: ({ pageParam }) => api.getDiscovery({
+      ...Object.fromEntries(Object.entries(appliedFilters).filter(([, value]) => value)),
+      cursor: pageParam,
+      limit: '20',
+    }),
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     enabled: !sessionLoading && !!token,
   });
 
-  const items = data?.items ?? [];
+  const items = data?.pages.flatMap((page) => page.items) ?? [];
   const current = items[index];
   const next = items[index + 1];
   const { data: mediaData } = useQuery({
@@ -57,6 +63,7 @@ export default function DiscoverScreen() {
   const retryDiscovery = () => {
     setIndex(0);
     setMediaIndex(0);
+    queryClient.removeQueries({ queryKey: ['dating', 'discovery', appliedFilters] });
     queryClient.invalidateQueries({ queryKey: ['dating', 'discovery', appliedFilters] });
   };
 
@@ -69,9 +76,15 @@ export default function DiscoverScreen() {
   const advance = () => {
     setMediaIndex(0);
     if (index < items.length - 1) {
-      setIndex((value) => value + 1);
-    } else {
-      queryClient.invalidateQueries({ queryKey: ['dating', 'discovery', appliedFilters] });
+      const nextIndex = index + 1;
+      setIndex(nextIndex);
+      if (nextIndex >= items.length - 3 && hasNextPage && !isFetchingNextPage) {
+        void fetchNextPage();
+      }
+      return;
+    }
+    if (hasNextPage && !isFetchingNextPage) {
+      void fetchNextPage();
     }
   };
 
@@ -176,6 +189,7 @@ export default function DiscoverScreen() {
       </View>
 
       {isLoading ? <Text>Loading profiles…</Text> : null}
+      {!isLoading && isFetchingNextPage ? <Text>Loading more profiles…</Text> : null}
       {!isLoading && !current ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>No more profiles</Text>
