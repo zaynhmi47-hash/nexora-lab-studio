@@ -481,7 +481,7 @@ class BlockView(APIView):
 
 class ReportInputSerializer(serializers.Serializer):
     target_user_id = serializers.UUIDField()
-    reason = serializers.CharField(max_length=80)
+    reason = serializers.ChoiceField(choices=DatingReport.Reason.choices)
     details = serializers.CharField(max_length=2000, required=False, allow_blank=True)
 
 
@@ -686,7 +686,10 @@ class PushTokenView(APIView):
             return Response({"detail": "token is too long."}, status=status.HTTP_400_BAD_REQUEST)
         if platform not in {"ios", "android", "web"}:
             return Response({"detail": "platform must be ios, android, or web."}, status=status.HTTP_400_BAD_REQUEST)
-        push_token, _ = DatingPushToken.objects.update_or_create(user=request.user, token=token, defaults={"platform": platform, "active": True})
+        push_token, _ = DatingPushToken.objects.update_or_create(
+            token=token,
+            defaults={"user": request.user, "platform": platform, "active": True},
+        )
         return Response({"id": str(push_token.id), "status": "registered"}, status=status.HTTP_201_CREATED)
 
     def delete(self, request):
@@ -712,5 +715,15 @@ class ConversationPresenceView(APIView):
         return Response({"status": "active"})
 
     def delete(self, request, conversation_id):
-        DatingConversationPresence.objects.filter(user=request.user, conversation_id=conversation_id).update(active=False, last_seen_at=timezone.now(), updated_at=timezone.now())
+        conversation = DatingConversation.objects.select_related("match").filter(
+            id=conversation_id,
+            active=True,
+            match__active=True,
+        ).first()
+        if not conversation or request.user.id not in {conversation.match.user_a_id, conversation.match.user_b_id}:
+            return Response({"detail": "Conversation not found."}, status=status.HTTP_404_NOT_FOUND)
+        DatingConversationPresence.objects.filter(
+            user=request.user,
+            conversation_id=conversation_id,
+        ).update(active=False, last_seen_at=timezone.now(), updated_at=timezone.now())
         return Response({"status": "inactive"})
