@@ -17,6 +17,8 @@ class DatingProfile(AuditableBaseModel):
     photo_url = models.URLField(max_length=2048, blank=True)
     relationship_intent = models.CharField(max_length=32, choices=RelationshipIntent.choices, blank=True)
     discovery_enabled = models.BooleanField(default=True, db_index=True)
+    preferred_min_age = models.PositiveSmallIntegerField(default=18)
+    preferred_max_age = models.PositiveSmallIntegerField(default=99)
 
     class Meta:
         db_table = "dating_profiles"
