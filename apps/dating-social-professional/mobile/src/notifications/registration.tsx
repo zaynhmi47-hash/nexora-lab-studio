@@ -15,6 +15,15 @@ export function DatingPushRegistration() {
 
     let cancelled = false;
     const register = async () => {
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'Default',
+          importance: Notifications.AndroidImportance.DEFAULT,
+          vibrationPattern: [0, 250, 250, 250],
+          sound: 'default',
+        });
+      }
+
       const permissions = await Notifications.getPermissionsAsync();
       let status = permissions.status;
       if (status !== 'granted') {
