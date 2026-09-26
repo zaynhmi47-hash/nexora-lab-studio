@@ -1,4 +1,6 @@
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -15,6 +17,10 @@ export default function DiscoverScreen() {
   const [cityFilter, setCityFilter] = useState('');
   const [appliedFilters, setAppliedFilters] = useState({ interest: '', city: '' });
   const [index, setIndex] = useState(0);
+  const [swiping, setSwiping] = useState(false);
+  const { width } = useWindowDimensions();
+  const translateX = useSharedValue(0);
+  const rotate = useSharedValue(0);
 
   const { data, isLoading } = useQuery({
     queryKey: ['dating', 'discovery', appliedFilters.interest, appliedFilters.city],
@@ -41,7 +47,7 @@ export default function DiscoverScreen() {
     }
   };
 
-  const swipe = async (action: 'like' | 'pass') => {
+  const submitSwipe = async (action: 'like' | 'pass') => {
     if (!current) return;
     try {
       const result = await api.swipe(current.id, action);
@@ -51,8 +57,47 @@ export default function DiscoverScreen() {
       advance();
     } catch (error) {
       Alert.alert('Swipe', error instanceof Error ? error.message : 'Unable to process this action.');
+    } finally {
+      translateX.value = 0;
+      rotate.value = 0;
+      setSwiping(false);
     }
   };
+
+  const swipe = (action: 'like' | 'pass') => {
+    if (!current || swiping) return;
+    setSwiping(true);
+    const direction = action === 'like' ? width + 160 : -width - 160;
+    translateX.value = withTiming(direction, { duration: 220 }, (finished) => {
+      if (finished) runOnJS(submitSwipe)(action);
+    });
+    rotate.value = withTiming(action === 'like' ? 18 : -18, { duration: 220 });
+  };
+
+  const panGesture = Gesture.Pan()
+    .enabled(!!current && !swiping)
+    .onUpdate((event) => {
+      translateX.value = event.translationX;
+      rotate.value = event.translationX / 18;
+    })
+    .onEnd((event) => {
+      const threshold = Math.max(100, width * 0.25);
+      if (Math.abs(event.translationX) > threshold || Math.abs(event.velocityX) > 900) {
+        const action = event.translationX >= 0 ? 'like' : 'pass';
+        const direction = action === 'like' ? width + 160 : -width - 160;
+        translateX.value = withTiming(direction, { duration: 220 }, (finished) => {
+          if (finished) runOnJS(submitSwipe)(action);
+        });
+        rotate.value = withTiming(action === 'like' ? 18 : -18, { duration: 220 });
+      } else {
+        translateX.value = withSpring(0);
+        rotate.value = withSpring(0);
+      }
+    });
+
+  const cardAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }, { rotate: String(rotate.value) + 'deg' }],
+  }));
 
   const showSafetyActions = () => {
     if (!current) return;
@@ -90,7 +135,8 @@ export default function DiscoverScreen() {
       {!isLoading && !current ? <Text>No more profiles available.</Text> : null}
 
       {current ? (
-        <View style={styles.card}>
+        <GestureDetector gesture={panGesture}>
+          <Animated.View style={[styles.card, cardAnimatedStyle]}>
           <Pressable onPress={() => router.push(`/profile/${current.id}`)}>
             <Text style={styles.position}>{index + 1} / {items.length}</Text>
             <Text style={styles.name}>{current.displayName}{current.age !== null ? `, ${current.age}` : ''}</Text>
@@ -107,7 +153,8 @@ export default function DiscoverScreen() {
             <Pressable style={styles.likeButton} onPress={() => swipe('like')}><Text>Like</Text></Pressable>
           </View>
           <Pressable style={styles.safetyButton} onPress={showSafetyActions}><Text>Safety</Text></Pressable>
-        </View>
+          </Animated.View>
+        </GestureDetector>
       ) : null}
     </View>
   );
