@@ -1,8 +1,11 @@
 from datetime import date, timedelta
 from uuid import uuid4
+import hashlib
+import json
 import logging
 
 from django.utils import timezone
+from django.core import signing
 from django.db.models import Q
 
 from rest_framework import serializers, status
@@ -21,7 +24,7 @@ from apps.identity.models import NexoraUser
 from .models import DatingBlock, DatingConversation, DatingConversationPresence, DatingMatch, DatingMessage, DatingNotification, DatingNotificationPreference, DatingProfile, DatingProfileMedia, DatingPushToken, DatingSwipe
 from .models.safety import DatingReport
 from .conversation_service import DatingConversationService
-from .services import DatingSafetyService, DatingSwipeService, _compatibility_score, _distance_km, discovery_for
+from .services import DatingSafetyService, DatingSwipeService, _compatibility_score, _distance_km, ranked_discovery_for
 
 
 logger = logging.getLogger(__name__)
@@ -47,7 +50,8 @@ class DatingProfileSerializer(serializers.ModelSerializer):
         fields = ("id", "display_name", "birth_date", "age", "bio", "photo_url", "relationship_intent", "discovery_enabled", "preferred_min_age", "preferred_max_age", "interests", "education", "occupation", "location_city", "location_country", "max_distance_km", "profile_completion")
 
     def get_profile_completion(self, obj):
-        has_photo = bool(obj.photo_url.strip()) or DatingProfileMedia.objects.filter(profile=obj, active=True).exists()\n        checks = [bool(obj.display_name.strip()), bool(obj.birth_date), bool(obj.bio.strip()), has_photo, bool(obj.relationship_intent), bool(obj.interests), bool(obj.education.strip()), bool(obj.occupation.strip()), bool(obj.location_city.strip())]
+        active_media = getattr(obj, "_active_media", None)
+        has_photo = bool(obj.photo_url.strip()) or (active_media is not None and bool(active_media)) or (active_media is None and DatingProfileMedia.objects.filter(profile=obj, active=True).exists())\n        checks = [bool(obj.display_name.strip()), bool(obj.birth_date), bool(obj.bio.strip()), has_photo, bool(obj.relationship_intent), bool(obj.interests), bool(obj.education.strip()), bool(obj.occupation.strip()), bool(obj.location_city.strip())]
         return round(sum(checks) / len(checks) * 100)
 
     def get_age(self, obj):
@@ -63,11 +67,10 @@ class DiscoveryView(APIView):
     def get(self, request):
         filters = {key: request.query_params.get(key) for key in ("intent", "education", "occupation", "city", "interest", "max_distance_km") if request.query_params.get(key)}
         try:
-            cursor = max(0, int(request.query_params.get("cursor", "0")))
             limit = min(50, max(1, int(request.query_params.get("limit", "20"))))
         except (TypeError, ValueError):
             return Response(
-                {"detail": "cursor and limit must be valid integers."},
+                {"detail": "limit must be a valid integer."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if "max_distance_km" in filters:
@@ -77,10 +80,48 @@ class DiscoveryView(APIView):
                 return Response(
                     {"detail": "max_distance_km must be a positive integer."},
                     status=status.HTTP_400_BAD_REQUEST,
-                )
-        profiles = discovery_for(request.user, limit=cursor + limit + 1, **filters)
-        page = profiles[cursor:cursor + limit]
-        has_more = len(profiles) > cursor + limit
+            )
+        filter_hash = hashlib.sha256(
+            json.dumps(filters, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        cursor_token = request.query_params.get("cursor")
+        cursor_key = None
+        if cursor_token:
+            try:
+                payload = signing.loads(cursor_token, salt="dating-discovery-v1", max_age=86400)
+                if payload.get("filter_hash") != filter_hash:
+                    raise signing.BadSignature("filter mismatch")
+                cursor_key = (float(payload["score"]), str(payload["updated_at"]), str(payload["id"]))
+            except (signing.BadSignature, signing.SignatureExpired, KeyError, TypeError, ValueError):
+                return Response({"detail": "cursor is invalid or expired."}, status=status.HTTP_400_BAD_REQUEST)
+
+        ranked = ranked_discovery_for(request.user, **filters)
+        if cursor_key:
+            from django.utils.dateparse import parse_datetime
+            cursor_updated_at = parse_datetime(cursor_key[1])
+            if cursor_updated_at is None:
+                return Response({"detail": "cursor is invalid or expired."}, status=status.HTTP_400_BAD_REQUEST)
+            cursor_sort_key = (-cursor_key[0], -cursor_updated_at.timestamp(), cursor_key[2])
+            ranked = [
+                pair for pair in ranked
+                if (-pair[0], -pair[1].updated_at.timestamp(), str(pair[1].id)) > cursor_sort_key
+            ]
+        page_ranked = ranked[:limit + 1]
+        page = [profile for _, profile in page_ranked[:limit]]
+        has_more = len(page_ranked) > limit
+        next_cursor = None
+        if has_more and page_ranked:
+            last_score, last_profile = page_ranked[limit - 1]
+            next_cursor = signing.dumps(
+                {
+                    "v": 1,
+                    "score": last_score,
+                    "updated_at": last_profile.updated_at.isoformat(),
+                    "id": str(last_profile.id),
+                    "filter_hash": filter_hash,
+                },
+                salt="dating-discovery-v1",
+            )
         actor_profile = DatingProfile.objects.filter(user=request.user).first()
         serialized = DatingProfileSerializer(page, many=True).data
         items = []
@@ -101,7 +142,7 @@ class DiscoveryView(APIView):
                 item["distance_km"] = None
                 item["shared_interests"] = []
             items.append(item)
-        return Response({"items": items, "next_cursor": str(cursor + limit) if has_more else None})
+        return Response({"items": items, "next_cursor": next_cursor})
 
 
 class ProfileDetailView(APIView):
