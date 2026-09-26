@@ -6,32 +6,49 @@ from rest_framework.views import APIView
 
 from apps.core.permissions import AuthenticatedNexoraUserPermission
 
-from .models import DatingProfile, DatingSwipe
+from .models import DatingMatch, DatingProfile, DatingSwipe
 from .services import DatingSwipeService, discovery_for
 
 
-class DiscoverySerializer(serializers.Serializer):
-    id = serializers.UUIDField()
-    display_name = serializers.CharField()
+class DatingProfileSerializer(serializers.ModelSerializer):
     age = serializers.SerializerMethodField()
-    bio = serializers.CharField()
-    photo_url = serializers.URLField(allow_null=True, allow_blank=True)
+
+    class Meta:
+        model = DatingProfile
+        fields = ("id", "display_name", "birth_date", "age", "bio", "photo_url", "relationship_intent", "discovery_enabled")
 
     def get_age(self, obj):
         if not obj.birth_date:
             return None
         today = date.today()
-        return today.year - obj.birth_date.year - (
-            (today.month, today.day) < (obj.birth_date.month, obj.birth_date.day)
-        )
+        return today.year - obj.birth_date.year - ((today.month, today.day) < (obj.birth_date.month, obj.birth_date.day))
 
 
 class DiscoveryView(APIView):
     permission_classes = [AuthenticatedNexoraUserPermission]
 
     def get(self, request):
-        items = discovery_for(request.user)
-        return Response({"items": DiscoverySerializer(items, many=True).data, "next_cursor": None})
+        return Response({"items": DatingProfileSerializer(discovery_for(request.user), many=True).data, "next_cursor": None})
+
+
+class MeProfileView(APIView):
+    permission_classes = [AuthenticatedNexoraUserPermission]
+
+    def get(self, request):
+        profile, _ = DatingProfile.objects.get_or_create(
+            user=request.user,
+            defaults={"display_name": getattr(request.user, "display_name", "") or "Nexora User"},
+        )
+        return Response(DatingProfileSerializer(profile).data)
+
+    def patch(self, request):
+        profile, _ = DatingProfile.objects.get_or_create(
+            user=request.user,
+            defaults={"display_name": getattr(request.user, "display_name", "") or "Nexora User"},
+        )
+        serializer = DatingProfileSerializer(profile, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        return Response(DatingProfileSerializer(serializer.save()).data)
 
 
 class SwipeInputSerializer(serializers.Serializer):
@@ -46,26 +63,19 @@ class SwipeView(APIView):
         serializer = SwipeInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            target = DatingProfile.objects.get(
-                id=serializer.validated_data["target_profile_id"],
-                discovery_enabled=True,
-            )
-            swipe, match = DatingSwipeService.record(
-                actor=request.user,
-                target_profile=target,
-                action=serializer.validated_data["action"],
-            )
+            target = DatingProfile.objects.get(id=serializer.validated_data["target_profile_id"], discovery_enabled=True)
+            swipe, match = DatingSwipeService.record(actor=request.user, target_profile=target, action=serializer.validated_data["action"])
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         except DatingProfile.DoesNotExist:
             return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"status": "accepted", "swipe_id": str(swipe.id), "matched": match is not None, "match_id": str(match.id) if match else None}, status=status.HTTP_201_CREATED)
 
-        return Response(
-            {
-                "status": "accepted",
-                "swipe_id": str(swipe.id),
-                "matched": match is not None,
-                "match_id": str(match.id) if match else None,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+
+class MatchesView(APIView):
+    permission_classes = [AuthenticatedNexoraUserPermission]
+
+    def get(self, request):
+        matches = DatingMatch.objects.filter(active=True).filter(user_a=request.user) | DatingMatch.objects.filter(active=True, user_b=request.user)
+        matches = matches.select_related("user_a", "user_b").order_by("-matched_at")
+        return Response({"items": [{"id": str(m.id), "userA": str(m.user_a_id), "userB": str(m.user_b_id), "matchedAt": m.matched_at.isoformat()} for m in matches.distinct()]})
