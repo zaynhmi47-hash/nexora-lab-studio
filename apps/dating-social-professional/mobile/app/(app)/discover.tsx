@@ -18,6 +18,7 @@ export default function DiscoverScreen() {
   const [appliedFilters, setAppliedFilters] = useState({ interest: '', city: '' });
   const [index, setIndex] = useState(0);
   const [swiping, setSwiping] = useState(false);
+  const [mediaIndex, setMediaIndex] = useState(0);
   const { width } = useWindowDimensions();
   const translateX = useSharedValue(0);
   const rotate = useSharedValue(0);
@@ -39,14 +40,18 @@ export default function DiscoverScreen() {
     enabled: !!current?.id,
   });
   const mediaItems = mediaData?.items ?? [];
-  const primaryMedia = mediaItems.find((item) => item.isPrimary) ?? mediaItems[0];
+  const orderedMedia = [...mediaItems].sort((a, b) => a.sortOrder - b.sortOrder);
+  const safeMediaIndex = orderedMedia.length ? Math.min(mediaIndex, orderedMedia.length - 1) : 0;
+  const currentMedia = orderedMedia[safeMediaIndex];
 
   const applyFilters = () => {
     setIndex(0);
+    setMediaIndex(0);
     setAppliedFilters({ interest: interestFilter.trim(), city: cityFilter.trim() });
   };
 
   const advance = () => {
+    setMediaIndex(0);
     if (index < items.length - 1) {
       setIndex((value) => value + 1);
     } else {
@@ -146,15 +151,28 @@ export default function DiscoverScreen() {
           <Animated.View style={[styles.card, cardAnimatedStyle]}>
           <Pressable onPress={() => router.push(`/profile/${current.id}`)}>
             <View style={styles.mediaFrame}>
-              {primaryMedia?.url ? (
-                <Image source={{ uri: primaryMedia.url }} style={styles.profileImage} resizeMode="cover" />
+              {currentMedia?.url ? (
+                <Image source={{ uri: currentMedia.url }} style={styles.profileImage} resizeMode="cover" />
               ) : (
                 <View style={styles.imageFallback}>
                   <Text style={styles.imageFallbackText}>{current.displayName?.trim().charAt(0).toUpperCase() || '?'}</Text>
                 </View>
               )}
+              {orderedMedia.length > 1 ? (
+                <View style={styles.mediaZones}>
+                  <Pressable style={styles.mediaZone} onPress={(event) => { event.stopPropagation(); setMediaIndex((value) => Math.max(0, value - 1)); }} accessibilityLabel="Previous profile photo" />
+                  <Pressable style={styles.mediaZone} onPress={(event) => { event.stopPropagation(); setMediaIndex((value) => Math.min(orderedMedia.length - 1, value + 1)); }} accessibilityLabel="Next profile photo" />
+                </View>
+              ) : null}
+              {orderedMedia.length > 1 ? (
+                <View style={styles.mediaIndicators}>
+                  {orderedMedia.map((media, itemIndex) => (
+                    <View key={media.id} style={[styles.mediaIndicator, itemIndex === safeMediaIndex && styles.mediaIndicatorActive]} />
+                  ))}
+                </View>
+              ) : null}
               <View style={styles.imageBadge}>
-                <Text style={styles.imageBadgeText}>{mediaItems.length ? `${mediaItems.length} photos` : 'Profile'}</Text>
+                <Text style={styles.imageBadgeText}>{orderedMedia.length ? (safeMediaIndex + 1) + ' / ' + orderedMedia.length : 'Profile'}</Text>
               </View>
             </View>
             <Text style={styles.position}>{index + 1} / {items.length}</Text>
@@ -194,6 +212,11 @@ const styles = StyleSheet.create({
   profileImage: { width: '100%', height: '100%' },
   imageFallback: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   imageFallbackText: { fontSize: 72, fontWeight: '800', opacity: 0.25 },
+  mediaZones: { ...StyleSheet.absoluteFillObject, flexDirection: 'row' },
+  mediaZone: { flex: 1 },
+  mediaIndicators: { position: 'absolute', top: 10, left: 12, right: 12, flexDirection: 'row', gap: 4 },
+  mediaIndicator: { flex: 1, height: 3, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.45)' },
+  mediaIndicatorActive: { backgroundColor: '#fff' },
   imageBadge: { position: 'absolute', left: 12, bottom: 12, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: 'rgba(0,0,0,0.55)' },
   imageBadgeText: { color: '#fff', fontWeight: '700' },
   position: { opacity: 0.6, marginBottom: 4 },
