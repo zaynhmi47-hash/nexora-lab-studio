@@ -8,6 +8,7 @@ export type DatingProfile = DiscoveryProfile & { discoveryEnabled: boolean; pref
 export type Match = { id: string; userA: string; userB: string; matchedAt: string };
 export type DatingMessage = { id: string; senderId: string; body: string; createdAt: string; readAt: string | null };
 export type DatingNotification = { id: string; type: string; title: string; body: string; data: Record<string, unknown>; createdAt: string; readAt: string | null };
+export type DatingNotificationPreferences = { push_enabled: boolean; match_push_enabled: boolean; message_push_enabled: boolean; safety_push_enabled: boolean };
 type WireProfile = { id: string; display_name: string; birth_date: string | null; age: number | null; bio: string; photo_url: string | null; relationship_intent: string; discovery_enabled?: boolean; preferred_min_age: number; preferred_max_age: number };
 
 const mapProfile = (item: WireProfile): DiscoveryProfile => ({ id: item.id, displayName: item.display_name, age: item.age, birthDate: item.birth_date, bio: item.bio, photoUrl: item.photo_url, relationshipIntent: item.relationship_intent });
@@ -37,6 +38,10 @@ class DatingApi {
   getMatches() { return this.request<{ items: Match[] }>('/api/v1/dating/matches/'); }
   getNotifications() { return this.request<{ items: DatingNotification[]; unreadCount: number }>('/api/v1/dating/notifications/'); }
   markNotificationsRead() { return this.request<{ status: 'read' }>('/api/v1/dating/notifications/', { method: 'POST' }); }
+  getNotificationPreferences() { return this.request<DatingNotificationPreferences>('/api/v1/dating/notification-preferences/'); }
+  updateNotificationPreferences(payload: Partial<DatingNotificationPreferences>) { return this.request<DatingNotificationPreferences>('/api/v1/dating/notification-preferences/', { method: 'PATCH', body: JSON.stringify(payload) }); }
+  setConversationPresence(conversationId: string) { return this.request<{ status: 'active' }>(`/api/v1/dating/conversations/${conversationId}/presence/`, { method: 'POST' }); }
+  clearConversationPresence(conversationId: string) { return this.request<{ status: 'inactive' }>(`/api/v1/dating/conversations/${conversationId}/presence/`, { method: 'DELETE' }); }
   registerPushToken(token: string, platform: string) { return this.request<{ id: string; status: 'registered' }>('/api/v1/dating/push-tokens/', { method: 'POST', body: JSON.stringify({ token, platform }) }); }
   unregisterPushToken(token: string) { return this.request<{ status: 'unregistered' }>('/api/v1/dating/push-tokens/', { method: 'DELETE', body: JSON.stringify({ token }) }); }
   createConversation(matchId: string) { return this.request<{ id: string; matchId: string }>('/api/v1/dating/conversations/', { method: 'POST', body: JSON.stringify({ match_id: matchId }) }); }
