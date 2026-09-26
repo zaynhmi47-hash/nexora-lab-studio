@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDatingApi } from '@/src/api/provider';
@@ -9,6 +9,7 @@ export default function ChatScreen() {
   const api = useDatingApi();
   const client = useQueryClient();
   const [body, setBody] = useState('');
+  const scrollRef = useRef<ScrollView>(null);
   const detail = useQuery({ queryKey: ['dating', 'conversation', conversationId], queryFn: () => api.getConversation(conversationId), enabled: Boolean(conversationId), refetchInterval: 5000 });
   const safety = useMutation({ mutationFn: async (action: 'unmatch' | 'block' | 'report') => {
     if (action === 'unmatch') return api.unmatch(detail.data?.matchId ?? '');
@@ -37,12 +38,12 @@ export default function ChatScreen() {
     }, [api, conversationId]),
   );
   const send = useMutation({ mutationFn: () => api.sendMessage(conversationId, body), onSuccess: () => { setBody(''); client.invalidateQueries({ queryKey: ['dating', 'messages', conversationId] }); } });
-  return <View style={styles.container}>
+  return <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}>
     <View style={styles.header}><View><Text style={styles.title}>{detail.data?.counterpart.displayName ?? "Chat"}</Text><Text style={styles.subtitle}>{detail.data?.counterpart.age ? `${detail.data.counterpart.age} years old` : "Nexora Dating"}</Text></View><Pressable onPress={openSafety} disabled={safety.isPending} style={styles.safety}><Text>•••</Text></Pressable></View>
-    <ScrollView style={styles.messages} contentContainerStyle={styles.messageList}>
+    <ScrollView ref={scrollRef} style={styles.messages} contentContainerStyle={styles.messageList} onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}>
       {query.data?.items.map((message) => <View key={message.id} style={[styles.message, message.senderId === detail.data?.counterpart.id ? styles.received : styles.sent]}><Text>{message.body}</Text><Text style={styles.meta}>{new Date(message.createdAt).toLocaleTimeString()}</Text></View>)}
     </ScrollView>
     <View style={styles.composer}><TextInput style={styles.input} value={body} onChangeText={setBody} placeholder="Write a message…" multiline /><Pressable disabled={send.isPending || !body.trim()} onPress={() => send.mutate()} style={styles.send}><Text>Send</Text></Pressable></View>
-  </View>;
+  </KeyboardAvoidingView>;
 }
 const styles = StyleSheet.create({ container: { flex: 1, padding: 18, gap: 12 }, header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, title: { fontSize: 24, fontWeight: '800' }, subtitle: { opacity: 0.55, marginTop: 2 }, safety: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 }, messages: { flex: 1 }, messageList: { gap: 10, paddingVertical: 8 }, message: { borderWidth: 1, borderRadius: 14, padding: 12, maxWidth: '88%' }, received: { alignSelf: 'flex-start' }, sent: { alignSelf: 'flex-end' }, meta: { marginTop: 5, opacity: 0.55, fontSize: 11 }, composer: { flexDirection: 'row', gap: 8, alignItems: 'flex-end' }, input: { flex: 1, borderWidth: 1, borderRadius: 14, padding: 12, maxHeight: 110 }, send: { borderWidth: 1, borderRadius: 14, padding: 14 } });
