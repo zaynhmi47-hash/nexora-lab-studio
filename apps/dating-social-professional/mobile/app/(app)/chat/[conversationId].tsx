@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDatingApi } from '@/src/api/provider';
 
@@ -9,14 +9,17 @@ export default function ChatScreen() {
   const api = useDatingApi();
   const client = useQueryClient();
   const [body, setBody] = useState('');
-  const detail = useQuery({ queryKey: ['dating', 'conversation', conversationId], queryFn: () => api.getConversation(conversationId), enabled: Boolean(conversationId) });
+  const detail = useQuery({ queryKey: ['dating', 'conversation', conversationId], queryFn: () => api.getConversation(conversationId), enabled: Boolean(conversationId), refetchInterval: 5000 });
   const safety = useMutation({ mutationFn: async (action: 'unmatch' | 'block' | 'report') => {
     if (action === 'unmatch') return api.unmatch(detail.data?.matchId ?? '');
     if (action === 'block') return api.blockConversation(conversationId);
     return api.reportConversation(conversationId, 'other', 'Reported from chat.');
   }, onSuccess: (_, action) => {
     client.invalidateQueries({ queryKey: ['dating', 'matches'] });
-    if (action !== 'report') client.invalidateQueries({ queryKey: ['dating', 'conversation', conversationId] });
+    if (action !== 'report') {
+      client.invalidateQueries({ queryKey: ['dating', 'conversation', conversationId] });
+      Alert.alert('Chat', action === 'unmatch' ? 'The match has been removed.' : 'The conversation has been blocked.', [{ text: 'OK', onPress: () => router.back() }]);
+    } else Alert.alert('Chat', 'Report submitted.');
   } });
   const openSafety = () => Alert.alert('Chat safety', 'Choose an action', [
     { text: 'Cancel', style: 'cancel' },
