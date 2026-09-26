@@ -20,6 +20,16 @@ export default function ProfileDetailScreen() {
   const mediaItems = [...(mediaQuery.data?.items ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
   const currentMedia = mediaItems[mediaIndex];
   const [swiping, setSwiping] = useState(false);
+  const [safetyOpen, setSafetyOpen] = useState(false);
+  const submitSafety = async (action: 'block' | 'report') => {
+    if (!profileId) return;
+    try {
+      if (action === 'block') { await api.blockUser(profileId); Alert.alert('Blocked', 'This profile has been blocked.', [{ text: 'OK', onPress: () => router.back() }]); }
+      else { await api.reportUser(profileId, 'other', 'Reported from profile.'); Alert.alert('Report submitted', 'Thank you for helping keep the community safe.'); }
+    } catch (error) { Alert.alert('Safety', error instanceof Error ? error.message : 'Unable to complete this action.'); }
+    finally { setSafetyOpen(false); }
+  };
+
   const submitSwipe = async (action: 'like' | 'pass') => {
     if (!profileId || swiping) return;
     setSwiping(true);
@@ -40,7 +50,7 @@ export default function ProfileDetailScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Stack.Screen options={{ title: data.displayName }} />
-      <Pressable onPress={() => router.back()}><Text>Back</Text></Pressable>
+      <View style={styles.topBar}><Pressable onPress={() => router.back()}><Text>Back</Text></Pressable><Pressable onPress={() => setSafetyOpen(true)}><Text>Safety</Text></Pressable></View>
       <View style={styles.hero}>
         <Text style={styles.name}>{data.displayName}{data.age !== null ? `, ${data.age}` : ''}</Text>
         <View style={styles.contextRow}><View style={styles.compatibilityBadge}><Text style={styles.compatibilityText}>{Math.round(data.compatibilityScore)}% match</Text></View>{data.distanceKm !== null ? <Text style={styles.contextText}>{data.distanceKm} km away</Text> : null}</View>
@@ -57,7 +67,7 @@ export default function ProfileDetailScreen() {
         <Text style={styles.section}>Compatibility context</Text>
         <Text style={styles.body}>Compatibility: {Math.round(data.compatibilityScore)}%</Text>
         {data.sharedInterests.length ? <Text style={styles.body}>Shared interests: {data.sharedInterests.join(' · ')}</Text> : <Text style={styles.muted}>No shared interests identified yet.</Text>}
-        {data.distanceKm !== null ? <Text style={styles.body}>Distance: {data.distanceKm} km</Text> : data.locationCity ? <Text style={styles.body}>City: ${data.locationCity} </Text> : null}
+        {data.distanceKm !== null ? <Text style={styles.body}>Distance: {data.distanceKm} km</Text> : data.locationCity ? <Text style={styles.body}>City: {data.locationCity}</Text> : null}
       </View>
       <Text style={styles.section}>About</Text>
       <Text style={styles.body}>{data.bio || 'No bio yet.'}</Text>
@@ -66,6 +76,7 @@ export default function ProfileDetailScreen() {
       {data.occupation ? <><Text style={styles.section}>Work</Text><Text style={styles.body}>{data.occupation}</Text></> : null}
       {data.locationCity || data.locationCountry ? <><Text style={styles.section}>Location</Text><Text style={styles.body}>{[data.locationCity, data.locationCountry].filter(Boolean).join(', ')}</Text></> : null}
       <View style={styles.meta}><Text>Profile completion: {data.profileCompletion}%</Text></View>
+      {safetyOpen ? <View style={styles.safetyCard}><Text style={styles.section}>Safety</Text><Text style={styles.muted}>If something feels wrong, you can block this person or report the profile.</Text><View style={styles.safetyActions}><Pressable onPress={() => void submitSafety('report')} style={styles.safetyButton}><Text>Report</Text></Pressable><Pressable onPress={() => Alert.alert('Block profile?', 'You will no longer see or interact with this profile.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Block', style: 'destructive', onPress: () => void submitSafety('block') }])} style={styles.safetyButton}><Text>Block</Text></Pressable></View></View> : null}
       <View style={styles.actions}><Pressable disabled={swiping} onPress={() => submitSwipe('pass')} style={styles.passButton}><Text>{swiping ? '…' : 'Pass'}</Text></Pressable><Pressable disabled={swiping} onPress={() => submitSwipe('like')} style={styles.likeButton}><Text>{swiping ? '…' : 'Like'}</Text></Pressable></View>
     </ScrollView>
   );
@@ -90,6 +101,10 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 12, marginTop: 8 },
   passButton: { flex: 1, borderWidth: 1, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   likeButton: { flex: 1, borderWidth: 1, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  safetyCard: { padding: 16, borderWidth: 1, borderRadius: 16, gap: 8 },
+  safetyActions: { flexDirection: 'row', gap: 8 },
+  safetyButton: { flex: 1, borderWidth: 1, borderRadius: 12, padding: 12, alignItems: 'center' },
   hero: { padding: 24, borderWidth: 1, borderRadius: 24, gap: 8 },
   name: { fontSize: 28, fontWeight: '800' },
   intent: { textTransform: 'capitalize' },
