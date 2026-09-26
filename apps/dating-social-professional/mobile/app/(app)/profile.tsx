@@ -44,12 +44,26 @@ export default function ProfileScreen() {
     }
   };
   const setPrimary = async (mediaId: string) => { if (!data) return; try { await api.updateProfileMedia(data.id, mediaId, { is_primary: true }); await mediaQuery.refetch(); await queryClient.invalidateQueries({ queryKey: ['dating', 'profile'] }); } catch (error) { Alert.alert('Media', error instanceof Error ? error.message : 'Unable to set primary photo.'); } };
+  const moveMedia = async (mediaId: string, nextIndex: number) => { if (!data) return; try { await api.updateProfileMedia(data.id, mediaId, { sort_order: nextIndex }); await mediaQuery.refetch(); } catch (error) { Alert.alert('Media', error instanceof Error ? error.message : 'Unable to reorder photos.'); } };
   const removeMedia = async (mediaId: string) => { if (!data) return; try { await api.removeProfileMedia(data.id, mediaId); await mediaQuery.refetch(); await queryClient.invalidateQueries({ queryKey: ['dating', 'profile'] }); } catch (error) { Alert.alert('Media', error instanceof Error ? error.message : 'Unable to remove media.'); } };
 
   return <ScrollView contentContainerStyle={styles.container}>
     <Text style={styles.title}>Your profile</Text>
     <Text style={styles.label}>Profile photos</Text>
-    <View style={styles.gallery}>{mediaQuery.data?.items.map((item) => <View key={item.id} style={styles.mediaItem}><Image source={{ uri: item.url }} style={styles.mediaImage} /><Text>{item.isPrimary ? 'Primary' : `Photo ${item.sortOrder + 1}`}</Text>{!item.isPrimary ? <Pressable onPress={() => setPrimary(item.id)}><Text>Set primary</Text></Pressable> : null}<Pressable onPress={() => removeMedia(item.id)}><Text>Remove</Text></Pressable></View>)}</View>
+    <View style={styles.gallery}>
+      {mediaQuery.data?.items.map((item, index, items) => (
+        <View key={item.id} style={styles.mediaItem}>
+          <Image source={{ uri: item.url }} style={styles.mediaImage} />
+          <Text>{item.isPrimary ? 'Primary' : 'Photo ' + (item.sortOrder + 1)}</Text>
+          <View style={styles.mediaActions}>
+            {!item.isPrimary ? <Pressable onPress={() => setPrimary(item.id)}><Text>Set primary</Text></Pressable> : null}
+            {index > 0 ? <Pressable onPress={() => moveMedia(item.id, index - 1)}><Text>Move left</Text></Pressable> : null}
+            {index < items.length - 1 ? <Pressable onPress={() => moveMedia(item.id, index + 1)}><Text>Move right</Text></Pressable> : null}
+            <Pressable onPress={() => removeMedia(item.id)}><Text>Remove</Text></Pressable>
+          </View>
+        </View>
+      ))}
+    </View>)}</View>
     <TextInput style={styles.input} value={mediaUrl} onChangeText={setMediaUrl} placeholder="Image URL" autoCapitalize="none" />
     <View style={styles.choices}><Pressable onPress={pickMedia} style={styles.save}><Text>Choose photo</Text></Pressable><Pressable onPress={addMedia} style={styles.save}><Text>Add URL</Text></Pressable></View>
     {isLoading ? <Text>Loading…</Text> : null}
@@ -69,4 +83,4 @@ export default function ProfileScreen() {
     <Pressable onPress={() => router.push('/(app)/settings/notifications')} style={styles.settings}><Text style={styles.settingsTitle}>Notification settings</Text><Text style={styles.settingsSubtitle}>Control match, message, and safety push notifications.</Text></Pressable>
   </ScrollView>;
 }
-const styles = StyleSheet.create({ gallery: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 }, mediaItem: { width: 110, gap: 6 }, mediaImage: { width: 110, height: 110, borderRadius: 14 }, container: { flex: 1, padding: 24, gap: 14 }, title: { fontSize: 30, fontWeight: '800', marginBottom: 8 }, input: { borderWidth: 1, borderRadius: 14, padding: 14 }, bio: { minHeight: 120, textAlignVertical: 'top' }, choices: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' }, choice: { padding: 12, borderWidth: 1, borderRadius: 12 }, label: { fontWeight: '700' }, ageRow: { flexDirection: 'row', alignItems: 'center', gap: 10 }, ageInput: { flex: 1 }, selected: { opacity: 0.55 }, save: { padding: 16, borderWidth: 1, borderRadius: 14, alignItems: 'center' }, completion: { fontWeight: '700' }, settings: { borderWidth: 1, borderRadius: 14, padding: 16, gap: 4 }, settingsTitle: { fontWeight: '800' }, settingsSubtitle: { opacity: 0.6 } });
+const styles = StyleSheet.create({ gallery: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 }, mediaItem: { width: 110, gap: 6 }, mediaActions: { gap: 6 }, mediaImage: { width: 110, height: 110, borderRadius: 14 }, container: { flex: 1, padding: 24, gap: 14 }, title: { fontSize: 30, fontWeight: '800', marginBottom: 8 }, input: { borderWidth: 1, borderRadius: 14, padding: 14 }, bio: { minHeight: 120, textAlignVertical: 'top' }, choices: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' }, choice: { padding: 12, borderWidth: 1, borderRadius: 12 }, label: { fontWeight: '700' }, ageRow: { flexDirection: 'row', alignItems: 'center', gap: 10 }, ageInput: { flex: 1 }, selected: { opacity: 0.55 }, save: { padding: 16, borderWidth: 1, borderRadius: 14, alignItems: 'center' }, completion: { fontWeight: '700' }, settings: { borderWidth: 1, borderRadius: 14, padding: 16, gap: 4 }, settingsTitle: { fontWeight: '800' }, settingsSubtitle: { opacity: 0.6 } });
