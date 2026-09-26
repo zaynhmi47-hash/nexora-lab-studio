@@ -169,3 +169,18 @@ This product owns:
 - dating-specific conversations and safety state.
 
 Professional context may consume authorized Social identity/network data, but dating context must remain isolated by default. Never automatically expose dating preferences, matches, conversations, or dating activity to Social or professional networking surfaces.
+
+
+## 14. Implemented architecture baseline — 2026-09-26
+
+The first production-oriented vertical slice is now present in the repository:
+
+- Mobile: `apps/dating-social-professional/mobile/`
+- Backend: `services/nexora-api/apps/dating_social_professional/`
+- API: `/api/v1/dating/discovery/` and `/api/v1/dating/swipes/`
+
+The mobile baseline targets Expo SDK 57 / React Native 0.86 / Expo Router 57. Routes remain in `app/`; API/session logic lives under `src/`. TanStack Query owns server state. The client must never become the authority for identity, discovery eligibility or match creation.
+
+The backend currently owns DatingProfile, DatingSwipe and DatingMatch. Swipe creation is protected by an actor/target uniqueness constraint and reciprocal likes create a deterministic match pair. NexoraUser remains the canonical identity anchor.
+
+This is intentionally a vertical foundation, not a claim that the product is production-complete. Before production messaging, implement block/report/safety enforcement, profile moderation/verification, notifications, conversation/message authorization, pagination/cursor semantics and the required API/integration tests.
