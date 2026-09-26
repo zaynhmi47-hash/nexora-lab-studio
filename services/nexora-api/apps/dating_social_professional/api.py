@@ -16,7 +16,7 @@ class DatingProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DatingProfile
-        fields = ("id", "display_name", "birth_date", "age", "bio", "photo_url", "relationship_intent", "discovery_enabled")
+        fields = ("id", "display_name", "birth_date", "age", "bio", "photo_url", "relationship_intent", "discovery_enabled", "preferred_min_age", "preferred_max_age")
 
     def get_age(self, obj):
         if not obj.birth_date:
@@ -49,6 +49,12 @@ class MeProfileView(APIView):
         )
         serializer = DatingProfileSerializer(profile, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
+        min_age = serializer.validated_data.get("preferred_min_age", profile.preferred_min_age)
+        max_age = serializer.validated_data.get("preferred_max_age", profile.preferred_max_age)
+        if min_age > max_age:
+            raise serializers.ValidationError({"preferred_min_age": "Minimum age cannot exceed maximum age."})
+        if min_age < 18 or max_age > 99:
+            raise serializers.ValidationError({"preferred_min_age": "Age preferences must be between 18 and 99."})
         return Response(DatingProfileSerializer(serializer.save()).data)
 
 
