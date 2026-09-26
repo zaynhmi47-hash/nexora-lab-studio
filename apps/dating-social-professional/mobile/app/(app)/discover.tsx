@@ -71,7 +71,7 @@ export default function DiscoverScreen() {
     if (index < items.length - 1) {
       setIndex((value) => value + 1);
     } else {
-      queryClient.invalidateQueries({ queryKey: ['dating', 'discovery', appliedFilters.interest, appliedFilters.city] });
+      queryClient.invalidateQueries({ queryKey: ['dating', 'discovery', appliedFilters] });
     }
   };
 
