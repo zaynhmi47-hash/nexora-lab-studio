@@ -734,8 +734,15 @@ class ConversationPresenceView(APIView):
             id=conversation_id,
             active=True,
             match__active=True,
+            match__user_a__status=NexoraUser.Status.ACTIVE,
+            match__user_b__status=NexoraUser.Status.ACTIVE,
         ).first()
         if not conversation or request.user.id not in {conversation.match.user_a_id, conversation.match.user_b_id}:
+            return Response({"detail": "Conversation not found."}, status=status.HTTP_404_NOT_FOUND)
+        counterpart_id = conversation.match.user_b_id if conversation.match.user_a_id == request.user.id else conversation.match.user_a_id
+        if DatingBlock.objects.filter(
+            Q(blocker_id=request.user.id, blocked_id=counterpart_id) | Q(blocker_id=counterpart_id, blocked_id=request.user.id)
+        ).exists():
             return Response({"detail": "Conversation not found."}, status=status.HTTP_404_NOT_FOUND)
         DatingConversationPresence.objects.filter(
             user=request.user,
