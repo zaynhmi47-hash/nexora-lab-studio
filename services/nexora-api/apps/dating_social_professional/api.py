@@ -167,10 +167,9 @@ class ProfileDetailView(APIView):
     def get(self, request, profile_id):
         profile = DatingProfile.objects.filter(
             id=profile_id,
-            discovery_enabled=True,
-            user__status__in=[NexoraUser.Status.ACTIVE],
+            user__status=NexoraUser.Status.ACTIVE,
         ).first()
-        if not profile:
+        if not profile or (profile.user_id != request.user.id and not profile.discovery_enabled):
             return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
         if profile.user_id == request.user.id:
             return Response(DatingProfileSerializer(profile).data)
@@ -219,12 +218,11 @@ class ProfileMediaView(APIView):
     def get(self, request, profile_id):
         profile = DatingProfile.objects.filter(
             id=profile_id,
-            discovery_enabled=True,
             user__status=NexoraUser.Status.ACTIVE,
         ).first()
-        if not profile:
+        if not profile or (profile.user_id != request.user.id and not profile.discovery_enabled):
             return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
-        if DatingBlock.objects.filter(
+        if profile.user_id != request.user.id and DatingBlock.objects.filter(
             Q(blocker=request.user, blocked=profile.user) | Q(blocker=profile.user, blocked=request.user)
         ).exists():
             return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
