@@ -1,5 +1,6 @@
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 
 import { useDatingApi } from '@/src/api/provider';
 import { useDatingSession } from '@/src/auth/session';
@@ -9,11 +10,13 @@ export default function DiscoverScreen() {
   const { token, loading: sessionLoading } = useDatingSession();
   const { data, isLoading } = useQuery({
     queryKey: ['dating', 'discovery'],
-    queryFn: () => api.getDiscovery(),
+    queryFn: () => api.getDiscovery({ ...(interestFilter ? { interest: interestFilter } : {}), ...(cityFilter ? { city: cityFilter } : {}) }),
     enabled: !sessionLoading && !!token,
   });
 
   const current = data?.items[0];
+  const [interestFilter, setInterestFilter] = useState('');
+  const [cityFilter, setCityFilter] = useState('');
 
   const showSafetyActions = () => {
     if (!current) return;
@@ -40,12 +43,17 @@ export default function DiscoverScreen() {
       <Text style={styles.title}>Discover</Text>
       {sessionLoading ? <Text>Loading session…</Text> : null}
       {!sessionLoading && !token ? <Text>Sign in through Nexora Identity to start discovering.</Text> : null}
+      <View style={styles.filters}><TextInput style={styles.filterInput} value={interestFilter} onChangeText={setInterestFilter} placeholder="Interest filter" /><TextInput style={styles.filterInput} value={cityFilter} onChangeText={setCityFilter} placeholder="City filter" /></View>
       {isLoading ? <Text>Loading profiles…</Text> : null}
       {!isLoading && !current ? <Text>No profiles available yet.</Text> : null}
       {current ? (
         <View style={styles.card}>
           <Text style={styles.name}>{current.displayName}, {current.age}</Text>
           <Text style={styles.bio}>{current.bio || 'No bio yet.'}</Text>
+          {current.interests.length ? <Text>Interests: {current.interests.join(' · ')}</Text> : null}
+          {current.education ? <Text>Education: {current.education}</Text> : null}
+          {current.occupation ? <Text>Work: {current.occupation}</Text> : null}
+          {current.locationCity ? <Text>Location: {current.locationCity}</Text> : null}
           <View style={styles.actions}>
             <Pressable style={styles.button} onPress={() => api.swipe(current.id, 'pass')}>
               <Text>Pass</Text>
@@ -71,5 +79,5 @@ const styles = StyleSheet.create({
   bio: { fontSize: 16, lineHeight: 23 },
   actions: { flexDirection: 'row', gap: 12 },
   button: { paddingHorizontal: 24, paddingVertical: 14, borderWidth: 1, borderRadius: 16 },
-  safetyButton: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingVertical: 10 }
+  filters: { gap: 8 }, filterInput: { borderWidth: 1, borderRadius: 12, padding: 12 }, safetyButton: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingVertical: 10 }
 });
