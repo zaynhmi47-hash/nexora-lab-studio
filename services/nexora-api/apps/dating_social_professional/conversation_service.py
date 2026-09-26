@@ -22,7 +22,10 @@ class DatingConversationService:
             | Q(blocker_id=match.user_b_id, blocked_id=match.user_a_id)
         ).exists():
             raise ValueError("This conversation is unavailable.")
-        conversation, _ = DatingConversation.objects.get_or_create(match=match)
+        conversation, _ = DatingConversation.objects.get_or_create(match=match, defaults={"active": True})
+        if not conversation.active:
+            conversation.active = True
+            conversation.save(update_fields=["active", "updated_at"])
         return conversation
 
     @staticmethod
