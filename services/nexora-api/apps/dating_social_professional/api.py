@@ -341,7 +341,26 @@ class MatchesView(APIView):
 
     def get(self, request):
         matches = DatingMatch.objects.filter(active=True).filter(Q(user_a=request.user) | Q(user_b=request.user)).select_related("user_a", "user_b").order_by("-matched_at")
-        return Response({"items": [{"id": str(m.id), "userA": str(m.user_a_id), "userB": str(m.user_b_id), "matchedAt": m.matched_at.isoformat()} for m in matches]})
+        counterpart_ids = [
+            m.user_b_id if m.user_a_id == request.user.id else m.user_a_id
+            for m in matches
+        ]
+        profiles = {
+            p.user_id: p
+            for p in DatingProfile.objects.filter(user_id__in=counterpart_ids)
+        }
+        items = []
+        for match in matches:
+            counterpart_id = match.user_b_id if match.user_a_id == request.user.id else match.user_a_id
+            profile = profiles.get(counterpart_id)
+            items.append({
+                "id": str(match.id),
+                "userA": str(match.user_a_id),
+                "userB": str(match.user_b_id),
+                "matchedAt": match.matched_at.isoformat(),
+                "counterpart": DatingProfileSerializer(profile).data if profile else None,
+            })
+        return Response({"items": items})
 
 
 class BlockInputSerializer(serializers.Serializer):
