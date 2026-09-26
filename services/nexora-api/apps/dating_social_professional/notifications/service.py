@@ -1,9 +1,12 @@
+from datetime import timedelta
+
 from django.db import transaction
 from django.db.models import Q
+from django.utils import timezone
 
 from apps.identity.models import NexoraUser
 
-from ..models import DatingBlock, DatingConversation, DatingConversationPresence, DatingNotification, DatingNotificationPreference, DatingPushToken
+from ..models import DatingBlock, DatingConversation, DatingConversationPresence, DatingMatch, DatingNotification, DatingNotificationPreference, DatingPushToken
 from .expo import ExpoPushProvider
 from .ports import PushMessage
 
@@ -45,6 +48,22 @@ class DatingNotificationService:
         if not preferences.push_enabled or not enabled:
             return
 
+        if notification.type == "match":
+            match_id = notification.data.get("match_id")
+            match = DatingMatch.objects.select_related("user_a", "user_b").filter(
+                id=match_id,
+                active=True,
+                user_a__status=NexoraUser.Status.ACTIVE,
+                user_b__status=NexoraUser.Status.ACTIVE,
+            ).first() if match_id else None
+            if not match or notification.recipient_id not in {match.user_a_id, match.user_b_id}:
+                return
+            if DatingBlock.objects.filter(
+                Q(blocker_id=match.user_a_id, blocked_id=match.user_b_id)
+                | Q(blocker_id=match.user_b_id, blocked_id=match.user_a_id)
+            ).exists():
+                return
+
         if notification.type == "message":
             conversation_id = notification.data.get("conversation_id")
             conversation = DatingConversation.objects.select_related("match").filter(
@@ -65,6 +84,7 @@ class DatingNotificationService:
                 user_id=notification.recipient_id,
                 conversation_id=conversation_id,
                 active=True,
+                last_seen_at__gte=timezone.now() - timedelta(seconds=60),
             ).exists():
                 return
 
