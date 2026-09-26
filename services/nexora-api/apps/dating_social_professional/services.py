@@ -80,4 +80,6 @@ def discovery_for(actor: NexoraUser, limit: int = 20):
         latest_birth_date = today.replace(year=today.year - actor_profile.preferred_min_age)
         earliest_birth_date = today.replace(year=today.year - actor_profile.preferred_max_age - 1)
         queryset = queryset.filter(birth_date__gt=earliest_birth_date, birth_date__lte=latest_birth_date)
+        if actor_profile.relationship_intent:
+            queryset = queryset.filter(relationship_intent=actor_profile.relationship_intent)
     return queryset[:limit]
