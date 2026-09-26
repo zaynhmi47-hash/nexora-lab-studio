@@ -606,9 +606,11 @@ class ConversationBlockView(APIView):
         conversation = DatingConversation.objects.select_related("match").filter(id=conversation_id, active=True).first()
         if not conversation or request.user.id not in {conversation.match.user_a_id, conversation.match.user_b_id}:
             return Response({"detail": "Conversation not found."}, status=status.HTTP_404_NOT_FOUND)
+        if conversation.match.user_a.status != NexoraUser.Status.ACTIVE or conversation.match.user_b.status != NexoraUser.Status.ACTIVE:
+            return Response({"detail": "Conversation not found."}, status=status.HTTP_404_NOT_FOUND)
         target_id = conversation.match.user_b_id if conversation.match.user_a_id == request.user.id else conversation.match.user_a_id
         try:
-            DatingSafetyService.block(actor=request.user, target=NexoraUser.objects.get(id=target_id))
+            DatingSafetyService.block(actor=request.user, target=NexoraUser.objects.get(id=target_id, status=NexoraUser.Status.ACTIVE))
         except (ValueError, NexoraUser.DoesNotExist) as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"status": "blocked"})
@@ -618,8 +620,10 @@ class ConversationReportView(APIView):
     permission_classes = [AuthenticatedNexoraUserPermission]
 
     def post(self, request, conversation_id):
-        conversation = DatingConversation.objects.select_related("match").filter(id=conversation_id, active=True).first()
+        conversation = DatingConversation.objects.select_related("match").filter(id=conversation_id, active=True, match__active=True).first()
         if not conversation or request.user.id not in {conversation.match.user_a_id, conversation.match.user_b_id}:
+            return Response({"detail": "Conversation not found."}, status=status.HTTP_404_NOT_FOUND)
+        if conversation.match.user_a.status != NexoraUser.Status.ACTIVE or conversation.match.user_b.status != NexoraUser.Status.ACTIVE:
             return Response({"detail": "Conversation not found."}, status=status.HTTP_404_NOT_FOUND)
         target_id = conversation.match.user_b_id if conversation.match.user_a_id == request.user.id else conversation.match.user_a_id
         report_serializer = ReportInputSerializer(data={
@@ -704,8 +708,19 @@ class ConversationPresenceView(APIView):
     permission_classes = [AuthenticatedNexoraUserPermission]
 
     def post(self, request, conversation_id):
-        conversation = DatingConversation.objects.select_related("match").filter(id=conversation_id, active=True).first()
+        conversation = DatingConversation.objects.select_related("match").filter(
+            id=conversation_id,
+            active=True,
+            match__active=True,
+            match__user_a__status=NexoraUser.Status.ACTIVE,
+            match__user_b__status=NexoraUser.Status.ACTIVE,
+        ).first()
         if not conversation or request.user.id not in {conversation.match.user_a_id, conversation.match.user_b_id}:
+            return Response({"detail": "Conversation not found."}, status=status.HTTP_404_NOT_FOUND)
+        counterpart_id = conversation.match.user_b_id if conversation.match.user_a_id == request.user.id else conversation.match.user_a_id
+        if DatingBlock.objects.filter(
+            Q(blocker_id=request.user.id, blocked_id=counterpart_id) | Q(blocker_id=counterpart_id, blocked_id=request.user.id)
+        ).exists():
             return Response({"detail": "Conversation not found."}, status=status.HTTP_404_NOT_FOUND)
         presence, _ = DatingConversationPresence.objects.get_or_create(user=request.user)
         presence.conversation = conversation
