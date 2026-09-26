@@ -34,7 +34,8 @@ class DatingSwipeService:
 
         first, second = sorted((actor.id, target_profile.user_id), key=str)
         try:
-            match, _ = DatingMatch.objects.get_or_create(user_a_id=first, user_b_id=second)
+            with transaction.atomic():
+                match, _ = DatingMatch.objects.get_or_create(user_a_id=first, user_b_id=second)
         except IntegrityError:
             match = DatingMatch.objects.get(user_a_id=first, user_b_id=second)
         return swipe, match
