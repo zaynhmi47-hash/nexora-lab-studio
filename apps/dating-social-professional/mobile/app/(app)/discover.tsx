@@ -16,8 +16,7 @@ export default function DiscoverScreen() {
     queryFn: () => api.getDiscovery({ ...(interestFilter ? { interest: interestFilter } : {}), ...(cityFilter ? { city: cityFilter } : {}) }),
     enabled: !sessionLoading && !!token,
   });
-
-
+  const current = data?.items[0];
 
   const showSafetyActions = () => {
     if (!current) return;
