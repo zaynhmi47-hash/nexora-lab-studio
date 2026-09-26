@@ -167,7 +167,7 @@ def discovery_for(actor: NexoraUser, limit: int = 20, *, intent: str | None = No
     queryset = (
         DatingProfile.objects.filter(discovery_enabled=True)
         .exclude(user=actor)
-        .exclude(user_id__in=blocked_ids)
+        .exclude(user_id__in=blocked_user_ids)
         .exclude(id__in=excluded)
         .exclude(user__status__in=[NexoraUser.Status.SUSPENDED, NexoraUser.Status.DISABLED, NexoraUser.Status.DELETED])
     )
