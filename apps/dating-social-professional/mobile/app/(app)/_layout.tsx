@@ -1,6 +1,8 @@
 import { Tabs } from 'expo-router';
+import { usePushRegistration } from '@/src/push/use-push-registration';
 
 export default function AppLayout() {
+  usePushRegistration();
   return (
     <Tabs screenOptions={{ headerShown: false }}>
       <Tabs.Screen name="discover" options={{ title: 'Discover' }} />
