@@ -43,12 +43,13 @@ export default function ProfileScreen() {
       Alert.alert('Media', error instanceof Error ? error.message : 'Unable to upload photo.');
     }
   };
-  const removeMedia = async (mediaId: string) => { if (!data) return; try { await api.removeProfileMedia(data.id, mediaId); await mediaQuery.refetch(); } catch (error) { Alert.alert('Media', error instanceof Error ? error.message : 'Unable to remove media.'); } };
+  const setPrimary = async (mediaId: string) => { if (!data) return; try { await api.updateProfileMedia(data.id, mediaId, { is_primary: true }); await mediaQuery.refetch(); await queryClient.invalidateQueries({ queryKey: ['dating', 'profile'] }); } catch (error) { Alert.alert('Media', error instanceof Error ? error.message : 'Unable to set primary photo.'); } };
+  const removeMedia = async (mediaId: string) => { if (!data) return; try { await api.removeProfileMedia(data.id, mediaId); await mediaQuery.refetch(); await queryClient.invalidateQueries({ queryKey: ['dating', 'profile'] }); } catch (error) { Alert.alert('Media', error instanceof Error ? error.message : 'Unable to remove media.'); } };
 
   return <ScrollView contentContainerStyle={styles.container}>
     <Text style={styles.title}>Your profile</Text>
     <Text style={styles.label}>Profile photos</Text>
-    <View style={styles.gallery}>{mediaQuery.data?.items.map((item) => <View key={item.id} style={styles.mediaItem}><Image source={{ uri: item.url }} style={styles.mediaImage} /><Text>{item.isPrimary ? 'Primary' : `Photo ${item.sortOrder + 1}`}</Text><Pressable onPress={() => removeMedia(item.id)}><Text>Remove</Text></Pressable></View>)}</View>
+    <View style={styles.gallery}>{mediaQuery.data?.items.map((item) => <View key={item.id} style={styles.mediaItem}><Image source={{ uri: item.url }} style={styles.mediaImage} /><Text>{item.isPrimary ? 'Primary' : `Photo ${item.sortOrder + 1}`}</Text>{!item.isPrimary ? <Pressable onPress={() => setPrimary(item.id)}><Text>Set primary</Text></Pressable> : null}<Pressable onPress={() => removeMedia(item.id)}><Text>Remove</Text></Pressable></View>)}</View>
     <TextInput style={styles.input} value={mediaUrl} onChangeText={setMediaUrl} placeholder="Image URL" autoCapitalize="none" />
     <View style={styles.choices}><Pressable onPress={pickMedia} style={styles.save}><Text>Choose photo</Text></Pressable><Pressable onPress={addMedia} style={styles.save}><Text>Add URL</Text></Pressable></View>
     {isLoading ? <Text>Loading…</Text> : null}
