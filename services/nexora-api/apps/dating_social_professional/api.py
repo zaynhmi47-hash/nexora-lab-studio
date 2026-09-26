@@ -18,7 +18,7 @@ from infrastructure.storage.ports.object_storage import UploadRequest
 
 from apps.identity.models import NexoraUser
 
-from .models import DatingBlock, DatingConversation, DatingConversationPresence, DatingMatch, DatingNotification, DatingNotificationPreference, DatingProfile, DatingProfileMedia, DatingPushToken, DatingSwipe
+from .models import DatingBlock, DatingConversation, DatingConversationPresence, DatingMatch, DatingMessage, DatingNotification, DatingNotificationPreference, DatingProfile, DatingProfileMedia, DatingPushToken, DatingSwipe
 from .models.safety import DatingReport
 from .conversation_service import DatingConversationService
 from .services import DatingSafetyService, DatingSwipeService, _compatibility_score, _distance_km, discovery_for
@@ -349,16 +349,36 @@ class MatchesView(APIView):
             p.user_id: p
             for p in DatingProfile.objects.filter(user_id__in=counterpart_ids)
         }
+        conversations = {
+            conversation.match_id: conversation
+            for conversation in DatingConversation.objects.filter(match_id__in=[m.id for m in matches], active=True)
+        }
+        last_messages = {}
+        unread_counts = {}
+        conversation_ids = [conversation.id for conversation in conversations.values()]
+        for message in DatingMessage.objects.filter(conversation_id__in=conversation_ids).order_by("conversation_id", "-created_at"):
+            last_messages.setdefault(message.conversation_id, message)
+            if message.sender_id != request.user.id and message.read_at is None:
+                unread_counts[message.conversation_id] = unread_counts.get(message.conversation_id, 0) + 1
         items = []
         for match in matches:
             counterpart_id = match.user_b_id if match.user_a_id == request.user.id else match.user_a_id
             profile = profiles.get(counterpart_id)
+            conversation = conversations.get(match.id)
+            last_message = last_messages.get(conversation.id) if conversation else None
             items.append({
                 "id": str(match.id),
                 "userA": str(match.user_a_id),
                 "userB": str(match.user_b_id),
                 "matchedAt": match.matched_at.isoformat(),
                 "counterpart": DatingProfileSerializer(profile).data if profile else None,
+                "conversationId": str(conversation.id) if conversation else None,
+                "lastMessage": {
+                    "body": last_message.body,
+                    "createdAt": last_message.created_at.isoformat(),
+                    "senderId": str(last_message.sender_id),
+                } if last_message else None,
+                "unreadCount": unread_counts.get(conversation.id, 0) if conversation else 0,
             })
         return Response({"items": items})
 
