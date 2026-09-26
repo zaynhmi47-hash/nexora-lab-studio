@@ -159,11 +159,10 @@ def _compatibility_score(actor: DatingProfile, candidate: DatingProfile, today: 
 def discovery_for(actor: NexoraUser, limit: int = 20, *, intent: str | None = None, education: str | None = None, occupation: str | None = None, city: str | None = None, interest: str | None = None, max_distance_km: int | None = None):
     actor_profile = DatingProfile.objects.filter(user=actor).first()
     excluded = DatingSwipe.objects.filter(actor=actor).values_list("target_id", flat=True)
-    blocked_ids = set(
-        DatingBlock.objects.filter(Q(blocker=actor) | Q(blocked=actor)).values_list("blocker_id", flat=True)
-    ) | set(
-        DatingBlock.objects.filter(Q(blocker=actor) | Q(blocked=actor)).values_list("blocked_id", flat=True)
-    )
+    blocked_pairs = DatingBlock.objects.filter(
+        Q(blocker=actor) | Q(blocked=actor)
+    ).values_list("blocker_id", "blocked_id")
+    blocked_user_ids = {user_id for pair in blocked_pairs for user_id in pair}
     queryset = (
         DatingProfile.objects.filter(discovery_enabled=True)
         .exclude(user=actor)
