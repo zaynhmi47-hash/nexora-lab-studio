@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from apps.core.permissions import AuthenticatedNexoraUserPermission
 
 from .models import DatingMatch, DatingProfile, DatingSwipe
+from .models.safety import DatingReport
 from .services import DatingSafetyService, DatingSwipeService, discovery_for
 
 
@@ -84,6 +85,38 @@ class MatchesView(APIView):
 
 class BlockInputSerializer(serializers.Serializer):
     target_user_id = serializers.UUIDField()
+
+
+class ReportInputSerializer(serializers.Serializer):
+    target_user_id = serializers.UUIDField()
+    reason = serializers.ChoiceField(choices=DatingReport.Reason.values)
+    details = serializers.CharField(required=False, allow_blank=True, max_length=2000)
+
+
+class ReportView(APIView):
+    permission_classes = [AuthenticatedNexoraUserPermission]
+
+    def post(self, request):
+        serializer = ReportInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        from apps.identity.models import NexoraUser
+
+        try:
+            target = NexoraUser.objects.get(id=serializer.validated_data["target_user_id"])
+        except NexoraUser.DoesNotExist:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            report = DatingSafetyService.report(
+                actor=request.user,
+                target=target,
+                reason=serializer.validated_data["reason"],
+                details=serializer.validated_data.get("details", ""),
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"status": "reported", "report_id": str(report.id)}, status=status.HTTP_201_CREATED)
 
 
 class BlockView(APIView):
