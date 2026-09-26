@@ -217,7 +217,11 @@ class ProfileMediaView(APIView):
         return access.url or item.url
 
     def get(self, request, profile_id):
-        profile = DatingProfile.objects.filter(id=profile_id, discovery_enabled=True).first()
+        profile = DatingProfile.objects.filter(
+            id=profile_id,
+            discovery_enabled=True,
+            user__status=NexoraUser.Status.ACTIVE,
+        ).first()
         if not profile:
             return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
         if DatingBlock.objects.filter(
@@ -451,7 +455,10 @@ class BlockView(APIView):
     def post(self, request):
         serializer = BlockInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        target = NexoraUser.objects.filter(id=serializer.validated_data["target_user_id"]).first()
+        target = NexoraUser.objects.filter(
+            id=serializer.validated_data["target_user_id"],
+            status=NexoraUser.Status.ACTIVE,
+        ).first()
         if not target:
             return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
         try:
@@ -473,7 +480,10 @@ class ReportView(APIView):
     def post(self, request):
         serializer = ReportInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        target = NexoraUser.objects.filter(id=serializer.validated_data["target_user_id"]).first()
+        target = NexoraUser.objects.filter(
+            id=serializer.validated_data["target_user_id"],
+            status=NexoraUser.Status.ACTIVE,
+        ).first()
         if not target:
             return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
         try:
@@ -580,8 +590,19 @@ class ConversationReportView(APIView):
         if not conversation or request.user.id not in {conversation.match.user_a_id, conversation.match.user_b_id}:
             return Response({"detail": "Conversation not found."}, status=status.HTTP_404_NOT_FOUND)
         target_id = conversation.match.user_b_id if conversation.match.user_a_id == request.user.id else conversation.match.user_a_id
+        report_serializer = ReportInputSerializer(data={
+            "target_user_id": target_id,
+            "reason": request.data.get("reason", "other"),
+            "details": request.data.get("details", ""),
+        })
+        report_serializer.is_valid(raise_exception=True)
         try:
-            report = DatingSafetyService.report(actor=request.user, target=NexoraUser.objects.get(id=target_id), reason=str(request.data.get("reason", "other")), details=str(request.data.get("details", "")))
+            report = DatingSafetyService.report(
+                actor=request.user,
+                target=NexoraUser.objects.get(id=target_id, status=NexoraUser.Status.ACTIVE),
+                reason=report_serializer.validated_data["reason"],
+                details=report_serializer.validated_data.get("details", ""),
+            )
         except (ValueError, NexoraUser.DoesNotExist) as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"status": "reported", "report_id": str(report.id)}, status=status.HTTP_201_CREATED)
@@ -626,9 +647,13 @@ class PushTokenView(APIView):
 
     def post(self, request):
         token = str(request.data.get("token", "")).strip()
-        platform = str(request.data.get("platform", "")).strip()
+        platform = str(request.data.get("platform", "")).strip().casefold()
         if not token or not platform:
             return Response({"detail": "token and platform are required."}, status=status.HTTP_400_BAD_REQUEST)
+        if len(token) > 512:
+            return Response({"detail": "token is too long."}, status=status.HTTP_400_BAD_REQUEST)
+        if platform not in {"ios", "android", "web"}:
+            return Response({"detail": "platform must be ios, android, or web."}, status=status.HTTP_400_BAD_REQUEST)
         push_token, _ = DatingPushToken.objects.update_or_create(user=request.user, token=token, defaults={"platform": platform, "active": True})
         return Response({"id": str(push_token.id), "status": "registered"}, status=status.HTTP_201_CREATED)
 
