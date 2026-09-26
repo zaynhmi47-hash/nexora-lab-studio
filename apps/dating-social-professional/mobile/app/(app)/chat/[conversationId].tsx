@@ -27,7 +27,7 @@ export default function ChatScreen() {
     { text: 'Block', style: 'destructive', onPress: () => safety.mutate('block') },
     { text: 'Unmatch', style: 'destructive', onPress: () => safety.mutate('unmatch') },
   ]);
-  const query = useQuery({ queryKey: ['dating', 'messages', conversationId], queryFn: () => api.getMessages(conversationId), enabled: Boolean(conversationId) });
+  const query = useQuery({ queryKey: ['dating', 'messages', conversationId], queryFn: () => api.getMessages(conversationId), enabled: Boolean(conversationId), refetchInterval: 5000 });
   useEffect(() => { if (conversationId) void api.markConversationRead(conversationId).then(() => client.invalidateQueries({ queryKey: ['dating', 'messages', conversationId] })); }, [conversationId, api, client]);
   useFocusEffect(
     useCallback(() => {
@@ -40,9 +40,9 @@ export default function ChatScreen() {
   return <View style={styles.container}>
     <View style={styles.header}><View><Text style={styles.title}>{detail.data?.counterpart.displayName ?? "Chat"}</Text><Text style={styles.subtitle}>{detail.data?.counterpart.age ? `${detail.data.counterpart.age} years old` : "Nexora Dating"}</Text></View><Pressable onPress={openSafety} disabled={safety.isPending} style={styles.safety}><Text>•••</Text></Pressable></View>
     <ScrollView style={styles.messages} contentContainerStyle={styles.messageList}>
-      {query.data?.items.map((message) => <View key={message.id} style={styles.message}><Text>{message.body}</Text><Text style={styles.meta}>{new Date(message.createdAt).toLocaleTimeString()}</Text></View>)}
+      {query.data?.items.map((message) => <View key={message.id} style={[styles.message, message.senderId === detail.data?.counterpart.id ? styles.received : styles.sent]}><Text>{message.body}</Text><Text style={styles.meta}>{new Date(message.createdAt).toLocaleTimeString()}</Text></View>)}
     </ScrollView>
     <View style={styles.composer}><TextInput style={styles.input} value={body} onChangeText={setBody} placeholder="Write a message…" multiline /><Pressable disabled={send.isPending || !body.trim()} onPress={() => send.mutate()} style={styles.send}><Text>Send</Text></Pressable></View>
   </View>;
 }
-const styles = StyleSheet.create({ container: { flex: 1, padding: 18, gap: 12 }, header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, title: { fontSize: 24, fontWeight: '800' }, subtitle: { opacity: 0.55, marginTop: 2 }, safety: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 }, messages: { flex: 1 }, messageList: { gap: 10, paddingVertical: 8 }, message: { borderWidth: 1, borderRadius: 14, padding: 12, maxWidth: '88%' }, meta: { marginTop: 5, opacity: 0.55, fontSize: 11 }, composer: { flexDirection: 'row', gap: 8, alignItems: 'flex-end' }, input: { flex: 1, borderWidth: 1, borderRadius: 14, padding: 12, maxHeight: 110 }, send: { borderWidth: 1, borderRadius: 14, padding: 14 } });
+const styles = StyleSheet.create({ container: { flex: 1, padding: 18, gap: 12 }, header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, title: { fontSize: 24, fontWeight: '800' }, subtitle: { opacity: 0.55, marginTop: 2 }, safety: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 }, messages: { flex: 1 }, messageList: { gap: 10, paddingVertical: 8 }, message: { borderWidth: 1, borderRadius: 14, padding: 12, maxWidth: '88%' }, received: { alignSelf: 'flex-start' }, sent: { alignSelf: 'flex-end' }, meta: { marginTop: 5, opacity: 0.55, fontSize: 11 }, composer: { flexDirection: 'row', gap: 8, alignItems: 'flex-end' }, input: { flex: 1, borderWidth: 1, borderRadius: 14, padding: 12, maxHeight: 110 }, send: { borderWidth: 1, borderRadius: 14, padding: 14 } });
