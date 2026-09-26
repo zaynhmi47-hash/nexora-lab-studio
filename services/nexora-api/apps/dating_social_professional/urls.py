@@ -8,6 +8,7 @@ urlpatterns = [
     path("swipes/", SwipeView.as_view(), name="dating-swipe"),
     path("matches/", MatchesView.as_view(), name="dating-matches"),
     path("notifications/", NotificationView.as_view(), name="dating-notifications"),
+    path("push-tokens/", PushTokenView.as_view(), name="dating-push-tokens"),
     path("matches/<uuid:match_id>/unmatch/", MatchLifecycleView.as_view(), name="dating-unmatch"),
     path("conversations/", ConversationView.as_view(), name="dating-conversation"),
     path("conversations/<uuid:conversation_id>/", ConversationDetailView.as_view(), name="dating-conversation-detail"),
