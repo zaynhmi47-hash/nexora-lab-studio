@@ -9,6 +9,8 @@ export default function ChatScreen() {
   const api = useDatingApi();
   const client = useQueryClient();
   const [body, setBody] = useState('');
+  const [olderMessages, setOlderMessages] = useState<import('@/src/api/provider').DatingMessage[]>([]);
+  const [nextBefore, setNextBefore] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const detail = useQuery({ queryKey: ['dating', 'conversation', conversationId], queryFn: () => api.getConversation(conversationId), enabled: Boolean(conversationId), refetchInterval: 5000 });
   const safety = useMutation({ mutationFn: async (action: 'unmatch' | 'block' | 'report') => {
@@ -28,7 +30,26 @@ export default function ChatScreen() {
     { text: 'Block', style: 'destructive', onPress: () => safety.mutate('block') },
     { text: 'Unmatch', style: 'destructive', onPress: () => safety.mutate('unmatch') },
   ]);
-  const query = useQuery({ queryKey: ['dating', 'messages', conversationId], queryFn: () => api.getMessages(conversationId), enabled: Boolean(conversationId), refetchInterval: 5000 });
+  const query = useQuery({ queryKey: ['dating', 'messages', conversationId], queryFn: () => api.getMessages(conversationId, { limit: 50 }), enabled: Boolean(conversationId), refetchInterval: 5000 });
+  useEffect(() => {
+    if (!query.data) return;
+    setNextBefore(query.data.next_before);
+  }, [query.data]);
+  useEffect(() => {
+    if (!conversationId) return;
+    setOlderMessages([]);
+    setNextBefore(null);
+  }, [conversationId]);
+  const loadOlder = useMutation({
+    mutationFn: () => api.getMessages(conversationId, { before: nextBefore ?? undefined, limit: 50 }),
+    onSuccess: (result) => {
+      setOlderMessages((current) => {
+        const byId = new Map([...result.items, ...current].map((message) => [message.id, message]));
+        return Array.from(byId.values()).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      });
+      setNextBefore(result.next_before);
+    },
+  });
   useEffect(() => { if (conversationId) void api.markConversationRead(conversationId).then(() => client.invalidateQueries({ queryKey: ['dating', 'messages', conversationId] })); }, [conversationId, api, client]);
   useFocusEffect(
     useCallback(() => {
@@ -62,9 +83,13 @@ export default function ChatScreen() {
       <ScrollView ref={scrollRef} style={styles.messages} contentContainerStyle={styles.messageList} onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}>
         {query.isLoading ? <View style={styles.state}><Text>Loading messages…</Text></View> :
           query.isError ? <View style={styles.state}><Text>Could not load messages.</Text><Pressable onPress={retryMessages} style={styles.retry}><Text>Retry</Text></Pressable></View> :
-          query.data?.items.length ? query.data.items.map((message) => <View key={message.id} style={[styles.message, message.senderId === detail.data.counterpart.id ? styles.received : styles.sent]}><Text>{message.body}</Text><Text style={styles.meta}>{new Date(message.createdAt).toLocaleTimeString()}</Text></View>) :
-          <View style={styles.state}><Text>No messages yet. Start the conversation.</Text></View>}
-      </ScrollView>}
+          <>
+            {nextBefore && <Pressable disabled={loadOlder.isPending} onPress={() => loadOlder.mutate()} style={styles.loadOlder}><Text>{loadOlder.isPending ? 'Loading…' : 'Load older messages'}</Text></Pressable>}
+            {[...olderMessages, ...(query.data?.items ?? [])].map((message) => <View key={message.id} style={[styles.message, message.senderId === detail.data.counterpart.id ? styles.received : styles.sent]}><Text>{message.body}</Text><Text style={styles.meta}>{new Date(message.createdAt).toLocaleTimeString()}</Text></View>)}
+            {!olderMessages.length && !query.data?.items.length && <View style={styles.state}><Text>No messages yet. Start the conversation.</Text></View>}
+            {loadOlder.isError && <View style={styles.errorBanner}><Text>Could not load older messages.</Text></View>}
+          </>}
+      </ScrollView>
     {send.isError && <View style={styles.errorBanner}><Text>Message failed to send. Check your connection and try again.</Text></View>}
     <View style={styles.composer}>
       <View style={styles.inputWrap}>
@@ -75,4 +100,4 @@ export default function ChatScreen() {
     </View>
   </KeyboardAvoidingView>;
 }
-const styles = StyleSheet.create({ container: { flex: 1, padding: 18, gap: 12 }, header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, title: { fontSize: 24, fontWeight: '800' }, subtitle: { opacity: 0.55, marginTop: 2 }, safety: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 }, messages: { flex: 1 }, messageList: { gap: 10, paddingVertical: 8 }, message: { borderWidth: 1, borderRadius: 14, padding: 12, maxWidth: '88%' }, received: { alignSelf: 'flex-start' }, sent: { alignSelf: 'flex-end' }, meta: { marginTop: 5, opacity: 0.55, fontSize: 11 }, composer: { flexDirection: 'row', gap: 8, alignItems: 'flex-end' }, inputWrap: { flex: 1 }, input: { borderWidth: 1, borderRadius: 14, padding: 12, maxHeight: 110 }, counter: { textAlign: 'right', opacity: 0.5, fontSize: 10, marginTop: 3 }, send: { borderWidth: 1, borderRadius: 14, padding: 14 }, sendDisabled: { opacity: 0.45 }, state: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 24 }, retry: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 9 }, errorBanner: { borderWidth: 1, borderRadius: 10, padding: 9 } });
+const styles = StyleSheet.create({ loadOlder: { alignSelf: 'center', borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 9 }, container: { flex: 1, padding: 18, gap: 12 }, header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, title: { fontSize: 24, fontWeight: '800' }, subtitle: { opacity: 0.55, marginTop: 2 }, safety: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 }, messages: { flex: 1 }, messageList: { gap: 10, paddingVertical: 8 }, message: { borderWidth: 1, borderRadius: 14, padding: 12, maxWidth: '88%' }, received: { alignSelf: 'flex-start' }, sent: { alignSelf: 'flex-end' }, meta: { marginTop: 5, opacity: 0.55, fontSize: 11 }, composer: { flexDirection: 'row', gap: 8, alignItems: 'flex-end' }, inputWrap: { flex: 1 }, input: { borderWidth: 1, borderRadius: 14, padding: 12, maxHeight: 110 }, counter: { textAlign: 'right', opacity: 0.5, fontSize: 10, marginTop: 3 }, send: { borderWidth: 1, borderRadius: 14, padding: 14 }, sendDisabled: { opacity: 0.45 }, state: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 24 }, retry: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 9 }, errorBanner: { borderWidth: 1, borderRadius: 10, padding: 9 } });
