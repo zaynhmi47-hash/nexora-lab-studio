@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { useDatingApi } from '@/src/api/provider';
 
 export default function ProfileScreen() {
@@ -27,6 +28,21 @@ export default function ProfileScreen() {
   });
 
   const addMedia = async () => { if (!data || !mediaUrl.trim()) return; try { await api.addProfileMedia(data.id, { url: mediaUrl.trim(), media_type: 'image', sort_order: mediaQuery.data?.items.length ?? 0, is_primary: !(mediaQuery.data?.items.length) }); setMediaUrl(''); await mediaQuery.refetch(); } catch (error) { Alert.alert('Media', error instanceof Error ? error.message : 'Unable to add media.'); } };
+  const pickMedia = async () => {
+    if (!data) return;
+    if ((mediaQuery.data?.items.length ?? 0) >= 6) { Alert.alert('Media', 'You can have at most 6 profile photos.'); return; }
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) { Alert.alert('Media', 'Photo library permission is required.'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, quality: 0.85 });
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    try {
+      await api.uploadProfileMedia(data.id, { uri: asset.uri, name: asset.fileName ?? `profile-${Date.now()}.jpg`, mimeType: asset.mimeType });
+      await mediaQuery.refetch();
+    } catch (error) {
+      Alert.alert('Media', error instanceof Error ? error.message : 'Unable to upload photo.');
+    }
+  };
   const removeMedia = async (mediaId: string) => { if (!data) return; try { await api.removeProfileMedia(data.id, mediaId); await mediaQuery.refetch(); } catch (error) { Alert.alert('Media', error instanceof Error ? error.message : 'Unable to remove media.'); } };
 
   return <ScrollView contentContainerStyle={styles.container}>
@@ -34,7 +50,7 @@ export default function ProfileScreen() {
     <Text style={styles.label}>Profile photos</Text>
     <View style={styles.gallery}>{mediaQuery.data?.items.map((item) => <View key={item.id} style={styles.mediaItem}><Image source={{ uri: item.url }} style={styles.mediaImage} /><Text>{item.isPrimary ? 'Primary' : `Photo ${item.sortOrder + 1}`}</Text><Pressable onPress={() => removeMedia(item.id)}><Text>Remove</Text></Pressable></View>)}</View>
     <TextInput style={styles.input} value={mediaUrl} onChangeText={setMediaUrl} placeholder="Image URL" autoCapitalize="none" />
-    <Pressable onPress={addMedia} style={styles.save}><Text>Add photo</Text></Pressable>
+    <View style={styles.choices}><Pressable onPress={pickMedia} style={styles.save}><Text>Choose photo</Text></Pressable><Pressable onPress={addMedia} style={styles.save}><Text>Add URL</Text></Pressable></View>
     {isLoading ? <Text>Loading…</Text> : null}
     <TextInput style={styles.input} value={displayName} onChangeText={setDisplayName} placeholder="Display name" />
     <TextInput style={[styles.input, styles.bio]} value={bio} onChangeText={setBio} placeholder="Tell people about you" multiline />
