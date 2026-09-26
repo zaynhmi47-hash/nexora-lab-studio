@@ -4,9 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useDatingSession } from '@/src/auth/session';
 
 export type DiscoveryProfile = { id: string; displayName: string; age: number | null; birthDate: string | null; bio: string; photoUrl: string | null; relationshipIntent: string };
-export type DatingProfile = DiscoveryProfile & { discoveryEnabled: boolean };
+export type DatingProfile = DiscoveryProfile & { discoveryEnabled: boolean; preferredMinAge: number; preferredMaxAge: number };
 export type Match = { id: string; userA: string; userB: string; matchedAt: string };
-type WireProfile = { id: string; display_name: string; birth_date: string | null; age: number | null; bio: string; photo_url: string | null; relationship_intent: string; discovery_enabled?: boolean };
+type WireProfile = { id: string; display_name: string; birth_date: string | null; age: number | null; bio: string; photo_url: string | null; relationship_intent: string; discovery_enabled?: boolean; preferred_min_age: number; preferred_max_age: number };
 
 const mapProfile = (item: WireProfile): DiscoveryProfile => ({ id: item.id, displayName: item.display_name, age: item.age, birthDate: item.birth_date, bio: item.bio, photoUrl: item.photo_url, relationshipIntent: item.relationship_intent });
 
@@ -23,7 +23,7 @@ class DatingApi {
   }
   async getMyProfile(): Promise<DatingProfile> {
     const p = await this.request<WireProfile>('/api/v1/dating/profile/me/');
-    return { ...mapProfile(p), discoveryEnabled: p.discovery_enabled ?? true };
+    return { ...mapProfile(p), discoveryEnabled: p.discovery_enabled ?? true, preferredMinAge: p.preferred_min_age, preferredMaxAge: p.preferred_max_age };
   }
   async updateMyProfile(payload: Record<string, unknown>) {
     const p = await this.request<WireProfile>('/api/v1/dating/profile/me/', { method: 'PATCH', body: JSON.stringify(payload) });
