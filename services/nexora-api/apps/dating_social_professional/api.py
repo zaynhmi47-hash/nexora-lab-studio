@@ -169,7 +169,7 @@ class DiscoveryView(APIView):
 
 
 class ProfileDetailView(APIView):
-    permission_classes = [AuthenticatedNexoraUserPermission]
+    permission_classes = [DatingActiveUserPermission]
 
     def get(self, request, profile_id):
         profile = DatingProfile.objects.filter(
@@ -196,7 +196,7 @@ class ProfileMediaInputSerializer(serializers.Serializer):
 
 
 class ProfileMediaView(APIView):
-    permission_classes = [AuthenticatedNexoraUserPermission]
+    permission_classes = [DatingActiveUserPermission]
     parser_classes = [JSONParser, MultiPartParser, FormParser]
     max_upload_size = 10 * 1024 * 1024
     access_ttl = timedelta(hours=1)
@@ -362,7 +362,7 @@ class ProfileMediaView(APIView):
 
 
 class MeProfileView(APIView):
-    permission_classes = [AuthenticatedNexoraUserPermission]
+    permission_classes = [DatingActiveUserPermission]
 
     def get(self, request):
         profile, _ = DatingProfile.objects.get_or_create(
@@ -387,7 +387,7 @@ class SwipeInputSerializer(serializers.Serializer):
 
 
 class SwipeView(APIView):
-    permission_classes = [AuthenticatedNexoraUserPermission]
+    permission_classes = [DatingActiveUserPermission]
     throttle_classes = [DatingActionThrottle]
 
     def post(self, request):
@@ -408,7 +408,7 @@ class SwipeView(APIView):
 
 
 class MatchesView(APIView):
-    permission_classes = [AuthenticatedNexoraUserPermission]
+    permission_classes = [DatingActiveUserPermission]
 
     def get(self, request):
         matches = DatingMatch.objects.filter(
@@ -466,7 +466,7 @@ class BlockInputSerializer(serializers.Serializer):
 
 
 class BlockView(APIView):
-    permission_classes = [AuthenticatedNexoraUserPermission]
+    permission_classes = [DatingActiveUserPermission]
 
     def post(self, request):
         serializer = BlockInputSerializer(data=request.data)
@@ -491,7 +491,7 @@ class ReportInputSerializer(serializers.Serializer):
 
 
 class ReportView(APIView):
-    permission_classes = [AuthenticatedNexoraUserPermission]
+    permission_classes = [DatingActiveUserPermission]
 
     def post(self, request):
         serializer = ReportInputSerializer(data=request.data)
@@ -510,7 +510,7 @@ class ReportView(APIView):
 
 
 class MatchLifecycleView(APIView):
-    permission_classes = [AuthenticatedNexoraUserPermission]
+    permission_classes = [DatingActiveUserPermission]
 
     def post(self, request, match_id):
         try:
@@ -525,7 +525,7 @@ class ConversationInputSerializer(serializers.Serializer):
 
 
 class ConversationView(APIView):
-    permission_classes = [AuthenticatedNexoraUserPermission]
+    permission_classes = [DatingActiveUserPermission]
 
     def post(self, request):
         serializer = ConversationInputSerializer(data=request.data)
@@ -538,7 +538,7 @@ class ConversationView(APIView):
 
 
 class ConversationDetailView(APIView):
-    permission_classes = [AuthenticatedNexoraUserPermission]
+    permission_classes = [DatingActiveUserPermission]
 
     def get(self, request, conversation_id):
         conversation = DatingConversation.objects.select_related("match", "match__user_a", "match__user_b").filter(
@@ -564,7 +564,7 @@ class MessageInputSerializer(serializers.Serializer):
 
 
 class ConversationMessagesView(APIView):
-    permission_classes = [AuthenticatedNexoraUserPermission]
+    permission_classes = [DatingActiveUserPermission]
     throttle_classes = [DatingMessageThrottle]
 
     def get(self, request, conversation_id):
@@ -594,7 +594,7 @@ class ConversationMessagesView(APIView):
 
 
 class ConversationReadView(APIView):
-    permission_classes = [AuthenticatedNexoraUserPermission]
+    permission_classes = [DatingActiveUserPermission]
 
     def post(self, request, conversation_id):
         try:
@@ -605,7 +605,7 @@ class ConversationReadView(APIView):
 
 
 class ConversationBlockView(APIView):
-    permission_classes = [AuthenticatedNexoraUserPermission]
+    permission_classes = [DatingActiveUserPermission]
 
     def post(self, request, conversation_id):
         conversation = DatingConversation.objects.select_related("match").filter(id=conversation_id, active=True).first()
@@ -622,7 +622,7 @@ class ConversationBlockView(APIView):
 
 
 class ConversationReportView(APIView):
-    permission_classes = [AuthenticatedNexoraUserPermission]
+    permission_classes = [DatingActiveUserPermission]
 
     def post(self, request, conversation_id):
         conversation = DatingConversation.objects.select_related("match").filter(id=conversation_id, active=True, match__active=True).first()
@@ -650,7 +650,7 @@ class ConversationReportView(APIView):
 
 
 class NotificationView(APIView):
-    permission_classes = [AuthenticatedNexoraUserPermission]
+    permission_classes = [DatingActiveUserPermission]
 
     def get(self, request):
         items = DatingNotification.objects.filter(recipient=request.user).order_by("-created_at")[:50]
@@ -669,7 +669,7 @@ class NotificationPreferenceSerializer(serializers.ModelSerializer):
 
 
 class NotificationPreferencesView(APIView):
-    permission_classes = [AuthenticatedNexoraUserPermission]
+    permission_classes = [DatingActiveUserPermission]
 
     def get(self, request):
         preference, _ = DatingNotificationPreference.objects.get_or_create(user=request.user)
@@ -683,7 +683,7 @@ class NotificationPreferencesView(APIView):
 
 
 class PushTokenView(APIView):
-    permission_classes = [AuthenticatedNexoraUserPermission]
+    permission_classes = [DatingActiveUserPermission]
     throttle_classes = [DatingPushThrottle]
 
     def post(self, request):
@@ -710,7 +710,7 @@ class PushTokenView(APIView):
 
 
 class ConversationPresenceView(APIView):
-    permission_classes = [AuthenticatedNexoraUserPermission]
+    permission_classes = [DatingActiveUserPermission]
 
     def post(self, request, conversation_id):
         conversation = DatingConversation.objects.select_related("match").filter(
