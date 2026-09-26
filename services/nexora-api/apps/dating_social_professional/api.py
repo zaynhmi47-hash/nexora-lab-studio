@@ -3,7 +3,7 @@ from uuid import uuid4
 import logging
 
 from django.utils import timezone
-from django.db.models import Q, Prefetch
+from django.db.models import Q
 
 from rest_framework import serializers, status
 from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
