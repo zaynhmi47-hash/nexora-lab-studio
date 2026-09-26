@@ -113,3 +113,17 @@ Architecture boundaries were hardened for Social vs Dating Professional, Nexora 
 
 No application runtime code was changed by this audit. Test execution was not performed through the GitHub connector, so this audit does not claim a fresh local test pass.
 
+
+
+## Dating Social Professional — verified implementation baseline on 2026-09-26
+
+- Product owner exists at `apps/dating-social-professional/AGENT.md`.
+- Mobile foundation exists at `apps/dating-social-professional/mobile/` targeting Expo SDK 57 / React Native 0.86 / Expo Router 57.
+- Backend domain exists at `services/nexora-api/apps/dating_social_professional/` and is registered in Django.
+- Initial API contract exposes authenticated discovery and swipe endpoints under `/api/v1/dating/`.
+- Initial persistence covers dating profiles, swipes and mutual matches.
+- Swipe actor/target pairs are database-unique and the service handles repeated requests idempotently.
+- Reciprocal likes create a deterministic match pair.
+- Tests were added for idempotency, mutual matching and self-swipe rejection.
+- ADR recorded at `docs/decisions/ADR-dating-social-professional-domain.md`.
+- This branch does not claim a fresh local test/typecheck pass through the GitHub connector; execution must still be performed in the development environment.
