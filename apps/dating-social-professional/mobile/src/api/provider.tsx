@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, type PropsWithChildren } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useDatingSession } from '@/src/auth/session';
 
 export type DiscoveryProfile = {
   id: string;
@@ -51,8 +52,9 @@ const ApiContext = createContext<DatingApi | null>(null);
 
 export function DatingApiProvider({ children }: PropsWithChildren) {
   const queryClient = useMemo(() => new QueryClient(), []);
+  const { token } = useDatingSession();
   const baseUrl = process.env.EXPO_PUBLIC_NEXORA_API_URL ?? '';
-  const api = useMemo(() => new DatingApi(baseUrl, null), [baseUrl]);
+  const api = useMemo(() => new DatingApi(baseUrl, token), [baseUrl, token]);
 
   return <QueryClientProvider client={queryClient}><ApiContext.Provider value={api}>{children}</ApiContext.Provider></QueryClientProvider>;
 }
