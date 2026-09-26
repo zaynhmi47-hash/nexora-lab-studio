@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDatingApi } from '@/src/api/provider';
 
@@ -25,7 +25,14 @@ export default function ChatScreen() {
     { text: 'Unmatch', style: 'destructive', onPress: () => safety.mutate('unmatch') },
   ]);
   const query = useQuery({ queryKey: ['dating', 'messages', conversationId], queryFn: () => api.getMessages(conversationId), enabled: Boolean(conversationId) });
-  useEffect(() => { if (conversationId) void api.markConversationRead(conversationId).then(() => client.invalidateQueries({ queryKey: ['dating', 'messages', conversationId] })); }, [conversationId]);
+  useEffect(() => { if (conversationId) void api.markConversationRead(conversationId).then(() => client.invalidateQueries({ queryKey: ['dating', 'messages', conversationId] })); }, [conversationId, api, client]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!conversationId) return undefined;
+      void api.setConversationPresence(conversationId);
+      return () => { void api.clearConversationPresence(conversationId); };
+    }, [api, conversationId]),
+  );
   const send = useMutation({ mutationFn: () => api.sendMessage(conversationId, body), onSuccess: () => { setBody(''); client.invalidateQueries({ queryKey: ['dating', 'messages', conversationId] }); } });
   return <View style={styles.container}>
     <View style={styles.header}><View><Text style={styles.title}>{detail.data?.counterpart.displayName ?? "Chat"}</Text><Text style={styles.subtitle}>{detail.data?.counterpart.age ? `${detail.data.counterpart.age} years old` : "Nexora Dating"}</Text></View><Pressable onPress={openSafety} disabled={safety.isPending} style={styles.safety}><Text>•••</Text></Pressable></View>
