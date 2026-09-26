@@ -3,7 +3,8 @@ from django.utils import timezone
 
 from apps.identity.models import NexoraUser
 
-from .models import DatingBlock, DatingConversation, DatingMatch, DatingMessage, DatingNotification
+from .models import DatingBlock, DatingConversation, DatingMatch, DatingMessage
+from .notifications.service import DatingNotificationService
 
 
 class DatingConversationService:
@@ -34,7 +35,13 @@ class DatingConversationService:
             raise ValueError("Message body cannot be empty.")
         message = DatingMessage.objects.create(conversation=conversation, sender=actor, body=normalized)
         recipient_id = match.user_b_id if actor.id == match.user_a_id else match.user_a_id
-        DatingNotification.objects.create(recipient_id=recipient_id, type=DatingNotification.Type.MESSAGE, title="New message", body=normalized[:500], data={"conversation_id": str(conversation.id), "message_id": str(message.id)})
+        DatingNotificationService.create_and_dispatch(
+            recipient_id=recipient_id,
+            notification_type="message",
+            title="New message",
+            body=normalized[:500],
+            data={"conversation_id": str(conversation.id), "message_id": str(message.id)},
+        )
         return message
 
     @staticmethod
