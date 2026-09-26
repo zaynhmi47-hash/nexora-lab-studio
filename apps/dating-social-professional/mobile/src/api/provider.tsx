@@ -28,7 +28,7 @@ class DatingApi {
   }
   async updateMyProfile(payload: Record<string, unknown>) {
     const p = await this.request<WireProfile>('/api/v1/dating/profile/me/', { method: 'PATCH', body: JSON.stringify(payload) });
-    return { ...mapProfile(p), discoveryEnabled: p.discovery_enabled ?? true };
+    return { ...mapProfile(p), discoveryEnabled: p.discovery_enabled ?? true, preferredMinAge: p.preferred_min_age, preferredMaxAge: p.preferred_max_age };
   }
   swipe(profileId: string, action: 'like' | 'pass') {
     return this.request<{ status: 'accepted'; matched: boolean; match_id: string | null }>('/api/v1/dating/swipes/', { method: 'POST', body: JSON.stringify({ target_profile_id: profileId, action }) });
@@ -38,6 +38,10 @@ class DatingApi {
   getMessages(conversationId: string) { return this.request<{ items: DatingMessage[] }>(`/api/v1/dating/conversations/${conversationId}/messages/`); }
   sendMessage(conversationId: string, body: string) { return this.request<DatingMessage>(`/api/v1/dating/conversations/${conversationId}/messages/`, { method: 'POST', body: JSON.stringify({ body }) }); }
   markConversationRead(conversationId: string) { return this.request<{ status: 'read'; updated: number }>(`/api/v1/dating/conversations/${conversationId}/read/`, { method: 'POST' }); }
+  getConversation(conversationId: string) { return this.request<{ id: string; matchId: string; active: boolean; counterpart: DiscoveryProfile }>(`/api/v1/dating/conversations/${conversationId}/`); }
+  unmatch(matchId: string) { return this.request<{ status: 'unmatched' }>(`/api/v1/dating/matches/${matchId}/unmatch/`, { method: 'POST' }); }
+  blockConversation(conversationId: string) { return this.request<{ status: 'blocked' }>(`/api/v1/dating/conversations/${conversationId}/block/`, { method: 'POST' }); }
+  reportConversation(conversationId: string, reason: string, details = '') { return this.request<{ status: 'reported'; report_id: string }>(`/api/v1/dating/conversations/${conversationId}/report/`, { method: 'POST', body: JSON.stringify({ reason, details }) }); }
 }
 
 const ApiContext = createContext<DatingApi | null>(null);
