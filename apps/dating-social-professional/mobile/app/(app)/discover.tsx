@@ -2,7 +2,7 @@ import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View, useWindowDi
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useDatingApi } from '@/src/api/provider';
 import { useRouter } from 'expo-router';
@@ -34,6 +34,7 @@ export default function DiscoverScreen() {
 
   const items = data?.items ?? [];
   const current = items[index];
+  const next = items[index + 1];
   const { data: mediaData } = useQuery({
     queryKey: ['dating', 'discovery-media', current?.id],
     queryFn: () => api.getProfileMedia(current!.id),
@@ -43,6 +44,20 @@ export default function DiscoverScreen() {
   const orderedMedia = [...mediaItems].sort((a, b) => a.sortOrder - b.sortOrder);
   const safeMediaIndex = orderedMedia.length ? Math.min(mediaIndex, orderedMedia.length - 1) : 0;
   const currentMedia = orderedMedia[safeMediaIndex];
+
+  useEffect(() => {
+    if (!next?.id) return;
+    queryClient.prefetchQuery({
+      queryKey: ['dating', 'discovery-media', next.id],
+      queryFn: () => api.getProfileMedia(next.id),
+    });
+  }, [api, next?.id, queryClient]);
+
+  const retryDiscovery = () => {
+    setIndex(0);
+    setMediaIndex(0);
+    queryClient.invalidateQueries({ queryKey: ['dating', 'discovery', appliedFilters.interest, appliedFilters.city] });
+  };
 
   const applyFilters = () => {
     setIndex(0);
@@ -111,6 +126,16 @@ export default function DiscoverScreen() {
     transform: [{ translateX: translateX.value }, { rotate: String(rotate.value) + 'deg' }],
   }));
 
+  const likeOverlayStyle = useAnimatedStyle(() => ({
+    opacity: Math.min(1, Math.max(0, translateX.value / 90)),
+    transform: [{ rotate: '-12deg' }, { scale: 0.9 + Math.min(0.1, Math.max(0, translateX.value / 900)) }],
+  }));
+
+  const passOverlayStyle = useAnimatedStyle(() => ({
+    opacity: Math.min(1, Math.max(0, -translateX.value / 90)),
+    transform: [{ rotate: '12deg' }, { scale: 0.9 + Math.min(0.1, Math.max(0, -translateX.value / 900)) }],
+  }));
+
   const showSafetyActions = () => {
     if (!current) return;
     Alert.alert('Safety', 'Choose an action for this profile.', [
@@ -144,10 +169,27 @@ export default function DiscoverScreen() {
       </View>
 
       {isLoading ? <Text>Loading profiles…</Text> : null}
-      {!isLoading && !current ? <Text>No more profiles available.</Text> : null}
+      {!isLoading && !current ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyTitle}>No more profiles</Text>
+          <Text style={styles.emptyText}>Try changing your filters or refresh discovery to look for new candidates.</Text>
+          <Pressable style={styles.refreshButton} onPress={retryDiscovery}>
+            <Text style={styles.refreshText}>Refresh discovery</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       {current ? (
-        <GestureDetector gesture={panGesture}>
+        <View style={styles.stack}>
+          {next ? (
+            <View pointerEvents="none" style={[styles.card, styles.nextCard]}>
+              <View style={styles.nextCardPlaceholder}>
+                <Text style={styles.nextCardLabel}>Next</Text>
+                <Text style={styles.nextCardName}>{next.displayName}{next.age !== null ? `, ${next.age}` : ''}</Text>
+              </View>
+            </View>
+          ) : null}
+          <GestureDetector gesture={panGesture}>
           <Animated.View style={[styles.card, cardAnimatedStyle]}>
           <Pressable onPress={() => router.push(`/profile/${current.id}`)}>
             <View style={styles.mediaFrame}>
@@ -197,8 +239,15 @@ export default function DiscoverScreen() {
             <Pressable style={styles.likeButton} onPress={() => swipe('like')}><Text>Like</Text></Pressable>
           </View>
           <Pressable style={styles.safetyButton} onPress={showSafetyActions}><Text>Safety</Text></Pressable>
+          <Animated.View pointerEvents="none" style={[styles.swipeOverlay, styles.likeOverlay, likeOverlayStyle]}>
+            <Text style={styles.swipeOverlayText}>LIKE</Text>
+          </Animated.View>
+          <Animated.View pointerEvents="none" style={[styles.swipeOverlay, styles.passOverlay, passOverlayStyle]}>
+            <Text style={styles.swipeOverlayText}>PASS</Text>
+          </Animated.View>
           </Animated.View>
         </GestureDetector>
+        </View>
       ) : null}
     </View>
   );
@@ -206,8 +255,17 @@ export default function DiscoverScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 24, justifyContent: 'center', gap: 18 },
+  stack: { position: 'relative' },
   title: { fontSize: 32, fontWeight: '800' },
   card: { padding: 16, borderWidth: 1, borderRadius: 24, gap: 14 },
+  nextCard: { position: 'absolute', left: 8, right: 8, top: 8, opacity: 0.35, transform: [{ scale: 0.97 }] },
+  nextCardPlaceholder: { height: 460, alignItems: 'center', justifyContent: 'center', gap: 8 },
+  nextCardLabel: { fontSize: 14, fontWeight: '700', opacity: 0.55, textTransform: 'uppercase' },
+  nextCardName: { fontSize: 22, fontWeight: '800' },
+  swipeOverlay: { position: 'absolute', top: 28, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 3, borderRadius: 12 },
+  likeOverlay: { left: 28, borderColor: '#168a4a', transform: [{ rotate: '-12deg' }] },
+  passOverlay: { right: 28, borderColor: '#b3261e', transform: [{ rotate: '12deg' }] },
+  swipeOverlayText: { fontSize: 28, fontWeight: '900' },
   mediaFrame: { height: 320, borderRadius: 18, overflow: 'hidden', position: 'relative' },
   profileImage: { width: '100%', height: '100%' },
   imageFallback: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -236,4 +294,9 @@ const styles = StyleSheet.create({
   applyFilter: { alignSelf: 'flex-start', borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 9 },
   filterInput: { borderWidth: 1, borderRadius: 12, padding: 12 },
   safetyButton: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingVertical: 10 },
+  emptyState: { alignItems: 'center', gap: 10, paddingVertical: 32 },
+  emptyTitle: { fontSize: 22, fontWeight: '800' },
+  emptyText: { textAlign: 'center', opacity: 0.65, lineHeight: 21 },
+  refreshButton: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 11, marginTop: 4 },
+  refreshText: { fontWeight: '700' },
 });
