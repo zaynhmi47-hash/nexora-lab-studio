@@ -7,7 +7,7 @@ import logging
 from django.utils import timezone
 from django.core import signing
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, OuterRef, Prefetch, Q, Subquery
 
 from rest_framework import serializers, status
 from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
@@ -450,27 +450,47 @@ class MatchesView(APIView):
             m.user_b_id if m.user_a_id == request.user.id else m.user_a_id
             for m in matches
         ]
+        active_media = Prefetch(
+            "media",
+            queryset=DatingProfileMedia.objects.filter(active=True).order_by("sort_order", "created_at"),
+            to_attr="_active_media",
+        )
         profiles = {
             p.user_id: p
-            for p in DatingProfile.objects.filter(user_id__in=counterpart_ids)
+            for p in DatingProfile.objects.filter(user_id__in=counterpart_ids).prefetch_related(active_media)
         }
+        match_ids = [m.id for m in matches]
+        latest_message = DatingMessage.objects.filter(
+            conversation=OuterRef("pk"),
+        ).order_by("-created_at").values("id")[:1]
         conversations = {
             conversation.match_id: conversation
-            for conversation in DatingConversation.objects.filter(match_id__in=[m.id for m in matches], active=True)
+            for conversation in DatingConversation.objects.filter(
+                match_id__in=match_ids,
+                active=True,
+            ).annotate(
+                unread_count=Count(
+                    "messages",
+                    filter=~Q(messages__sender_id=request.user.id) & Q(messages__read_at__isnull=True),
+                ),
+                latest_message_id=Subquery(latest_message),
+            )
         }
-        last_messages = {}
-        unread_counts = {}
-        conversation_ids = [conversation.id for conversation in conversations.values()]
-        for message in DatingMessage.objects.filter(conversation_id__in=conversation_ids).order_by("conversation_id", "-created_at"):
-            last_messages.setdefault(message.conversation_id, message)
-            if message.sender_id != request.user.id and message.read_at is None:
-                unread_counts[message.conversation_id] = unread_counts.get(message.conversation_id, 0) + 1
+        message_ids = {
+            conversation.latest_message_id
+            for conversation in conversations.values()
+            if conversation.latest_message_id
+        }
+        last_messages = {
+            message.id: message
+            for message in DatingMessage.objects.filter(id__in=message_ids)
+        }
         items = []
         for match in matches:
             counterpart_id = match.user_b_id if match.user_a_id == request.user.id else match.user_a_id
             profile = profiles.get(counterpart_id)
             conversation = conversations.get(match.id)
-            last_message = last_messages.get(conversation.id) if conversation else None
+            last_message = last_messages.get(conversation.latest_message_id) if conversation and conversation.latest_message_id else None
             items.append({
                 "id": str(match.id),
                 "userA": str(match.user_a_id),
@@ -483,10 +503,9 @@ class MatchesView(APIView):
                     "createdAt": last_message.created_at.isoformat(),
                     "senderId": str(last_message.sender_id),
                 } if last_message else None,
-                "unreadCount": unread_counts.get(conversation.id, 0) if conversation else 0,
+                "unreadCount": conversation.unread_count if conversation else 0,
             })
         return Response({"items": items})
-
 
 class BlockInputSerializer(serializers.Serializer):
     target_user_id = serializers.UUIDField()
