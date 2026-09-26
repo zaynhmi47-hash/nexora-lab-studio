@@ -70,14 +70,17 @@ class DatingSwipeService:
         first, second = sorted((actor.id, target_profile.user_id), key=str)
         try:
             with transaction.atomic():
-                match, _ = DatingMatch.objects.get_or_create(user_a_id=first, user_b_id=second)
+                match, created = DatingMatch.objects.get_or_create(user_a_id=first, user_b_id=second)
+                reactivated = False
                 if not match.active:
                     match.active = True
                     match.save(update_fields=["active", "updated_at"])
-                DatingNotification.objects.bulk_create([
-                    DatingNotification(recipient_id=actor.id, type=DatingNotification.Type.MATCH, title="New match", body="You have a new match.", data={"match_id": str(match.id)}),
-                    DatingNotification(recipient_id=target_profile.user_id, type=DatingNotification.Type.MATCH, title="New match", body="You have a new match.", data={"match_id": str(match.id)}),
-                ])
+                    reactivated = True
+                if created or reactivated:
+                    DatingNotification.objects.bulk_create([
+                        DatingNotification(recipient_id=actor.id, type=DatingNotification.Type.MATCH, title="New match", body="You have a new match.", data={"match_id": str(match.id)}),
+                        DatingNotification(recipient_id=target_profile.user_id, type=DatingNotification.Type.MATCH, title="New match", body="You have a new match.", data={"match_id": str(match.id)}),
+                    ])
         except IntegrityError:
             match = DatingMatch.objects.get(user_a_id=first, user_b_id=second)
         return swipe, match
