@@ -3,15 +3,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { useDatingSession } from '@/src/auth/session';
 
-export type DiscoveryProfile = { id: string; displayName: string; age: number | null; birthDate: string | null; bio: string; photoUrl: string | null; relationshipIntent: string };
+export type DiscoveryProfile = { id: string; displayName: string; age: number | null; birthDate: string | null; bio: string; photoUrl: string | null; relationshipIntent: string; interests: string[]; education: string; occupation: string; locationCity: string; locationCountry: string; maxDistanceKm: number; profileCompletion: number };
 export type DatingProfile = DiscoveryProfile & { discoveryEnabled: boolean; preferredMinAge: number; preferredMaxAge: number };
 export type Match = { id: string; userA: string; userB: string; matchedAt: string };
 export type DatingMessage = { id: string; senderId: string; body: string; createdAt: string; readAt: string | null };
 export type DatingNotification = { id: string; type: string; title: string; body: string; data: Record<string, unknown>; createdAt: string; readAt: string | null };
 export type DatingNotificationPreferences = { push_enabled: boolean; match_push_enabled: boolean; message_push_enabled: boolean; safety_push_enabled: boolean };
-type WireProfile = { id: string; display_name: string; birth_date: string | null; age: number | null; bio: string; photo_url: string | null; relationship_intent: string; discovery_enabled?: boolean; preferred_min_age: number; preferred_max_age: number };
+type WireProfile = { id: string; display_name: string; birth_date: string | null; age: number | null; bio: string; photo_url: string | null; relationship_intent: string; discovery_enabled?: boolean; preferred_min_age: number; preferred_max_age: number; interests?: string[]; education?: string; occupation?: string; location_city?: string; location_country?: string; max_distance_km?: number; profile_completion?: number };
 
-const mapProfile = (item: WireProfile): DiscoveryProfile => ({ id: item.id, displayName: item.display_name, age: item.age, birthDate: item.birth_date, bio: item.bio, photoUrl: item.photo_url, relationshipIntent: item.relationship_intent });
+const mapProfile = (item: WireProfile): DiscoveryProfile => ({ id: item.id, displayName: item.display_name, age: item.age, birthDate: item.birth_date, bio: item.bio, photoUrl: item.photo_url, relationshipIntent: item.relationship_intent, interests: item.interests ?? [], education: item.education ?? "", occupation: item.occupation ?? "", locationCity: item.location_city ?? "", locationCountry: item.location_country ?? "", maxDistanceKm: item.max_distance_km ?? 100, profileCompletion: item.profile_completion ?? 0 });
 
 class DatingApi {
   constructor(private readonly baseUrl: string, private readonly token: string | null) {}
@@ -20,8 +20,9 @@ class DatingApi {
     if (!response.ok) throw new Error('Nexora Dating API request failed.');
     return response.json() as Promise<T>;
   }
-  async getDiscovery() {
-    const wire = await this.request<{ items: WireProfile[]; next_cursor: string | null }>('/api/v1/dating/discovery/');
+  async getDiscovery(filters: Record<string, string> = {}) {
+    const query = new URLSearchParams(filters).toString();
+    const wire = await this.request<{ items: WireProfile[]; next_cursor: string | null }>(`/api/v1/dating/discovery/${query ? `?${query}` : ''}`);
     return { items: wire.items.map(mapProfile), nextCursor: wire.next_cursor };
   }
   async getMyProfile(): Promise<DatingProfile> {
