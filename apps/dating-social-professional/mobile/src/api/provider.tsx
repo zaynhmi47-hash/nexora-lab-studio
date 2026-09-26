@@ -5,7 +5,7 @@ import { useDatingSession } from '@/src/auth/session';
 
 export type DiscoveryProfile = { id: string; displayName: string; age: number | null; birthDate: string | null; bio: string; photoUrl: string | null; relationshipIntent: string; interests: string[]; education: string; occupation: string; locationCity: string; locationCountry: string; maxDistanceKm: number; profileCompletion: number; compatibilityScore: number; distanceKm: number | null; sharedInterests: string[] };
 export type DatingProfile = DiscoveryProfile & { discoveryEnabled: boolean; preferredMinAge: number; preferredMaxAge: number };
-export type Match = { id: string; userA: string; userB: string; matchedAt: string; counterpart: DiscoveryProfile | null };
+export type Match = { id: string; userA: string; userB: string; matchedAt: string; counterpart: DiscoveryProfile | null; conversationId: string | null; lastMessage: { body: string; createdAt: string; senderId: string } | null; unreadCount: number };
 export type DatingMessage = { id: string; senderId: string; body: string; createdAt: string; readAt: string | null };
 export type DatingNotification = { id: string; type: string; title: string; body: string; data: Record<string, unknown>; createdAt: string; readAt: string | null };
 export type DatingProfileMedia = { id: string; url: string; mediaType: 'image'; sortOrder: number; isPrimary: boolean };
@@ -49,7 +49,7 @@ class DatingApi {
   swipe(profileId: string, action: 'like' | 'pass') {
     return this.request<{ status: 'accepted'; matched: boolean; match_id: string | null }>('/api/v1/dating/swipes/', { method: 'POST', body: JSON.stringify({ target_profile_id: profileId, action }) });
   }
-  getMatches() { return this.request<{ items: Array<{ id: string; userA: string; userB: string; matchedAt: string; counterpart: WireProfile | null }> }>('/api/v1/dating/matches/').then((result) => ({ items: result.items.map((item) => ({ ...item, counterpart: item.counterpart ? mapProfile(item.counterpart) : null })) }));
+  getMatches() { return this.request<{ items: Array<{ id: string; userA: string; userB: string; matchedAt: string; counterpart: WireProfile | null; conversationId: string | null; lastMessage: { body: string; createdAt: string; senderId: string } | null; unreadCount: number }> }>('/api/v1/dating/matches/').then((result) => ({ items: result.items.map((item) => ({ ...item, counterpart: item.counterpart ? mapProfile(item.counterpart) : null })) })); }
   getNotifications() { return this.request<{ items: DatingNotification[]; unreadCount: number }>('/api/v1/dating/notifications/'); }
   markNotificationsRead() { return this.request<{ status: 'read' }>('/api/v1/dating/notifications/', { method: 'POST' }); }
   getNotificationPreferences() { return this.request<DatingNotificationPreferences>('/api/v1/dating/notification-preferences/'); }
