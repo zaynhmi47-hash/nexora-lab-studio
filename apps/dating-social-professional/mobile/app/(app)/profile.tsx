@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -20,10 +20,12 @@ export default function ProfileScreen() {
   const [education, setEducation] = useState('');
   const [occupation, setOccupation] = useState('');
   const [city, setCity] = useState('');
+  const [maxDistance, setMaxDistance] = useState('100');
+  const [discoveryEnabled, setDiscoveryEnabled] = useState(true);
 
-  useEffect(() => { if (data) { setDisplayName(data.displayName); setBio(data.bio); setIntent(data.relationshipIntent || 'dating'); setMinAge(String(data.preferredMinAge)); setMaxAge(String(data.preferredMaxAge)); setInterests(data.interests.join(', ')); setEducation(data.education); setOccupation(data.occupation); setCity(data.locationCity); } }, [data]);
+  useEffect(() => { if (data) { setDisplayName(data.displayName); setBio(data.bio); setIntent(data.relationshipIntent || 'dating'); setMinAge(String(data.preferredMinAge)); setMaxAge(String(data.preferredMaxAge)); setInterests(data.interests.join(', ')); setEducation(data.education); setOccupation(data.occupation); setCity(data.locationCity); setMaxDistance(String(data.maxDistanceKm)); setDiscoveryEnabled(data.discoveryEnabled); } }, [data]);
   const save = useMutation({
-    mutationFn: () => api.updateMyProfile({ display_name: displayName, bio, relationship_intent: intent, preferred_min_age: Number(minAge), preferred_max_age: Number(maxAge), interests: interests.split(',').map((item) => item.trim()).filter(Boolean).slice(0, 20), education, occupation, location_city: city }),
+    mutationFn: () => api.updateMyProfile({ display_name: displayName, bio, relationship_intent: intent, preferred_min_age: Number(minAge), preferred_max_age: Number(maxAge), interests: interests.split(',').map((item) => item.trim()).filter(Boolean).slice(0, 20), education, occupation, location_city: city, max_distance_km: Number(maxDistance), discovery_enabled: discoveryEnabled }),
     onSuccess: (next) => queryClient.setQueryData(['dating', 'profile'], next),
   });
 
@@ -76,6 +78,8 @@ export default function ProfileScreen() {
     <TextInput style={styles.input} value={occupation} onChangeText={setOccupation} placeholder="Occupation" />
     <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="City" />
     {data ? <Text style={styles.completion}>Profile completion: {data.profileCompletion}%</Text> : null}
+    <View style={styles.preferenceRow}><View style={styles.preferenceCopy}><Text style={styles.label}>Discovery</Text><Text style={styles.muted}>Allow your profile to appear in discovery.</Text></View><Switch value={discoveryEnabled} onValueChange={setDiscoveryEnabled} /></View>
+    <Text style={styles.label}>Maximum discovery distance (km)</Text><TextInput style={styles.input} value={maxDistance} onChangeText={setMaxDistance} keyboardType="number-pad" />
     <Text style={styles.label}>Preferred age range</Text>
     <View style={styles.ageRow}><TextInput style={[styles.input, styles.ageInput]} value={minAge} onChangeText={setMinAge} keyboardType="number-pad" /><Text>to</Text><TextInput style={[styles.input, styles.ageInput]} value={maxAge} onChangeText={setMaxAge} keyboardType="number-pad" /></View>
     <Pressable disabled={save.isPending} onPress={() => save.mutate()} style={styles.save}><Text>{save.isPending ? 'Saving…' : 'Save profile'}</Text></Pressable>
