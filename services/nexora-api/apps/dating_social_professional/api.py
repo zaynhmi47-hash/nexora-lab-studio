@@ -411,6 +411,9 @@ class MatchesView(APIView):
             user_a__status=NexoraUser.Status.ACTIVE,
             user_b__status=NexoraUser.Status.ACTIVE,
         ).filter(Q(user_a=request.user) | Q(user_b=request.user)).select_related("user_a", "user_b").order_by("-matched_at")
+        blocked_pairs = DatingBlock.objects.filter(Q(blocker=request.user) | Q(blocked=request.user)).values_list("blocker_id", "blocked_id")
+        blocked_ids = {user_id for pair in blocked_pairs for user_id in pair} - {request.user.id}
+        matches = [m for m in matches if (m.user_b_id if m.user_a_id == request.user.id else m.user_a_id) not in blocked_ids]
         counterpart_ids = [
             m.user_b_id if m.user_a_id == request.user.id else m.user_a_id
             for m in matches
@@ -533,10 +536,20 @@ class ConversationDetailView(APIView):
     permission_classes = [AuthenticatedNexoraUserPermission]
 
     def get(self, request, conversation_id):
-        conversation = DatingConversation.objects.select_related("match", "match__user_a", "match__user_b").filter(id=conversation_id, active=True).first()
+        conversation = DatingConversation.objects.select_related("match", "match__user_a", "match__user_b").filter(
+            id=conversation_id,
+            active=True,
+            match__active=True,
+            match__user_a__status=NexoraUser.Status.ACTIVE,
+            match__user_b__status=NexoraUser.Status.ACTIVE,
+        ).first()
         if not conversation or request.user.id not in {conversation.match.user_a_id, conversation.match.user_b_id}:
             return Response({"detail": "Conversation not found."}, status=status.HTTP_404_NOT_FOUND)
         counterpart = conversation.match.user_b if conversation.match.user_a_id == request.user.id else conversation.match.user_a
+        if DatingBlock.objects.filter(
+            Q(blocker=request.user, blocked=counterpart) | Q(blocker=counterpart, blocked=request.user)
+        ).exists():
+            return Response({"detail": "Conversation not found."}, status=status.HTTP_404_NOT_FOUND)
         profile = DatingProfile.objects.filter(user=counterpart).first()
         return Response({"id": str(conversation.id), "matchId": str(conversation.match_id), "active": conversation.active, "counterpart": DatingProfileSerializer(profile).data if profile else None})
 
@@ -550,8 +563,19 @@ class ConversationMessagesView(APIView):
     throttle_classes = [DatingMessageThrottle]
 
     def get(self, request, conversation_id):
-        conversation = DatingConversation.objects.select_related("match").filter(id=conversation_id, active=True).first()
+        conversation = DatingConversation.objects.select_related("match").filter(
+            id=conversation_id,
+            active=True,
+            match__active=True,
+            match__user_a__status=NexoraUser.Status.ACTIVE,
+            match__user_b__status=NexoraUser.Status.ACTIVE,
+        ).first()
         if not conversation or request.user.id not in {conversation.match.user_a_id, conversation.match.user_b_id}:
+            return Response({"detail": "Conversation not found."}, status=status.HTTP_404_NOT_FOUND)
+        counterpart_id = conversation.match.user_b_id if conversation.match.user_a_id == request.user.id else conversation.match.user_a_id
+        if DatingBlock.objects.filter(
+            Q(blocker_id=request.user.id, blocked_id=counterpart_id) | Q(blocker_id=counterpart_id, blocked_id=request.user.id)
+        ).exists():
             return Response({"detail": "Conversation not found."}, status=status.HTTP_404_NOT_FOUND)
         messages = DatingMessage.objects.filter(conversation=conversation).order_by("created_at")
         return Response({"items": [{"id": str(m.id), "senderId": str(m.sender_id), "body": m.body, "createdAt": m.created_at.isoformat(), "readAt": m.read_at.isoformat() if m.read_at else None} for m in messages]})
