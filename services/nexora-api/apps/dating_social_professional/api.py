@@ -6,8 +6,9 @@ from rest_framework.views import APIView
 
 from apps.core.permissions import AuthenticatedNexoraUserPermission
 
-from .models import DatingMatch, DatingProfile, DatingSwipe
+from .models import DatingConversation, DatingMatch, DatingProfile, DatingSwipe
 from .models.safety import DatingReport
+from .conversation_service import DatingConversationService
 from .services import DatingSafetyService, DatingSwipeService, discovery_for
 
 
@@ -141,3 +142,17 @@ class BlockView(APIView):
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"status": "blocked"}, status=status.HTTP_201_CREATED)
+
+
+class ConversationView(APIView):
+    permission_classes = [AuthenticatedNexoraUserPermission]
+
+    def post(self, request):
+        match_id = request.data.get("match_id")
+        if not match_id:
+            return Response({"detail": "match_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            conversation = DatingConversationService.get_or_create_for_user(actor=request.user, match_id=match_id)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"id": str(conversation.id), "matchId": str(conversation.match_id)}, status=status.HTTP_201_CREATED)
