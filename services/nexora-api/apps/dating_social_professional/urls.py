@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .api import BlockView, DiscoveryView, MatchesView, MeProfileView, SwipeView
+from .api import BlockView, DiscoveryView, MatchesView, MeProfileView, ReportView, SwipeView
 
 urlpatterns = [
     path("discovery/", DiscoveryView.as_view(), name="dating-discovery"),
@@ -8,4 +8,5 @@ urlpatterns = [
     path("swipes/", SwipeView.as_view(), name="dating-swipe"),
     path("matches/", MatchesView.as_view(), name="dating-matches"),
     path("blocks/", BlockView.as_view(), name="dating-block"),
+    path("reports/", ReportView.as_view(), name="dating-report"),
 ]
