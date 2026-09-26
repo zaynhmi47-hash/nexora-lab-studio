@@ -27,6 +27,18 @@ from .services import DatingSafetyService, DatingSwipeService, _compatibility_sc
 logger = logging.getLogger(__name__)
 
 
+class DatingActionThrottle(UserRateThrottle):
+    rate = "30/min"
+
+
+class DatingMessageThrottle(UserRateThrottle):
+    rate = "20/min"
+
+
+class DatingPushThrottle(UserRateThrottle):
+    rate = "10/min"
+
+
 class DatingProfileSerializer(serializers.ModelSerializer):
     age = serializers.SerializerMethodField()
 
@@ -267,7 +279,7 @@ class ProfileMediaView(APIView):
                     ObjectReference(namespace="dating/profile-media", key=item.storage_key)
                 )
             except Exception:
-                pass
+                logger.warning("Failed to delete dating profile media object: %s", item.storage_key, exc_info=True)
         if was_primary:
             replacement = DatingProfileMedia.objects.filter(profile=profile, active=True).order_by("sort_order", "created_at").first()
             if replacement:
@@ -309,6 +321,7 @@ class SwipeInputSerializer(serializers.Serializer):
 
 class SwipeView(APIView):
     permission_classes = [AuthenticatedNexoraUserPermission]
+    throttle_classes = [DatingActionThrottle]
 
     def post(self, request):
         serializer = SwipeInputSerializer(data=request.data)
@@ -419,6 +432,7 @@ class MessageInputSerializer(serializers.Serializer):
 
 class ConversationMessagesView(APIView):
     permission_classes = [AuthenticatedNexoraUserPermission]
+    throttle_classes = [DatingMessageThrottle]
 
     def get(self, request, conversation_id):
         conversation = DatingConversation.objects.select_related("match").filter(id=conversation_id, active=True).first()
@@ -511,6 +525,7 @@ class NotificationPreferencesView(APIView):
 
 class PushTokenView(APIView):
     permission_classes = [AuthenticatedNexoraUserPermission]
+    throttle_classes = [DatingPushThrottle]
 
     def post(self, request):
         token = str(request.data.get("token", "")).strip()
