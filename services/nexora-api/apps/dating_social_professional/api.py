@@ -42,6 +42,13 @@ class DatingPushThrottle(UserRateThrottle):
     rate = "10/min"
 
 
+class DatingActiveUserPermission(AuthenticatedNexoraUserPermission):
+    message = "An active Nexora account is required."
+
+    def has_permission(self, request, view):
+        return super().has_permission(request, view) and getattr(request.user, "status", None) == NexoraUser.Status.ACTIVE
+
+
 class DatingProfileSerializer(serializers.ModelSerializer):
     age = serializers.SerializerMethodField()
 
@@ -78,7 +85,7 @@ class DatingProfileSerializer(serializers.ModelSerializer):
 
 
 class DiscoveryView(APIView):
-    permission_classes = [AuthenticatedNexoraUserPermission]
+    permission_classes = [DatingActiveUserPermission]
 
     def get(self, request):
         filters = {key: request.query_params.get(key) for key in ("intent", "education", "occupation", "city", "interest", "max_distance_km") if request.query_params.get(key)}
