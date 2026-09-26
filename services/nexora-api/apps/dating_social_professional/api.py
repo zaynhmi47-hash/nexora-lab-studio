@@ -45,6 +45,14 @@ class DiscoveryView(APIView):
 
     def get(self, request):
         filters = {key: request.query_params.get(key) for key in ("intent", "education", "occupation", "city", "interest", "max_distance_km") if request.query_params.get(key)}
+        try:
+            cursor = max(0, int(request.query_params.get("cursor", "0")))
+            limit = min(50, max(1, int(request.query_params.get("limit", "20"))))
+        except (TypeError, ValueError):
+            return Response(
+                {"detail": "cursor and limit must be valid integers."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         if "max_distance_km" in filters:
             try:
                 filters["max_distance_km"] = max(1, int(filters["max_distance_km"]))
@@ -53,11 +61,13 @@ class DiscoveryView(APIView):
                     {"detail": "max_distance_km must be a positive integer."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-        profiles = discovery_for(request.user, **filters)
+        profiles = discovery_for(request.user, limit=cursor + limit + 1, **filters)
+        page = profiles[cursor:cursor + limit]
+        has_more = len(profiles) > cursor + limit
         actor_profile = DatingProfile.objects.filter(user=request.user).first()
-        serialized = DatingProfileSerializer(profiles, many=True).data
+        serialized = DatingProfileSerializer(page, many=True).data
         items = []
-        for profile, item in zip(profiles, serialized):
+        for profile, item in zip(page, serialized):
             if actor_profile:
                 distance = _distance_km(actor_profile, profile)
                 actor_interests = {str(value).strip().casefold() for value in (actor_profile.interests or []) if str(value).strip()}
@@ -74,7 +84,7 @@ class DiscoveryView(APIView):
                 item["distance_km"] = None
                 item["shared_interests"] = []
             items.append(item)
-        return Response({"items": items, "next_cursor": None})
+        return Response({"items": items, "next_cursor": str(cursor + limit) if has_more else None})
 
 
 class ProfileDetailView(APIView):
