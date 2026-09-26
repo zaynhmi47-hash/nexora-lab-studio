@@ -8,6 +8,7 @@ export default function AppLayout() {
       <Tabs.Screen name="chats" options={{ title: 'Chats' }} />
       <Tabs.Screen name="notifications" options={{ title: 'Notifications' }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
+      <Tabs.Screen name="profile/[profileId]" options={{ href: null, headerShown: false }} />
     </Tabs>
   );
 }
