@@ -80,7 +80,7 @@ class DiscoveryView(APIView):
                 return Response(
                     {"detail": "max_distance_km must be a positive integer."},
                     status=status.HTTP_400_BAD_REQUEST,
-            )
+                )
         filter_hash = hashlib.sha256(
             json.dumps(filters, sort_keys=True, separators=(",", ":")).encode("utf-8")
         ).hexdigest()
