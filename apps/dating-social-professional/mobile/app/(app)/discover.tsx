@@ -15,7 +15,11 @@ export default function DiscoverScreen() {
   const queryClient = useQueryClient();
   const [interestFilter, setInterestFilter] = useState('');
   const [cityFilter, setCityFilter] = useState('');
-  const [appliedFilters, setAppliedFilters] = useState({ interest: '', city: '' });
+  const [intentFilter, setIntentFilter] = useState('');
+  const [educationFilter, setEducationFilter] = useState('');
+  const [occupationFilter, setOccupationFilter] = useState('');
+  const [distanceFilter, setDistanceFilter] = useState('');
+  const [appliedFilters, setAppliedFilters] = useState({ interest: '', city: '', intent: '', education: '', occupation: '', distance: '' });
   const [index, setIndex] = useState(0);
   const [swiping, setSwiping] = useState(false);
   const [mediaIndex, setMediaIndex] = useState(0);
@@ -24,11 +28,8 @@ export default function DiscoverScreen() {
   const rotate = useSharedValue(0);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['dating', 'discovery', appliedFilters.interest, appliedFilters.city],
-    queryFn: () => api.getDiscovery({
-      ...(appliedFilters.interest ? { interest: appliedFilters.interest } : {}),
-      ...(appliedFilters.city ? { city: appliedFilters.city } : {}),
-    }),
+    queryKey: ['dating', 'discovery', appliedFilters],
+    queryFn: () => api.getDiscovery(Object.fromEntries(Object.entries(appliedFilters).filter(([, value]) => value))),
     enabled: !sessionLoading && !!token,
   });
 
@@ -56,13 +57,13 @@ export default function DiscoverScreen() {
   const retryDiscovery = () => {
     setIndex(0);
     setMediaIndex(0);
-    queryClient.invalidateQueries({ queryKey: ['dating', 'discovery', appliedFilters.interest, appliedFilters.city] });
+    queryClient.invalidateQueries({ queryKey: ['dating', 'discovery', appliedFilters] });
   };
 
   const applyFilters = () => {
     setIndex(0);
     setMediaIndex(0);
-    setAppliedFilters({ interest: interestFilter.trim(), city: cityFilter.trim() });
+    setAppliedFilters({ interest: interestFilter.trim(), city: cityFilter.trim(), intent: intentFilter.trim(), education: educationFilter.trim(), occupation: occupationFilter.trim(), distance: distanceFilter.trim() });
   };
 
   const advance = () => {
@@ -163,9 +164,15 @@ export default function DiscoverScreen() {
       {!sessionLoading && !token ? <Text>Sign in through Nexora Identity to start discovering.</Text> : null}
 
       <View style={styles.filters}>
-        <TextInput style={styles.filterInput} value={interestFilter} onChangeText={setInterestFilter} placeholder="Interest filter" />
-        <TextInput style={styles.filterInput} value={cityFilter} onChangeText={setCityFilter} placeholder="City filter" />
-        <Pressable style={styles.applyFilter} onPress={applyFilters}><Text>Apply</Text></Pressable>
+        <View style={styles.filterGrid}>
+          <TextInput style={styles.filterInput} value={interestFilter} onChangeText={setInterestFilter} placeholder="Interest" />
+          <TextInput style={styles.filterInput} value={cityFilter} onChangeText={setCityFilter} placeholder="City" />
+          <TextInput style={styles.filterInput} value={intentFilter} onChangeText={setIntentFilter} placeholder="Intent (dating, relationship, friendship)" autoCapitalize="none" />
+          <TextInput style={styles.filterInput} value={educationFilter} onChangeText={setEducationFilter} placeholder="Education" />
+          <TextInput style={styles.filterInput} value={occupationFilter} onChangeText={setOccupationFilter} placeholder="Occupation" />
+          <TextInput style={styles.filterInput} value={distanceFilter} onChangeText={setDistanceFilter} placeholder="Max distance (km)" keyboardType="number-pad" />
+        </View>
+        <Pressable style={styles.applyFilter} onPress={applyFilters}><Text>Apply filters</Text></Pressable>
       </View>
 
       {isLoading ? <Text>Loading profiles…</Text> : null}
@@ -291,6 +298,7 @@ const styles = StyleSheet.create({
   passButton: { flex: 1, paddingVertical: 16, borderWidth: 1, borderRadius: 16, alignItems: 'center' },
   likeButton: { flex: 1, paddingVertical: 16, borderWidth: 1, borderRadius: 16, alignItems: 'center' },
   filters: { gap: 8 },
+  filterGrid: { gap: 8 },
   applyFilter: { alignSelf: 'flex-start', borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 9 },
   filterInput: { borderWidth: 1, borderRadius: 12, padding: 12 },
   safetyButton: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingVertical: 10 },
