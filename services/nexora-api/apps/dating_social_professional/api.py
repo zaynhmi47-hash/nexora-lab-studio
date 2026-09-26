@@ -156,3 +156,32 @@ class ConversationView(APIView):
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"id": str(conversation.id), "matchId": str(conversation.match_id)}, status=status.HTTP_201_CREATED)
+
+
+class ConversationMessagesView(APIView):
+    permission_classes = [AuthenticatedNexoraUserPermission]
+
+    def get(self, request, conversation_id):
+        conversation = DatingConversation.objects.select_related("match").filter(id=conversation_id, active=True).first()
+        if not conversation or request.user.id not in {conversation.match.user_a_id, conversation.match.user_b_id}:
+            return Response({"detail": "Conversation not found."}, status=status.HTTP_404_NOT_FOUND)
+        messages = conversation.messages.select_related("sender").order_by("created_at")[:100]
+        return Response({"items": [{"id": str(m.id), "senderId": str(m.sender_id), "body": m.body, "createdAt": m.created_at.isoformat(), "readAt": m.read_at.isoformat() if m.read_at else None} for m in messages]})
+
+    def post(self, request, conversation_id):
+        try:
+            message = DatingConversationService.send(actor=request.user, conversation_id=conversation_id, body=request.data.get("body", ""))
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"id": str(message.id), "senderId": str(message.sender_id), "body": message.body, "createdAt": message.created_at.isoformat(), "readAt": None}, status=status.HTTP_201_CREATED)
+
+
+class ConversationReadView(APIView):
+    permission_classes = [AuthenticatedNexoraUserPermission]
+
+    def post(self, request, conversation_id):
+        try:
+            count = DatingConversationService.mark_read(actor=request.user, conversation_id=conversation_id)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": "read", "updated": count})
