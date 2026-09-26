@@ -1,0 +1,43 @@
+from django.db import transaction
+from django.utils import timezone
+
+from apps.identity.models import NexoraUser
+
+from .models import DatingBlock, DatingConversation, DatingMatch, DatingMessage
+
+
+class DatingConversationService:
+    @staticmethod
+    @transaction.atomic
+    def get_or_create_for_user(*, actor: NexoraUser, match_id) -> DatingConversation:
+        match = DatingMatch.objects.select_for_update().filter(id=match_id, active=True).first()
+        if not match or actor.id not in {match.user_a_id, match.user_b_id}:
+            raise ValueError("Active match not found.")
+        if DatingBlock.objects.filter(blocker_id__in=[match.user_a_id, match.user_b_id], blocked_id__in=[match.user_a_id, match.user_b_id]).exists():
+            raise ValueError("This conversation is unavailable.")
+        conversation, _ = DatingConversation.objects.get_or_create(match=match)
+        return conversation
+
+    @staticmethod
+    @transaction.atomic
+    def send(*, actor: NexoraUser, conversation_id, body: str) -> DatingMessage:
+        conversation = DatingConversation.objects.select_related("match").filter(id=conversation_id, active=True).first()
+        if not conversation:
+            raise ValueError("Conversation not found.")
+        match = conversation.match
+        if not match.active or actor.id not in {match.user_a_id, match.user_b_id}:
+            raise ValueError("Conversation is unavailable.")
+        if DatingBlock.objects.filter(blocker_id__in=[match.user_a_id, match.user_b_id], blocked_id__in=[match.user_a_id, match.user_b_id]).exists():
+            raise ValueError("Messaging is unavailable.")
+        normalized = body.strip()
+        if not normalized:
+            raise ValueError("Message body cannot be empty.")
+        return DatingMessage.objects.create(conversation=conversation, sender=actor, body=normalized)
+
+    @staticmethod
+    @transaction.atomic
+    def mark_read(*, actor: NexoraUser, conversation_id) -> int:
+        conversation = DatingConversation.objects.select_related("match").filter(id=conversation_id, active=True).first()
+        if not conversation or actor.id not in {conversation.match.user_a_id, conversation.match.user_b_id}:
+            raise ValueError("Conversation not found.")
+        return DatingMessage.objects.filter(conversation=conversation, read_at__isnull=True).exclude(sender=actor).update(read_at=timezone.now())
