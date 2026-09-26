@@ -3,10 +3,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { useDatingApi } from '@/src/api/provider';
+import { useRouter } from 'expo-router';
 import { useDatingSession } from '@/src/auth/session';
 
 export default function DiscoverScreen() {
   const api = useDatingApi();
+  const router = useRouter();
   const { token, loading: sessionLoading } = useDatingSession();
   const queryClient = useQueryClient();
   const [interestFilter, setInterestFilter] = useState('');
@@ -48,7 +50,7 @@ export default function DiscoverScreen() {
       {isLoading ? <Text>Loading profiles…</Text> : null}
       {!isLoading && !current ? <Text>No profiles available yet.</Text> : null}
       {current ? (
-        <View style={styles.card}>
+        <Pressable style={styles.card} onPress={() => router.push(`/profile/${current.id}`)}>
           <Text style={styles.name}>{current.displayName}, {current.age}</Text>
           <Text style={styles.bio}>{current.bio || 'No bio yet.'}</Text>
           {current.interests.length ? <Text>Interests: {current.interests.join(' · ')}</Text> : null}
