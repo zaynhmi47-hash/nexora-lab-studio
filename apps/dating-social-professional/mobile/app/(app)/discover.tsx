@@ -1,4 +1,4 @@
-import { Alert, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -33,6 +33,13 @@ export default function DiscoverScreen() {
 
   const items = data?.items ?? [];
   const current = items[index];
+  const { data: mediaData } = useQuery({
+    queryKey: ['dating', 'discovery-media', current?.id],
+    queryFn: () => api.getProfileMedia(current!.id),
+    enabled: !!current?.id,
+  });
+  const mediaItems = mediaData?.items ?? [];
+  const primaryMedia = mediaItems.find((item) => item.isPrimary) ?? mediaItems[0];
 
   const applyFilters = () => {
     setIndex(0);
@@ -138,6 +145,18 @@ export default function DiscoverScreen() {
         <GestureDetector gesture={panGesture}>
           <Animated.View style={[styles.card, cardAnimatedStyle]}>
           <Pressable onPress={() => router.push(`/profile/${current.id}`)}>
+            <View style={styles.mediaFrame}>
+              {primaryMedia?.url ? (
+                <Image source={{ uri: primaryMedia.url }} style={styles.profileImage} resizeMode="cover" />
+              ) : (
+                <View style={styles.imageFallback}>
+                  <Text style={styles.imageFallbackText}>{current.displayName?.trim().charAt(0).toUpperCase() || '?'}</Text>
+                </View>
+              )}
+              <View style={styles.imageBadge}>
+                <Text style={styles.imageBadgeText}>{mediaItems.length ? `${mediaItems.length} photos` : 'Profile'}</Text>
+              </View>
+            </View>
             <Text style={styles.position}>{index + 1} / {items.length}</Text>
             <Text style={styles.name}>{current.displayName}{current.age !== null ? `, ${current.age}` : ''}</Text>
             <Text style={styles.intent}>{current.relationshipIntent || 'Open to connect'}</Text>
@@ -163,7 +182,13 @@ export default function DiscoverScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 24, justifyContent: 'center', gap: 18 },
   title: { fontSize: 32, fontWeight: '800' },
-  card: { padding: 24, borderWidth: 1, borderRadius: 24, gap: 14 },
+  card: { padding: 16, borderWidth: 1, borderRadius: 24, gap: 14 },
+  mediaFrame: { height: 320, borderRadius: 18, overflow: 'hidden', position: 'relative' },
+  profileImage: { width: '100%', height: '100%' },
+  imageFallback: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  imageFallbackText: { fontSize: 72, fontWeight: '800', opacity: 0.25 },
+  imageBadge: { position: 'absolute', left: 12, bottom: 12, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: 'rgba(0,0,0,0.55)' },
+  imageBadgeText: { color: '#fff', fontWeight: '700' },
   position: { opacity: 0.6, marginBottom: 4 },
   name: { fontSize: 26, fontWeight: '800' },
   intent: { fontWeight: '700', textTransform: 'capitalize' },
