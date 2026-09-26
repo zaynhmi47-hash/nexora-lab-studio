@@ -24,11 +24,25 @@ function openNotification(data: Record<string, unknown>) {
 
 export function DatingNotificationHandler() {
   useEffect(() => {
+    let mounted = true;
+
+    const openInitialNotification = async () => {
+      const response = await Notifications.getLastNotificationResponseAsync();
+      if (mounted && response) {
+        openNotification(response.notification.request.content.data as Record<string, unknown>);
+      }
+    };
+
+    void openInitialNotification();
+
     const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
       openNotification(response.notification.request.content.data as Record<string, unknown>);
     });
 
-    return () => subscription.remove();
+    return () => {
+      mounted = false;
+      subscription.remove();
+    };
   }, []);
 
   return null;
