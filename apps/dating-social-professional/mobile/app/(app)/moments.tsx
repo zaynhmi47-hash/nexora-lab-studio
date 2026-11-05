@@ -155,7 +155,10 @@ function MomentCard({ item, onDelete }: { item: DatingMoment; onDelete: (id: str
       {item.media_url && item.media_type === 'image' ? (
         <Image source={{ uri: item.media_url }} style={styles.feedMediaImage} resizeMode="cover" accessibilityLabel="Media Moment" />
       ) : item.media_url && item.media_type === 'video' ? (
-        <MomentVideo uri={item.media_url} />
+        <View style={styles.videoMediaGroup}>
+          {item.thumbnail_url ? <Image source={{ uri: item.thumbnail_url }} style={styles.videoThumbnail} resizeMode="cover" accessibilityLabel="Thumbnail video Moment" /> : null}
+          <MomentVideo uri={item.media_url} />
+        </View>
       ) : item.media_url ? <Text style={styles.mediaLink} numberOfLines={2}>{item.media_url}</Text> : null}
 
       <View style={styles.interactionBar}>
@@ -492,6 +495,8 @@ const styles = StyleSheet.create({
   momentCaption: { color: '#303441', fontSize: 15, lineHeight: 23 },
   mediaLink: { color: '#5D49B8', fontSize: 12, lineHeight: 17 },
   feedMediaImage: { width: '100%', height: 260, borderRadius: 14, backgroundColor: '#F1F1F5' },
+  videoMediaGroup: { gap: 8 },
+  videoThumbnail: { width: "100%", height: 190, borderRadius: 14, backgroundColor: "#E8E9EF" },
   videoPlayerShell: { overflow: 'hidden', borderRadius: 14, backgroundColor: '#11131A' },
   videoPlayer: { width: '100%', height: 280, backgroundColor: '#11131A' },
   videoHint: { color: '#D8D4EA', fontSize: 10, paddingHorizontal: 10, paddingVertical: 7 },
