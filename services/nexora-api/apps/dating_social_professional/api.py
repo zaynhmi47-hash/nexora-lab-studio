@@ -520,6 +520,33 @@ class BlockInputSerializer(serializers.Serializer):
 class BlockView(APIView):
     permission_classes = [DatingActiveUserPermission]
 
+    def get(self, request):
+        blocks = DatingBlock.objects.filter(blocker=request.user).select_related("blocked").order_by("-created_at")
+        profile_by_user = {
+            profile.user_id: profile
+            for profile in DatingProfile.objects.filter(user_id__in=[item.blocked_id for item in blocks])
+        }
+        return Response({
+            "items": [
+                {
+                    "user_id": str(item.blocked_id),
+                    "display_name": profile_by_user[item.blocked_id].display_name if item.blocked_id in profile_by_user else item.blocked.display_name,
+                    "photo_url": profile_by_user[item.blocked_id].photo_url if item.blocked_id in profile_by_user else "",
+                    "blocked_at": item.created_at.isoformat(),
+                }
+                for item in blocks
+            ]
+        })
+
+    def delete(self, request):
+        serializer = BlockInputSerializer(data={"target_user_id": request.query_params.get("target_user_id")})
+        serializer.is_valid(raise_exception=True)
+        try:
+            DatingSafetyService.unblock(actor=request.user, target_id=serializer.validated_data["target_user_id"])
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": "unblocked"})
+
     def post(self, request):
         serializer = BlockInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
