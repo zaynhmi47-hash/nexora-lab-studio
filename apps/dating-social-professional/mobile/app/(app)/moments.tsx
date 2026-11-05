@@ -94,7 +94,6 @@ function MomentCard({ item, onDelete }: { item: DatingMoment; onDelete: (id: str
         </View>
         <View style={styles.commentActions}>
           {!isReply ? <Pressable onPress={() => setReplyTo(comment)} hitSlop={8}><Text style={styles.commentActionText}>Balas</Text></Pressable> : null}
-          {comment.author.id === item.author.id ? null : null}
           <Text style={styles.commentDate}>{formatMomentDate(comment.created_at)}</Text>
         </View>
         {comment.replies?.map((reply) => renderComment(reply, true))}
