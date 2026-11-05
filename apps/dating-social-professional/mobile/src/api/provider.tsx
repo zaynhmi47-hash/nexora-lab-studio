@@ -3,6 +3,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { useDatingSession } from '@/src/auth/session';
 
+
+export type DatingMoment = {
+  id: string;
+  author: { id: string; display_name: string; photo_url: string };
+  caption: string;
+  media_url: string;
+  visibility: 'public' | 'private';
+  created_at: string;
+  is_own: boolean;
+};
+
 export type DiscoveryProfile = { id: string; displayName: string; age: number | null; birthDate: string | null; bio: string; photoUrl: string | null; relationshipIntent: string; interests: string[]; education: string; occupation: string; locationCity: string; locationCountry: string; maxDistanceKm: number; profileCompletion: number; compatibilityScore: number; distanceKm: number | null; sharedInterests: string[] };
 export type DatingProfile = DiscoveryProfile & { discoveryEnabled: boolean; preferredMinAge: number; preferredMaxAge: number };
 export type Match = { id: string; userA: string; userB: string; matchedAt: string; counterpart: DiscoveryProfile | null; conversationId: string | null; lastMessage: { body: string; createdAt: string; senderId: string } | null; unreadCount: number };
