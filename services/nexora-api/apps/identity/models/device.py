@@ -30,6 +30,7 @@ class IdentityDevice(AuditableBaseModel):
 
 class IdentityLoginEvent(AuditableBaseModel):
     class Type(models.TextChoices):
+        LOGIN_VERIFIED = "login_verified", "Login verified"
         DEVICE_REGISTERED = "device_registered", "Device registered"
         DEVICE_SEEN = "device_seen", "Device seen"
         DEVICE_TRUSTED = "device_trusted", "Device trusted"
