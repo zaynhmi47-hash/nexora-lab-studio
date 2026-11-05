@@ -16,11 +16,33 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDatingApi, type DatingMoment, type DatingMomentComment } from '@/src/api/provider';
 import { useDatingSession } from '@/src/auth/session';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { useVideoPlayer, VideoView } from 'expo-video';
 
 function formatMomentDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function MomentVideo({ uri }: { uri: string }) {
+  const player = useVideoPlayer({ uri, useCaching: true }, (instance) => {
+    instance.loop = true;
+    instance.muted = true;
+  });
+
+  return (
+    <View style={styles.videoPlayerShell}>
+      <VideoView
+        player={player}
+        style={styles.videoPlayer}
+        contentFit="cover"
+        nativeControls
+        allowsPictureInPicture={false}
+      />
+      <Text style={styles.videoHint}>Putar video · Audio nonaktif secara default</Text>
+    </View>
+  );
 }
 
 function MomentCard({ item, onDelete }: { item: DatingMoment; onDelete: (id: string) => void }) {
@@ -131,7 +153,7 @@ function MomentCard({ item, onDelete }: { item: DatingMoment; onDelete: (id: str
       {item.media_url && item.media_type === 'image' ? (
         <Image source={{ uri: item.media_url }} style={styles.feedMediaImage} resizeMode="cover" accessibilityLabel="Media Moment" />
       ) : item.media_url && item.media_type === 'video' ? (
-        <View style={styles.feedVideoCard}><Text style={styles.feedVideoLabel}>VIDEO MOMENT</Text><Text style={styles.feedVideoUrl} numberOfLines={1}>{item.media_url}</Text></View>
+        <MomentVideo uri={item.media_url} />
       ) : item.media_url ? <Text style={styles.mediaLink} numberOfLines={2}>{item.media_url}</Text> : null}
 
       <View style={styles.interactionBar}>
@@ -318,7 +340,30 @@ export default function MomentsScreen() {
                 videoMaxDuration: 60,
               });
               if (!result.canceled && result.assets[0]) {
-                setSelectedMedia(result.assets[0]);
+                const asset = result.assets[0];
+                if (asset.type === 'video' && asset.duration && asset.duration > 60_000) {
+                  Alert.alert('Video terlalu panjang', 'Durasi video Moment maksimal 60 detik.');
+                  return;
+                }
+                if (asset.type === 'video' && asset.fileSize && asset.fileSize > 100 * 1024 * 1024) {
+                  Alert.alert('Video terlalu besar', 'Ukuran video Moment maksimal 100 MB.');
+                  return;
+                }
+                if (asset.type === 'image') {
+                  try {
+                    const compressed = await ImageManipulator.manipulateAsync(
+                      asset.uri,
+                      [{ resize: { width: 1600 } }],
+                      { compress: 0.78, format: ImageManipulator.SaveFormat.JPEG },
+                    );
+                    setSelectedMedia({ ...asset, uri: compressed.uri, fileName: 'moment-compressed.jpg', mimeType: 'image/jpeg' });
+                  } catch {
+                    Alert.alert('Kompresi gagal', 'Foto tidak dapat diproses. Silakan pilih foto lain.');
+                    return;
+                  }
+                } else {
+                  setSelectedMedia(asset);
+                }
                 setMediaUrl('');
               }
             }}
@@ -444,9 +489,9 @@ const styles = StyleSheet.create({
   momentCaption: { color: '#303441', fontSize: 15, lineHeight: 23 },
   mediaLink: { color: '#5D49B8', fontSize: 12, lineHeight: 17 },
   feedMediaImage: { width: '100%', height: 260, borderRadius: 14, backgroundColor: '#F1F1F5' },
-  feedVideoCard: { height: 150, borderRadius: 14, backgroundColor: '#242735', alignItems: 'center', justifyContent: 'center', padding: 16, gap: 8 },
-  feedVideoLabel: { color: '#FFFFFF', fontSize: 14, fontWeight: '900', letterSpacing: 1 },
-  feedVideoUrl: { color: '#D8D4EA', fontSize: 10 },
+  videoPlayerShell: { overflow: 'hidden', borderRadius: 14, backgroundColor: '#11131A' },
+  videoPlayer: { width: '100%', height: 280, backgroundColor: '#11131A' },
+  videoHint: { color: '#D8D4EA', fontSize: 10, paddingHorizontal: 10, paddingVertical: 7 },
   interactionBar: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#F0F0F4', paddingTop: 11, gap: 12 },
   interactionButton: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 5, paddingRight: 12 },
   interactionText: { color: '#666D79', fontSize: 13, fontWeight: '700' },
