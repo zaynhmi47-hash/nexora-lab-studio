@@ -1,6 +1,7 @@
 import datetime
 
 import pytest
+from django.test import override_settings
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.dating_social_professional.moments_api import DatingMomentView
@@ -46,3 +47,37 @@ def test_moment_create_feed_private_visibility_and_owner_delete():
     delete_request = factory.delete(f"/api/v1/dating/moments/?moment_id={moment_id}")
     force_authenticate(delete_request, user=reader)
     assert DatingMomentView.as_view()(delete_request).status_code == 404
+
+
+@pytest.mark.django_db
+def test_moment_moderation_requires_allowlisted_reviewer_and_approves_content():
+    from apps.dating_social_professional.moderation_api import DatingMomentModerationQueueView
+
+    author = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, display_name="Author")
+    reviewer = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, display_name="Reviewer")
+    moment = DatingMoment.objects.create(author=author, caption="Awaiting review", moderation_status=DatingMoment.ModerationStatus.PENDING)
+    factory = APIRequestFactory()
+
+    denied = factory.get("/api/v1/dating/moderation/moments/")
+    force_authenticate(denied, user=reviewer)
+    assert DatingMomentModerationQueueView.as_view()(denied).status_code == 403
+
+    with override_settings(DATING_MOMENT_MODERATOR_USER_IDS=[str(reviewer.id)]):
+        queue = factory.get("/api/v1/dating/moderation/moments/")
+        force_authenticate(queue, user=reviewer)
+        queued = DatingMomentModerationQueueView.as_view()(queue)
+        assert queued.status_code == 200
+        assert any(item["id"] == str(moment.id) for item in queued.data["items"])
+
+        approve = factory.patch(
+            f"/api/v1/dating/moderation/moments/{moment.id}/",
+            {"status": "approved", "reason": "Passed human review"},
+            format="json",
+        )
+        force_authenticate(approve, user=reviewer)
+        response = DatingMomentModerationQueueView.as_view()(approve, moment_id=moment.id)
+
+    assert response.status_code == 200
+    moment.refresh_from_db()
+    assert moment.moderation_status == DatingMoment.ModerationStatus.APPROVED
+    assert moment.moderation_reviewed_by_id == reviewer.id
