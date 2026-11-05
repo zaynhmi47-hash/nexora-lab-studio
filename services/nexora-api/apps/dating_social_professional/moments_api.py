@@ -16,7 +16,7 @@ from infrastructure.firebase.registry import FirebaseProviderRegistry
 from infrastructure.storage.ports.object_storage import UploadRequest
 
 from .api import DatingActiveUserPermission, DatingActionThrottle
-from .models import DatingBlock, DatingMoment, DatingMomentComment, DatingMomentMediaJob, DatingMomentReaction, DatingProfile
+from .models import DatingBlock, DatingMoment, DatingMomentComment, DatingMomentMediaJob, DatingMomentModerationJob, DatingMomentReaction, DatingProfile
 
 logger = logging.getLogger(__name__)
 
@@ -200,6 +200,7 @@ class DatingMomentView(APIView):
                 )
                 if storage_key:
                     DatingMomentMediaJob.objects.create(moment=moment)
+                DatingMomentModerationJob.objects.create(moment=moment)
         except Exception:
             if reference is not None:
                 try:
