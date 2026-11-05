@@ -47,9 +47,9 @@ class DatingMomentView(APIView):
             "visibility": moment.visibility if own else "public",
             "created_at": moment.created_at.isoformat(),
             "is_own": own,
-            "like_count": moment.like_count,
-            "comment_count": moment.comment_count,
-            "is_liked_by_me": moment.is_liked_by_me,
+            "like_count": getattr(moment, "like_count", 0),
+            "comment_count": getattr(moment, "comment_count", 0),
+            "is_liked_by_me": getattr(moment, "is_liked_by_me", False),
         }
 
     def get(self, request):
