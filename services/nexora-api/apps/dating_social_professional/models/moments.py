@@ -23,6 +23,7 @@ class DatingMoment(AuditableBaseModel):
     # media_url is retained for legacy/external media references.
     media_url = models.URLField(max_length=2048, blank=True)
     storage_key = models.CharField(max_length=512, blank=True)
+    thumbnail_key = models.CharField(max_length=512, blank=True)
     media_type = models.CharField(max_length=16, choices=MediaType.choices, blank=True)
     visibility = models.CharField(max_length=16, choices=Visibility.choices, default=Visibility.PUBLIC, db_index=True)
     moderation_status = models.CharField(max_length=16, choices=ModerationStatus.choices, default=ModerationStatus.APPROVED, db_index=True)
