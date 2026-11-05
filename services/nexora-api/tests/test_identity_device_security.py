@@ -7,6 +7,8 @@ from rest_framework.test import APIClient
 
 from apps.identity.models import IdentityDevice, IdentityLoginEvent, IdentityProviderAccount, NexoraUser
 from apps.identity.services.device_security import fingerprint_hash, mark_device_trusted, register_device
+from apps.identity.services import IdentityService
+from infrastructure.identity.ports.identity_provider import IdentityClaims
 from infrastructure.firebase.providers.identity import FirebaseIdentityProvider
 
 
@@ -167,3 +169,27 @@ def test_failed_provider_revocation_does_not_mark_device_revoked():
     assert response.status_code == 503
     device.refresh_from_db()
     assert device.revoked_at is None
+
+
+@pytest.mark.django_db
+def test_verified_firebase_login_is_recorded_once_per_auth_time_and_linked_to_device():
+    user = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE)
+    raw_device_id = "login-event-device-identifier"
+    device = register_device(user=user, device_id=raw_device_id)
+    provider = Mock()
+    provider.verify_token.return_value = IdentityClaims(
+        provider="firebase",
+        provider_subject="firebase-login-history-user",
+        email="login@example.com",
+        claims={"auth_time": int(time.time()), "firebase": {"sign_in_provider": "password"}},
+    )
+    service = IdentityService(provider)
+
+    service.authenticate_token("id-token", device_id=raw_device_id)
+    service.authenticate_token("id-token", device_id=raw_device_id)
+
+    events = IdentityLoginEvent.objects.filter(
+        user=user, event_type=IdentityLoginEvent.Type.LOGIN_VERIFIED
+    )
+    assert events.count() == 1
+    assert events.first().device_id == device.id
