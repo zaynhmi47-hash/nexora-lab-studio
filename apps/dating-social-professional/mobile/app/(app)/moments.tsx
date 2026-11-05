@@ -415,7 +415,7 @@ export default function MomentsScreen() {
             {createMoment.isPending ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.postButtonText}>Posting</Text>}
           </Pressable>
         </View>
-        <Text style={styles.helper}>Foto dan video diunggah langsung. Video dibatasi 60 detik; moderasi otomatis lanjutan menyusul.</Text>
+        <Text style={styles.helper}>Foto dan video akan diproses untuk thumbnail. Setiap Moment ditinjau sebelum tampil di feed publik.</Text>
       </View>
 
       <View style={styles.feedHeader}>
