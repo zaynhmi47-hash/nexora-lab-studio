@@ -211,3 +211,15 @@ No application runtime code was changed by this audit. Test execution was not pe
 - Corrected backend binary signature validation to compare real JPEG/PNG/WebM byte sequences. Updated the valid JPEG upload test fixture to use actual signature bytes.
 - Not yet implemented: server-side video transcoding/adaptive streaming, persistent thumbnail generation and storage, automated content moderation/quarantine, visibility-aware autoplay/pause for scrolling feeds, video metadata verification on server, and device-level runtime tests. The current player is user-initiated with native controls; it is not an autoplay Reels feed.
 - Dependency versions are aligned to Expo SDK 57 per the Expo SDK 57 reference. A new native development build is required after adding native Expo modules; run `pnpm exec expo install --check` (or `npx expo install --check`) and the mobile typecheck in Codespaces before release.
+
+
+## Dating Moments — media safety and human moderation pipeline (2026-11-05)
+
+- Added `moderation_status` (`pending`, `approved`, `rejected`), reviewer identity, review timestamp, and optional reviewer reason to `DatingMoment`.
+- Migration `0015_dating_moment_moderation` preserves existing content as approved; newly-created Moments through the API are explicitly queued as pending.
+- Public feed results are restricted to approved public Moments. Authors can still see their own Moments, including pending/rejected states and moderation reason.
+- Other users cannot react to, comment on, or report a Moment until it is approved; existing visibility, block, and active-account checks remain in place.
+- Added a protected human review queue and approve/reject endpoint under `/api/v1/dating/moderation/moments/`.
+- Moderator access uses the explicit `DATING_MOMENT_MODERATOR_USER_IDS` settings allowlist. It is empty by default; production operators must configure authorized Nexora user UUIDs before any reviewer can access the queue.
+- This is a human moderation workflow only. Automated AI moderation, background processing, quarantine storage, thumbnail generation, video transcoding, and provider integration are not implemented or claimed.
+- Added tests for pending-feed visibility, pending upload state, allowlisted review, approval metadata, and interaction blocking. Tests and migrations have not been executed in this remote GitHub editing session.
