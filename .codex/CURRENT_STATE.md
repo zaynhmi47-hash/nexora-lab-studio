@@ -136,3 +136,12 @@ No application runtime code was changed by this audit. Test execution was not pe
 - Unblocking deliberately does not reactivate a prior match or conversation; users must establish a new mutual like to match again.
 - Added a regression test covering block creation, match deactivation, unblock idempotency, and no automatic match reactivation.
 - Code is committed to `main`; tests have not been executed in this environment and must be run in Codespaces/CI before treating this slice as verified.
+
+
+## Dating Moments — first backend vertical slice (2026-11-05)
+
+- Added `DatingMoment` with text caption, optional media URL, public/private visibility, UUID/audit timestamps, and feed/author indexes.
+- Added authenticated `GET/POST/DELETE /api/v1/dating/moments/`. Creation requires a dating profile with birth date and enforces age 18+; deletion is owner-only and uses the shared soft-delete base model.
+- Public feed excludes inactive authors and both directions of block relationships. Private moments are visible only to their author.
+- Media is represented by an optional URL in this first slice; upload moderation, reactions, comments, ranking, and media processing remain later phases.
+- Added focused API coverage for create/feed/private visibility/owner-only delete. Tests and migrations have not been executed in this remote editing session.
