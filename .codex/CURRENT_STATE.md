@@ -127,3 +127,12 @@ No application runtime code was changed by this audit. Test execution was not pe
 - Tests were added for idempotency, mutual matching and self-swipe rejection.
 - ADR recorded at `docs/decisions/ADR-dating-social-professional-domain.md`.
 - This branch does not claim a fresh local test/typecheck pass through the GitHub connector; execution must still be performed in the development environment.
+
+## Dating safety lifecycle update — 2026-11-05
+
+- Added an idempotent backend unblock operation for the authenticated account.
+- Added `GET /api/v1/dating/blocks/` to return the caller's own block list with minimal profile presentation fields.
+- Added `DELETE /api/v1/dating/blocks/?target_user_id=<uuid>` to remove a caller-created block.
+- Unblocking deliberately does not reactivate a prior match or conversation; users must establish a new mutual like to match again.
+- Added a regression test covering block creation, match deactivation, unblock idempotency, and no automatic match reactivation.
+- Code is committed to `main`; tests have not been executed in this environment and must be run in Codespaces/CI before treating this slice as verified.
