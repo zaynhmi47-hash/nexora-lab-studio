@@ -188,3 +188,16 @@ No application runtime code was changed by this audit. Test execution was not pe
 - Mobile now exposes a Moment report action with reason selection and routes social notification taps to the Moments feed.
 - Tightened interaction visibility to exclude soft-deleted Moments, comments, replies, and inactive comment authors. Comment payloads include `is_own` for ownership-aware UI.
 - Added regression coverage for social notifications and Moment reports. Migration execution, backend tests, mobile typecheck, and end-to-end behavior still need verification in Codespaces/CI. Push delivery is not implemented by this in-app notification slice.
+
+
+## Dating Moments — direct media upload (2026-11-05)
+
+- Extended `DatingMoment` with provider-neutral `storage_key` and `media_type` metadata; legacy `media_url` remains supported.
+- Added migration `0014_dating_moment_media_storage`.
+- `POST /api/v1/dating/moments/` now accepts either JSON with a legacy `media_url`, or multipart form data with `caption`, `visibility`, and `file`.
+- Uploads are stored through the existing `ObjectStorageProvider` port and Firebase Storage adapter in the `dating/moments` namespace. Firebase SDK usage remains behind the infrastructure adapter.
+- Server-side validation checks declared MIME type, file size, and file signature. Current limits: images JPEG/PNG/WebP up to 10 MB; videos MP4/MOV/WebM up to 100 MB.
+- Feed serialization generates short-lived signed read URLs. Owner deletion soft-deletes the Moment and attempts to delete its stored object.
+- Mobile composer now uses Expo Image Picker for photo/video selection and submits multipart uploads; feed renders image media and a video media card.
+- Added backend tests for successful image storage and MIME/signature mismatch rejection.
+- Not yet implemented/verified: video transcoding, thumbnail generation, playback UI, automated content moderation, background orphan cleanup, plan-based quotas, push notifications, and local test/typecheck/migration execution. These remain explicit follow-up work; do not treat this media slice as fully production-verified.
