@@ -29,6 +29,14 @@ class DatingSafetyService:
         return block
 
     @staticmethod
+    @transaction.atomic
+    def unblock(*, actor: NexoraUser, target_id) -> bool:
+        if actor.status != NexoraUser.Status.ACTIVE:
+            raise ValueError("This account is unavailable.")
+        deleted, _ = DatingBlock.objects.filter(blocker=actor, blocked_id=target_id).delete()
+        return deleted > 0
+
+    @staticmethod
     def report(*, actor: NexoraUser, target: NexoraUser, reason: str, details: str = "") -> DatingReport:
         if actor.id == target.id:
             raise ValueError("A user cannot report themselves.")
