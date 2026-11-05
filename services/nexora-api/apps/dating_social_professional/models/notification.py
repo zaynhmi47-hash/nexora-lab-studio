@@ -8,6 +8,7 @@ class DatingNotification(AuditableBaseModel):
     class Type(models.TextChoices):
         MATCH = "match", "Match"
         MESSAGE = "message", "Message"
+        SOCIAL = "social", "Social activity"
         SAFETY = "safety", "Safety"
 
     recipient = models.ForeignKey(NexoraUser, on_delete=models.PROTECT, related_name="dating_notifications")
