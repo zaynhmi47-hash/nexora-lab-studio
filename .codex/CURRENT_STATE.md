@@ -241,3 +241,15 @@ No application runtime code was changed by this audit. Test execution was not pe
 - Tests and migrations have not been executed in this remote GitHub editing session. Automated AI content moderation is not active; the existing human approval gate remains authoritative.
 
 - Mobile Moments now accepts the optional `thumbnail_url` field and renders generated video thumbnails above the video player; composer guidance explains thumbnail processing and the human review gate.
+
+
+## Dating Moments — provider-neutral AI moderation integration layer (2026-11-05)
+
+- Added `DatingMomentModerationJob` and migration `0017_dating_moment_ai_moderation`. New Moments enqueue both media processing (when uploaded media exists) and AI risk assessment in the same database transaction.
+- Added provider-neutral contracts under `infrastructure/moderation/ports/`: `ContentModerationRequest`, `ContentModerationAssessment`, and `ContentModerationProvider`. The request supplies caption, media type, and private object references for the original media and optional thumbnail; provider adapters own any provider-specific fetch/upload logic.
+- Added configurable adapter loading via `DATING_MOMENT_MODERATION_PROVIDER` (Django import path to a provider factory). Empty configuration means AI assessment is disabled; no vendor SDK, credentials, or AI service is falsely assumed to exist.
+- Added `process_pending_moderation_jobs()` and management command `python manage.py run_moment_moderation_worker --limit 20`. Jobs use PostgreSQL row locks, stale lease recovery, bounded retries, and persisted provider/action/confidence/categories/explanation metadata.
+- AI results are recommendations only (`approve`, `reject`, `review`). The worker intentionally never changes `DatingMoment.moderation_status`; only the allowlisted human moderation endpoint can approve or reject content. Provider failures leave content pending and retry or fail the assessment job without publishing it.
+- The human review queue now includes the latest AI assessment details. Reviewer decision fields on the Moment remain the authoritative publication state.
+- Added tests for enqueueing, provider recommendations, provider failure handling, and the invariant that AI cannot publish or reject content. Tests and migrations have not been executed in this remote GitHub editing session.
+- Configure a real adapter factory and its secret references in the deployment environment before scheduling the moderation worker. Review provider retention/training terms and data-processing region before sending user-generated content to any external provider. Do not put API keys in source control.
