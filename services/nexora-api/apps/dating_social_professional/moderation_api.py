@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .api import DatingActiveUserPermission
-from .models import DatingMoment
+from .models import DatingMoment, DatingMomentModerationJob
 from .moments_api import DatingMomentView
 
 
@@ -46,6 +46,15 @@ class DatingMomentModerationQueueView(APIView):
             item = DatingMomentView.serialize(moment, own=True)
             item["author"]["id"] = str(moment.author_id)
             item["moderation_status"] = moment.moderation_status
+            ai_job = DatingMomentModerationJob.objects.filter(moment=moment).first()
+            item["ai_assessment"] = ({
+                "status": ai_job.status,
+                "provider": ai_job.provider_name,
+                "suggested_action": ai_job.suggested_action,
+                "confidence": ai_job.confidence,
+                "categories": ai_job.categories,
+                "explanation": ai_job.explanation,
+            } if ai_job else None)
             items.append(item)
         return Response({"items": items})
 
