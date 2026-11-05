@@ -127,3 +127,43 @@ def test_revoking_one_device_revokes_all_firebase_sessions():
     )
     device.refresh_from_db()
     assert device.revoked_at is not None
+
+
+@pytest.mark.django_db
+def test_trusting_device_succeeds_after_recent_firebase_reauthentication():
+    user = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE)
+    device = register_device(user=user, device_id="recent-auth-device-identifier")
+    IdentityProviderAccount.objects.create(
+        user=user,
+        provider="firebase",
+        provider_subject="firebase-user-recent",
+        claims={"auth_time": int(time.time())},
+    )
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.post(reverse("identity-device-trust", kwargs={"device_id": device.id}))
+
+    assert response.status_code == 200
+    assert response.data["data"]["trusted_at"] is not None
+
+
+@pytest.mark.django_db
+def test_failed_provider_revocation_does_not_mark_device_revoked():
+    user = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE)
+    device = register_device(user=user, device_id="provider-fail-device-identifier")
+    IdentityProviderAccount.objects.create(
+        user=user, provider="firebase", provider_subject="firebase-user-fail"
+    )
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    with patch("apps.identity.api.security.FirebaseProviderRegistry") as registry:
+        registry.return_value.identity.return_value.revoke_session.side_effect = RuntimeError("provider down")
+        response = client.post(
+            reverse("identity-device-revoke", kwargs={"device_id": device.id})
+        )
+
+    assert response.status_code == 503
+    device.refresh_from_db()
+    assert device.revoked_at is None
