@@ -18,7 +18,12 @@ export default function NotificationsScreen() {
     setSelected(item.id);
     if (!item.readAt) void markAll.mutateAsync();
     const conversationId = typeof item.data.conversationId === 'string' ? item.data.conversationId : typeof item.data.conversation_id === 'string' ? item.data.conversation_id : null;
-    if (conversationId) router.push(`/(app)/chat/${conversationId}`);
+    if (conversationId) {
+      router.push(`/(app)/chat/${conversationId}`);
+      return;
+    }
+    const momentId = typeof item.data.momentId === 'string' ? item.data.momentId : null;
+    if (momentId) router.push('/(app)/moments');
   };
 
   return (
