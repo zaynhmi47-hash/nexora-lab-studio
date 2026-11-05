@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -14,6 +15,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useDatingApi, type DatingMoment, type DatingMomentComment } from '@/src/api/provider';
 import { useDatingSession } from '@/src/auth/session';
+import * as ImagePicker from 'expo-image-picker';
 
 function formatMomentDate(value: string) {
   const date = new Date(value);
@@ -202,6 +204,7 @@ export default function MomentsScreen() {
   const queryClient = useQueryClient();
   const [caption, setCaption] = useState('');
   const [mediaUrl, setMediaUrl] = useState('');
+  const [selectedMedia, setSelectedMedia] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
 
   const feed = useQuery({
@@ -214,12 +217,19 @@ export default function MomentsScreen() {
   const createMoment = useMutation({
     mutationFn: () => api.createMoment({
       caption: caption.trim(),
-      ...(mediaUrl.trim() ? { media_url: mediaUrl.trim() } : {}),
+      ...(selectedMedia ? {
+        file: {
+          uri: selectedMedia.uri,
+          name: selectedMedia.fileName || `moment-${Date.now()}.${selectedMedia.mimeType?.startsWith('video/') ? 'mp4' : 'jpg'}`,
+          type: selectedMedia.mimeType || (selectedMedia.type === 'video' ? 'video/mp4' : 'image/jpeg'),
+        },
+      } : mediaUrl.trim() ? { media_url: mediaUrl.trim() } : {}),
       visibility,
     }),
     onSuccess: async () => {
       setCaption('');
       setMediaUrl('');
+      setSelectedMedia(null);
       setVisibility('public');
       await queryClient.invalidateQueries({ queryKey: ['dating', 'moments'] });
     },
@@ -289,16 +299,50 @@ export default function MomentsScreen() {
           accessibilityLabel="Teks Moment"
         />
         <Text style={styles.counter}>{caption.length}/2000</Text>
-        <TextInput
-          value={mediaUrl}
-          onChangeText={setMediaUrl}
-          placeholder="URL foto/video (opsional)"
-          placeholderTextColor="#8A8F98"
-          autoCapitalize="none"
-          keyboardType="url"
-          style={styles.urlInput}
-          accessibilityLabel="URL media opsional"
-        />
+        <View style={styles.mediaPickerRow}>
+          <Pressable
+            onPress={async () => {
+              const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+              if (!permission.granted) {
+                Alert.alert('Izin galeri diperlukan', 'Izinkan akses galeri untuk memilih foto atau video.');
+                return;
+              }
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images', 'videos'],
+                allowsEditing: false,
+                quality: 0.85,
+                videoMaxDuration: 60,
+              });
+              if (!result.canceled && result.assets[0]) {
+                setSelectedMedia(result.assets[0]);
+                setMediaUrl('');
+              }
+            }}
+            style={styles.mediaPickerButton}
+          >
+            <Text style={styles.mediaPickerText}>{selectedMedia ? 'Ganti media' : 'Pilih foto / video'}</Text>
+          </Pressable>
+          {selectedMedia ? (
+            <Pressable onPress={() => setSelectedMedia(null)}><Text style={styles.removeMediaText}>Hapus pilihan</Text></Pressable>
+          ) : null}
+        </View>
+        {selectedMedia ? (
+          <View style={styles.selectedMedia}>
+            {selectedMedia.type === 'image' ? <Image source={{ uri: selectedMedia.uri }} style={styles.mediaPreview} resizeMode="cover" /> : <View style={styles.videoPreview}><Text style={styles.videoPreviewText}>VIDEO · {selectedMedia.fileName || 'Video dipilih'}</Text></View>}
+            <Text style={styles.mediaMeta}>{selectedMedia.fileSize ? `${(selectedMedia.fileSize / (1024 * 1024)).toFixed(1)} MB` : 'Media dipilih'} · Maksimal video 60 detik</Text>
+          </View>
+        ) : (
+          <TextInput
+            value={mediaUrl}
+            onChangeText={setMediaUrl}
+            placeholder="Atau masukkan URL media (opsional)"
+            placeholderTextColor="#8A8F98"
+            autoCapitalize="none"
+            keyboardType="url"
+            style={styles.urlInput}
+            accessibilityLabel="URL media opsional"
+          />
+        )}
         <View style={styles.composerFooter}>
           <View style={styles.visibilityGroup}>
             <Pressable onPress={() => setVisibility('public')} style={[styles.visibilityButton, visibility === 'public' && styles.visibilityActive]}>
@@ -316,7 +360,7 @@ export default function MomentsScreen() {
             {createMoment.isPending ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.postButtonText}>Posting</Text>}
           </Pressable>
         </View>
-        <Text style={styles.helper}>Konten media melalui URL untuk tahap awal. Upload langsung dan moderasi media menyusul.</Text>
+        <Text style={styles.helper}>Foto dan video diunggah langsung. Video dibatasi 60 detik; moderasi otomatis lanjutan menyusul.</Text>
       </View>
 
       <View style={styles.feedHeader}>
@@ -357,6 +401,15 @@ const styles = StyleSheet.create({
   sectionTitle: { color: '#202331', fontSize: 17, fontWeight: '800' },
   captionInput: { minHeight: 112, maxHeight: 190, borderRadius: 14, backgroundColor: '#F7F7FA', padding: 13, color: '#202331', fontSize: 15, lineHeight: 22 },
   counter: { textAlign: 'right', color: '#858B96', fontSize: 11, marginTop: -7 },
+  mediaPickerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  mediaPickerButton: { alignSelf: 'flex-start', backgroundColor: '#F1EEFC', borderRadius: 11, paddingHorizontal: 14, paddingVertical: 10 },
+  mediaPickerText: { color: '#5141A4', fontSize: 12, fontWeight: '800' },
+  removeMediaText: { color: '#B42318', fontSize: 12, fontWeight: '700' },
+  selectedMedia: { gap: 6 },
+  mediaPreview: { width: '100%', height: 180, borderRadius: 12, backgroundColor: '#F1F1F5' },
+  videoPreview: { height: 80, borderRadius: 12, backgroundColor: '#242735', alignItems: 'center', justifyContent: 'center', padding: 12 },
+  videoPreviewText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
+  mediaMeta: { color: '#858B96', fontSize: 11 },
   urlInput: { height: 44, borderRadius: 12, borderWidth: 1, borderColor: '#E7E8EE', paddingHorizontal: 12, color: '#202331' },
   composerFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
   visibilityGroup: { flexDirection: 'row', backgroundColor: '#F1F1F5', borderRadius: 12, padding: 3 },
