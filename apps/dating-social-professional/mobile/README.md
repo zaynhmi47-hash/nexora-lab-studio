@@ -25,3 +25,11 @@ The current discover screen is intentionally a thin vertical slice. It establish
 
 - Mobile API provider now exposes feed creation/deletion, like/unlike, comment listing/creation/deletion, and the feed interaction counters/liked-by-me state.
 - The current Moments screen still needs the interaction controls and comment thread UI; this commit adds the typed API boundary only.
+
+
+## Moments interaction UI
+
+- Moment cards now expose like/unlike actions and live interaction counters.
+- Comment threads load on demand, support top-level comments and one-level replies, and refresh feed counters after successful mutations.
+- Comment and reaction requests use the authenticated dating API provider; loading, retry, pending, and error states are surfaced in the UI.
+- The current mobile thread UI does not yet expose comment deletion or reporting controls; these require ownership/session mapping and the next moderation slice.
