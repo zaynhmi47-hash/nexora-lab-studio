@@ -68,6 +68,19 @@ class IdentityDeviceTrustView(APIView):
         ).first()
         if not device:
             return Response({"detail": "Device not found."}, status=status.HTTP_404_NOT_FOUND)
+        provider_account = IdentityProviderAccount.objects.filter(
+            user=request.user, provider="firebase", deleted_at__isnull=True
+        ).first()
+        auth_time = (provider_account.claims or {}).get("auth_time") if provider_account else None
+        try:
+            auth_age = timezone.now().timestamp() - float(auth_time)
+        except (TypeError, ValueError):
+            auth_age = None
+        if auth_age is None or auth_age < -60 or auth_age > 600:
+            return Response(
+                {"detail": "Recent reauthentication is required before trusting a device."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         try:
             device = mark_device_trusted(user=request.user, device=device)
         except ValueError as exc:
