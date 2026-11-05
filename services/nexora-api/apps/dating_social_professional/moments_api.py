@@ -190,15 +190,16 @@ class DatingMomentView(APIView):
                 return Response({"detail": "Media storage is temporarily unavailable."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         try:
-            moment = DatingMoment.objects.create(
-                author=request.user,
-                storage_key=storage_key,
-                media_type=media_type,
-                moderation_status=DatingMoment.ModerationStatus.PENDING,
-                **serializer.validated_data,
-            )
-            if storage_key:
-                DatingMomentMediaJob.objects.create(moment=moment)
+            with transaction.atomic():
+                moment = DatingMoment.objects.create(
+                    author=request.user,
+                    storage_key=storage_key,
+                    media_type=media_type,
+                    moderation_status=DatingMoment.ModerationStatus.PENDING,
+                    **serializer.validated_data,
+                )
+                if storage_key:
+                    DatingMomentMediaJob.objects.create(moment=moment)
         except Exception:
             if reference is not None:
                 try:
