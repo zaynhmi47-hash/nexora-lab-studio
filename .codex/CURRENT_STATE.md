@@ -223,3 +223,6 @@ No application runtime code was changed by this audit. Test execution was not pe
 - Moderator access uses the explicit `DATING_MOMENT_MODERATOR_USER_IDS` settings allowlist. It is empty by default; production operators must configure authorized Nexora user UUIDs before any reviewer can access the queue.
 - This is a human moderation workflow only. Automated AI moderation, background processing, quarantine storage, thumbnail generation, video transcoding, and provider integration are not implemented or claimed.
 - Added tests for pending-feed visibility, pending upload state, allowlisted review, approval metadata, and interaction blocking. Tests and migrations have not been executed in this remote GitHub editing session.
+
+- Mobile Moments now types moderation state and displays a pending-review or rejection message to the author; successful submission explains that the post will not appear publicly until approved.
+- No staff moderation screen is included yet; reviewers use the protected API until the internal moderation UI is implemented.
