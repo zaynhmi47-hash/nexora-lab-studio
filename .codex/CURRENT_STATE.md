@@ -282,3 +282,21 @@ No application runtime code was changed by this audit. Test execution was not pe
 - No automatic warnings, suspensions, bans, or public reputation badges are issued. Unreviewed reports are not scored; blocks are weak signals and the model is private to moderators. Account status enforcement is deliberately deferred until a separately reviewed policy and session/token revocation mechanism exist.
 - Added tests for ignoring unreviewed reports, transparent scoring, caps, and idempotent profile updates. Tests and migration have not been run in this remote GitHub editing session.
 - Apply with python manage.py migrate. Recalculate existing accounts only through the moderator endpoint; no bulk backfill is triggered automatically.
+
+
+## Nexora Identity Security & Device Management foundation (2026-11-05)
+
+- Added identity models IdentityDevice and IdentityLoginEvent with migration identity 0002_device_security.py.
+- Device identifiers are client-generated opaque values; the API stores only a salted HMAC-SHA256 fingerprint keyed by Django SECRET_KEY. Raw identifiers are never persisted or returned. Device metadata is limited to user-provided label and platform; no raw IP, geolocation, advertising ID, or device fingerprint collection is implemented.
+- Added authenticated endpoints under /api/v1/identity/:
+  - GET/POST devices/ (list and register current user's devices)
+  - GET login-history/ (privacy-safe recent activity, capped at 100)
+  - POST devices/<device_id>/trust/ (requires Firebase auth_time within the last 10 minutes)
+  - POST devices/<device_id>/revoke/
+  - POST sessions/revoke-all/
+- Firebase ID token verification now calls verify_id_token(check_revoked=True), so tokens issued before Firebase refresh-token revocation are rejected on subsequent authenticated requests.
+- Firebase Admin adapter already supported revoke_session(); device revocation currently invokes Firebase revoke_refresh_tokens for the linked provider subject. Firebase revocation is account-wide, not per-device: all Firebase sessions for that account must sign in again. This is explicitly reflected in the API response. If provider revocation fails, local device state is not changed.
+- Device registration is an authenticated client action after sign-in. Mobile/web clients still need to generate and securely persist a random opaque device ID, then call POST devices/. Device trust is not automatic and requires recent Firebase reauthentication. The trust flag is currently an audit/registry state, not an MFA bypass or access-control grant.
+- Added tests for hashed identifiers, device registration, ownership-scoped listing, trusted-device reauthentication, revoked token verification, account-wide revocation, and provider failure behavior.
+- Not implemented in this phase: per-device token revocation (not supported by current Firebase token model), MFA enrollment/challenge UX, suspicious-login location analysis, password reset/recovery flows, and client-side device registration UI.
+- Apply migration with python manage.py migrate. Tests and migrations have not been run in the remote GitHub editing session.
