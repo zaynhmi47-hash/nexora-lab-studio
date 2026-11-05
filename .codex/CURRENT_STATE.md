@@ -152,3 +152,13 @@ No application runtime code was changed by this audit. Test execution was not pe
 - Added `app/(app)/moments.tsx` with authenticated feed query, pull-to-refresh, text composer, public/private visibility, optional media URL field, and owner-only delete action.
 - Added `DatingMoment` API client contracts and query mutations; registered Moments in the app tab navigation.
 - Media upload/playback, reactions, comments, cursor pagination, and moderation UX remain follow-up work. Mobile typecheck and backend tests have not been executed in this remote editing session.
+
+
+## Dating Moments — Social Interaction Engine (2026-11-05)
+
+- Added per-account Moment reactions with an active-row uniqueness constraint; repeated like requests are idempotent and unlike uses soft deletion.
+- Added top-level comments and one-level replies. Replies must reference a top-level comment on the same Moment.
+- Read/write interactions require an active account, a visible Moment, no block relationship, and an adult dating profile for creating likes/comments.
+- Comment deletion is owner-only and soft-deleted. Interaction endpoints are rate-limited using the existing dating action throttle.
+- API routes: `POST/DELETE /api/v1/dating/moments/<moment_id>/reactions/` and `GET/POST/DELETE /api/v1/dating/moments/<moment_id>/comments/`.
+- Added focused regression tests for idempotent reactions, soft unlike, comment/reply creation, and cross-Moment reply rejection. Tests/migrations remain unexecuted in the remote editing session.
