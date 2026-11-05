@@ -145,3 +145,10 @@ No application runtime code was changed by this audit. Test execution was not pe
 - Public feed excludes inactive authors and both directions of block relationships. Private moments are visible only to their author.
 - Media is represented by an optional URL in this first slice; upload moderation, reactions, comments, ranking, and media processing remain later phases.
 - Added focused API coverage for create/feed/private visibility/owner-only delete. Tests and migrations have not been executed in this remote editing session.
+
+
+## Dating Moments — mobile first slice (2026-11-05)
+
+- Added `app/(app)/moments.tsx` with authenticated feed query, pull-to-refresh, text composer, public/private visibility, optional media URL field, and owner-only delete action.
+- Added `DatingMoment` API client contracts and query mutations; registered Moments in the app tab navigation.
+- Media upload/playback, reactions, comments, cursor pagination, and moderation UX remain follow-up work. Mobile typecheck and backend tests have not been executed in this remote editing session.
