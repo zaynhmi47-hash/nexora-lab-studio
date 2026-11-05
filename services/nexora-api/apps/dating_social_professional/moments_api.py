@@ -1,13 +1,13 @@
 from datetime import date
 
-from django.db.models import Q
+from django.db.models import Count, Exists, OuterRef, Q
 from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.identity.models import NexoraUser
 
-from .models import DatingBlock, DatingMoment, DatingProfile
+from .models import DatingBlock, DatingMoment, DatingMomentComment, DatingMomentReaction, DatingProfile
 from .api import DatingActiveUserPermission, DatingActionThrottle
 
 
@@ -47,6 +47,9 @@ class DatingMomentView(APIView):
             "visibility": moment.visibility if own else "public",
             "created_at": moment.created_at.isoformat(),
             "is_own": own,
+            "like_count": moment.like_count,
+            "comment_count": moment.comment_count,
+            "is_liked_by_me": moment.is_liked_by_me,
         }
 
     def get(self, request):
@@ -61,15 +64,21 @@ class DatingMomentView(APIView):
         blocked_targets = DatingBlock.objects.filter(
             Q(blocker=request.user) | Q(blocked=request.user)
         ).values_list("blocked_id", flat=True)
-        queryset = DatingMoment.objects.select_related("author").filter(
+        queryset = DatingMoment.objects.select_related("author").annotate(
+            like_count=Count("reactions", filter=Q(reactions__deleted_at__isnull=True), distinct=True),
+            comment_count=Count("comments", filter=Q(comments__deleted_at__isnull=True), distinct=True),
+            is_liked_by_me=Exists(DatingMomentReaction.objects.filter(moment_id=OuterRef("pk"), user=request.user)),
+        ).filter(
             visibility=DatingMoment.Visibility.PUBLIC,
             author__status=NexoraUser.Status.ACTIVE,
             author__dating_profile__discovery_enabled=True,
         ).exclude(author_id__in=blocked_ids).exclude(author_id__in=blocked_targets)
         # The caller's private moments are visible only to their owner.
-        own_private = DatingMoment.objects.filter(
-            author=request.user, visibility=DatingMoment.Visibility.PRIVATE
-        ).select_related("author")
+        own_private = DatingMoment.objects.select_related("author").annotate(
+            like_count=Count("reactions", filter=Q(reactions__deleted_at__isnull=True), distinct=True),
+            comment_count=Count("comments", filter=Q(comments__deleted_at__isnull=True), distinct=True),
+            is_liked_by_me=Exists(DatingMomentReaction.objects.filter(moment_id=OuterRef("pk"), user=request.user)),
+        ).filter(author=request.user, visibility=DatingMoment.Visibility.PRIVATE)
         public_items = list(queryset.order_by("-created_at")[:limit])
         own_items = list(own_private.order_by("-created_at")[:limit])
         merged = sorted(public_items + own_items, key=lambda item: item.created_at, reverse=True)[:limit]
