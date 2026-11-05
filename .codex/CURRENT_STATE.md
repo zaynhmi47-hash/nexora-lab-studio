@@ -226,3 +226,16 @@ No application runtime code was changed by this audit. Test execution was not pe
 
 - Mobile Moments now types moderation state and displays a pending-review or rejection message to the author; successful submission explains that the post will not appear publicly until approved.
 - No staff moderation screen is included yet; reviewers use the protected API until the internal moderation UI is implemented.
+
+
+## Dating Moments — durable media thumbnail worker (2026-11-05)
+
+- Added DatingMoment.thumbnail_key and durable one-to-one DatingMomentMediaJob records with queued, processing, completed, and failed states, attempt count, retry time, worker lease, and error detail.
+- New uploaded media creates a queued job in the same database transaction as its Moment record. Legacy URL-only Moments do not create a processing job.
+- Added DatingMomentMediaProcessor: images are EXIF-oriented, resized to a maximum 640×640, and stored as optimized JPEG thumbnails in dating/moment-thumbnails. Videos use FFmpeg to extract a representative frame at one second; the original video remains unchanged.
+- Added process_pending_media_jobs() and the Django command `python manage.py run_moment_media_worker --limit 20`. The worker claims jobs with row locks, recovers stale processing leases after 15 minutes, retries failures with exponential backoff, and marks jobs failed after the configured attempt limit.
+- Added Pillow to backend requirements. Video thumbnail jobs require FFmpeg installed on the worker image; missing FFmpeg is recorded as a retryable job error. No transcoding or adaptive streaming is included.
+- Thumbnail URLs are generated as short-lived signed storage references by the Moment serializer when a thumbnail exists.
+- Added unit tests for image thumbnail dimensions/format, invalid image rejection, and storage upload/reference persistence.
+- Deployment: install backend requirements, install FFmpeg in the worker container, then schedule `python manage.py run_moment_media_worker --limit 50` periodically (for example, once per minute). Run one worker command instance per scheduler tick; database row locks coordinate concurrent workers on PostgreSQL.
+- Tests and migrations have not been executed in this remote GitHub editing session. Automated AI content moderation is not active; the existing human approval gate remains authoritative.
