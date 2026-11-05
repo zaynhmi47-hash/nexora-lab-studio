@@ -58,6 +58,20 @@ function MomentCard({ item, onDelete }: { item: DatingMoment; onDelete: (id: str
     onError: (error) => Alert.alert('Komentar gagal dikirim', error instanceof Error ? error.message : 'Silakan coba lagi.'),
   });
 
+  const reportMoment = useMutation({
+    mutationFn: (reason: string) => api.reportMoment(item.id, reason),
+    onSuccess: () => Alert.alert('Laporan diterima', 'Terima kasih. Tim keamanan akan meninjau Moment ini.'),
+    onError: (error) => Alert.alert('Laporan gagal', error instanceof Error ? error.message : 'Silakan coba lagi.'),
+  });
+
+  const chooseReportReason = () => Alert.alert('Laporkan Moment', 'Pilih alasan laporan:', [
+    { text: 'Pelecehan', onPress: () => reportMoment.mutate('harassment') },
+    { text: 'Penipuan', onPress: () => reportMoment.mutate('scam') },
+    { text: 'Konten tidak pantas', onPress: () => reportMoment.mutate('inappropriate') },
+    { text: 'Lainnya', onPress: () => reportMoment.mutate('other') },
+    { text: 'Batal', style: 'cancel' },
+  ]);
+
   const removeComment = useMutation({
     mutationFn: (commentId: string) => api.deleteMomentComment(item.id, commentId),
     onSuccess: refreshInteractions,
@@ -109,7 +123,7 @@ function MomentCard({ item, onDelete }: { item: DatingMoment; onDelete: (id: str
           <Text style={styles.authorName}>{item.author.display_name || 'Pengguna Nexora'}</Text>
           <Text style={styles.timestamp}>{formatMomentDate(item.created_at)} · {item.visibility === 'private' ? 'Pribadi' : 'Publik'}</Text>
         </View>
-        {item.is_own ? <Pressable onPress={() => onDelete(item.id)} hitSlop={10}><Text style={styles.deleteText}>Hapus</Text></Pressable> : null}
+        {item.is_own ? <Pressable onPress={() => onDelete(item.id)} hitSlop={10}><Text style={styles.deleteText}>Hapus</Text></Pressable> : <Pressable onPress={chooseReportReason} disabled={reportMoment.isPending} hitSlop={10}><Text style={styles.deleteText}>Laporkan</Text></Pressable>}
       </View>
       <Text style={styles.momentCaption}>{item.caption}</Text>
       {item.media_url ? <Text style={styles.mediaLink} numberOfLines={2}>{item.media_url}</Text> : null}
