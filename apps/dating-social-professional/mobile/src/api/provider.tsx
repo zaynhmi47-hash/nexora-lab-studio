@@ -10,6 +10,7 @@ export type DatingMoment = {
   caption: string;
   media_url: string;
   media_type?: 'image' | 'video' | '';
+  thumbnail_url?: string | null;
   visibility: 'public' | 'private';
   created_at: string;
   is_own: boolean;
