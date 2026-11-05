@@ -270,3 +270,15 @@ No application runtime code was changed by this audit. Test execution was not pe
 - This phase adds casework and auditability, not automatic account sanctions. Any account restriction still requires a separately designed enforcement policy and integration with authentication/session enforcement.
 - Added tests for report triage/audit, appeal submission/review, and ownership restrictions. Tests and migration have not been executed in this remote GitHub editing session.
 - Apply migrations with python manage.py migrate. Configure DATING_MOMENT_MODERATOR_USER_IDS before using moderator endpoints.
+
+
+## Dating Social — Account Protection & Reputation Engine foundation (2026-11-05)
+
+- Added DatingAccountRiskProfile and DatingAccountSecurityEvent with migration 0019_dating_account_risk.py.
+- Risk policy dating-risk-v1 is explainable and conservative: only moderator-resolved reports with status action_taken contribute report points (20 each, maximum 3); one urgent confirmed report adds 10; distinct user blocks contribute 2 each up to 10 blockers; final score is capped at 80.
+- Risk bands: low 0-19, medium 20-39, high 40-64, critical 65-80. Signals and policy version are persisted for review.
+- Added recalculate_account_risk() service, moderator endpoints GET /api/v1/dating/moderation/accounts/risk/ and POST /api/v1/dating/moderation/accounts/<user_id>/risk/recalculate/, plus GET /api/v1/dating/account/security/ for the signed-in account's limited security summary.
+- Trust & Safety overview now counts high and critical risk profiles. Moderator endpoints reuse active-user permission and DATING_MOMENT_MODERATOR_USER_IDS allowlist.
+- No automatic warnings, suspensions, bans, or public reputation badges are issued. Unreviewed reports are not scored; blocks are weak signals and the model is private to moderators. Account status enforcement is deliberately deferred until a separately reviewed policy and session/token revocation mechanism exist.
+- Added tests for ignoring unreviewed reports, transparent scoring, caps, and idempotent profile updates. Tests and migration have not been run in this remote GitHub editing session.
+- Apply with python manage.py migrate. Recalculate existing accounts only through the moderator endpoint; no bulk backfill is triggered automatically.
