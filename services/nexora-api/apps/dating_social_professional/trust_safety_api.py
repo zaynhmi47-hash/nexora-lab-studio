@@ -9,7 +9,7 @@ from apps.identity.models import NexoraUser
 
 from .api import DatingActiveUserPermission
 from .moderation_api import DatingMomentModeratorPermission
-from .models import DatingModerationAppeal, DatingMoment, DatingMomentModerationJob, DatingReport, DatingSafetyAuditEvent
+from .models import DatingAccountRiskProfile, DatingModerationAppeal, DatingMoment, DatingMomentModerationJob, DatingReport, DatingSafetyAuditEvent
 
 
 class ReportReviewSerializer(serializers.Serializer):
@@ -230,6 +230,16 @@ class TrustSafetyOverviewView(APIView):
             "appeals": {
                 "open": DatingModerationAppeal.objects.filter(
                     status=DatingModerationAppeal.Status.OPEN,
+                    deleted_at__isnull=True,
+                ).count(),
+            },
+            "account_risk": {
+                "high": DatingAccountRiskProfile.objects.filter(
+                    level=DatingAccountRiskProfile.Level.HIGH,
+                    deleted_at__isnull=True,
+                ).count(),
+                "critical": DatingAccountRiskProfile.objects.filter(
+                    level=DatingAccountRiskProfile.Level.CRITICAL,
                     deleted_at__isnull=True,
                 ).count(),
             },
