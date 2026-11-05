@@ -48,6 +48,8 @@ def register_device(*, user, device_id, display_name="", platform="other"):
             device.platform = platform
         device.last_seen_at = now
         device.save(update_fields=["display_name", "platform", "last_seen_at", "updated_at"])
+    user.last_login_at = now
+    user.save(update_fields=["last_login_at", "updated_at"])
     IdentityLoginEvent.objects.create(
         user=user,
         device=device,
