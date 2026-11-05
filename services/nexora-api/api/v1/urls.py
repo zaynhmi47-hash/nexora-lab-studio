@@ -25,6 +25,7 @@ urlpatterns = [
     path("health/", HealthView.as_view(), name="health"),
     path("health/live/", LivenessView.as_view(), name="health-live"),
     path("health/ready/", ReadinessView.as_view(), name="health-ready"),
+    path("identity/", include("apps.identity.api.urls")),
     path("identity/me/", CurrentIdentityView.as_view(), name="identity-me"),
     path("app-state/", CurrentAppStateView.as_view(), name="app-state"),
     path("learning/", include("apps.learning.urls")),
