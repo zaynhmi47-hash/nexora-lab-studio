@@ -1,5 +1,6 @@
 from django.urls import path
 
+from .account_risk_api import MyAccountSecurityView, TrustSafetyAccountRiskView
 from .moments_api import DatingMomentView
 from .moderation_api import DatingMomentModerationQueueView
 from .trust_safety_api import TrustSafetyReportsView, DatingMomentAppealView, TrustSafetyAppealsView, TrustSafetyOverviewView, TrustSafetyAuditView
@@ -12,6 +13,9 @@ urlpatterns = [
     path("moderation/moments/<uuid:moment_id>/", DatingMomentModerationQueueView.as_view(), name="dating-moment-moderation-detail"),
     path("moderation/appeals/", TrustSafetyAppealsView.as_view(), name="dating-moderation-appeals"),
     path("moderation/appeals/<uuid:appeal_id>/", TrustSafetyAppealsView.as_view(), name="dating-moderation-appeal-detail"),
+    path("account/security/", MyAccountSecurityView.as_view(), name="dating-account-security"),
+    path("moderation/accounts/risk/", TrustSafetyAccountRiskView.as_view(), name="dating-account-risk-list"),
+    path("moderation/accounts/<uuid:user_id>/risk/recalculate/", TrustSafetyAccountRiskView.as_view(), name="dating-account-risk-recalculate"),
     path("moderation/overview/", TrustSafetyOverviewView.as_view(), name="dating-trust-safety-overview"),
     path("moderation/audit/", TrustSafetyAuditView.as_view(), name="dating-trust-safety-audit"),
     path("moderation/reports/", TrustSafetyReportsView.as_view(), name="dating-trust-safety-reports"),
