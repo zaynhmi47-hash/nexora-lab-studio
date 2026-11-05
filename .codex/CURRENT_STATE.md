@@ -201,3 +201,13 @@ No application runtime code was changed by this audit. Test execution was not pe
 - Mobile composer now uses Expo Image Picker for photo/video selection and submits multipart uploads; feed renders image media and a video media card.
 - Added backend tests for successful image storage and MIME/signature mismatch rejection.
 - Not yet implemented/verified: video transcoding, thumbnail generation, playback UI, automated content moderation, background orphan cleanup, plan-based quotas, push notifications, and local test/typecheck/migration execution. These remain explicit follow-up work; do not treat this media slice as fully production-verified.
+
+
+## Dating Moments — Video Experience Engine (2026-11-05)
+
+- Added SDK 57-compatible `expo-video ~57.0.5` for native inline playback of uploaded Moment videos. Players loop, use local video caching, and start muted; native playback controls remain available.
+- Added SDK 57-compatible `expo-image-manipulator ~57.0.21`; selected photos are resized to a maximum width of 1600 px and JPEG-compressed at 0.78 quality before upload.
+- Mobile picker rejects videos over 60 seconds or over 100 MB before upload. Server continues enforcing the 100 MB video limit.
+- Corrected backend binary signature validation to compare real JPEG/PNG/WebM byte sequences. Updated the valid JPEG upload test fixture to use actual signature bytes.
+- Not yet implemented: server-side video transcoding/adaptive streaming, persistent thumbnail generation and storage, automated content moderation/quarantine, visibility-aware autoplay/pause for scrolling feeds, video metadata verification on server, and device-level runtime tests. The current player is user-initiated with native controls; it is not an autoplay Reels feed.
+- Dependency versions are aligned to Expo SDK 57 per the Expo SDK 57 reference. A new native development build is required after adding native Expo modules; run `pnpm exec expo install --check` (or `npx expo install --check`) and the mobile typecheck in Codespaces before release.
