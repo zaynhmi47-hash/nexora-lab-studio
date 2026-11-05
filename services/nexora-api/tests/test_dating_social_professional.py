@@ -59,3 +59,26 @@ def test_user_cannot_swipe_on_own_profile():
         DatingSwipeService.record(
             actor=actor, target_profile=profile, action=DatingSwipe.Action.LIKE
         )
+
+@pytest.mark.django_db
+def test_block_can_be_listed_and_removed_without_reactivating_old_match():
+    from apps.dating_social_professional.models import DatingBlock, DatingMatch
+    from apps.dating_social_professional.services import DatingSafetyService
+
+    actor = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, display_name="Actor")
+    target = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, display_name="Target")
+    first, second = sorted((actor.id, target.id), key=str)
+    match = DatingMatch.objects.create(user_a_id=first, user_b_id=second, active=True)
+
+    DatingSafetyService.block(actor=actor, target=target)
+    match.refresh_from_db()
+    assert match.active is False
+    assert DatingBlock.objects.filter(blocker=actor, blocked=target).exists()
+
+    removed = DatingSafetyService.unblock(actor=actor, target_id=target.id)
+    assert removed is True
+    assert not DatingBlock.objects.filter(blocker=actor, blocked=target).exists()
+    match.refresh_from_db()
+    assert match.active is False
+
+    assert DatingSafetyService.unblock(actor=actor, target_id=target.id) is False
