@@ -239,3 +239,5 @@ No application runtime code was changed by this audit. Test execution was not pe
 - Added unit tests for image thumbnail dimensions/format, invalid image rejection, and storage upload/reference persistence.
 - Deployment: install backend requirements, install FFmpeg in the worker container, then schedule `python manage.py run_moment_media_worker --limit 50` periodically (for example, once per minute). Run one worker command instance per scheduler tick; database row locks coordinate concurrent workers on PostgreSQL.
 - Tests and migrations have not been executed in this remote GitHub editing session. Automated AI content moderation is not active; the existing human approval gate remains authoritative.
+
+- Mobile Moments now accepts the optional `thumbnail_url` field and renders generated video thumbnails above the video player; composer guidance explains thumbnail processing and the human review gate.
