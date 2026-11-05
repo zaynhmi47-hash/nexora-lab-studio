@@ -253,3 +253,20 @@ No application runtime code was changed by this audit. Test execution was not pe
 - The human review queue now includes the latest AI assessment details. Reviewer decision fields on the Moment remain the authoritative publication state.
 - Added tests for enqueueing, provider recommendations, provider failure handling, and the invariant that AI cannot publish or reject content. Tests and migrations have not been executed in this remote GitHub editing session.
 - Configure a real adapter factory and its secret references in the deployment environment before scheduling the moderation worker. Review provider retention/training terms and data-processing region before sending user-generated content to any external provider. Do not put API keys in source control.
+
+
+## Dating Social — Nexora Trust & Safety Center (2026-11-05)
+
+- Extended DatingReport with lifecycle states (open, investigating, action_taken, dismissed), priorities (low, normal, high, urgent), assignment, reviewer, review timestamp, and resolution note. Existing reports migrate to open / normal.
+- Added DatingModerationAppeal (one appeal per rejected Moment) and DatingSafetyAuditEvent for report creation/triage, human Moment decisions, and appeal decisions. Report creation and its audit event are atomic.
+- Added allowlisted moderator APIs:
+  - GET /api/v1/dating/moderation/overview/ — report, pending Moment, failed AI assessment, and appeal counts.
+  - GET /api/v1/dating/moderation/reports/ and PATCH /api/v1/dating/moderation/reports/<report_id>/ — report triage, priority, assignment, and resolution. Queue ordering is urgent, high, normal, then low.
+  - GET /api/v1/dating/moderation/appeals/ and PATCH /api/v1/dating/moderation/appeals/<appeal_id>/ — second-level human appeal review.
+  - GET /api/v1/dating/moderation/audit/ — moderator-only audit feed.
+  - POST /api/v1/dating/moments/<moment_id>/appeal/ and GET /api/v1/dating/my-appeals/ — author appeal submission and status tracking.
+- Accepting an appeal changes the Moment to approved and records the reviewing moderator; rejecting an appeal leaves the Moment rejected. Only the author of a rejected Moment can appeal, and an appeal can be submitted once.
+- Moderator routes use the existing DATING_MOMENT_MODERATOR_USER_IDS allowlist and active-account permission. No public API exposes report or appeal queues.
+- This phase adds casework and auditability, not automatic account sanctions. Any account restriction still requires a separately designed enforcement policy and integration with authentication/session enforcement.
+- Added tests for report triage/audit, appeal submission/review, and ownership restrictions. Tests and migration have not been executed in this remote GitHub editing session.
+- Apply migrations with python manage.py migrate. Configure DATING_MOMENT_MODERATOR_USER_IDS before using moderator endpoints.
