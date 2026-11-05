@@ -1,11 +1,14 @@
 from django.urls import path
 
 from .moments_api import DatingMomentView
+from .moderation_api import DatingMomentModerationQueueView
 from .interactions_api import DatingMomentCommentsView, DatingMomentReactionView, DatingMomentReportView
 from .api import ConversationPresenceView, NotificationPreferencesView, PushTokenView, BlockView, ConversationBlockView, ConversationDetailView, ConversationMessagesView, ConversationReadView, ConversationReportView, ConversationView, DiscoveryView, MatchLifecycleView, ProfileDetailView, MatchesView, NotificationView, MeProfileView, ProfileMediaView, ReportView, SwipeView
 
 urlpatterns = [
     path("moments/", DatingMomentView.as_view(), name="dating-moments"),
+    path("moderation/moments/", DatingMomentModerationQueueView.as_view(), name="dating-moment-moderation-queue"),
+    path("moderation/moments/<uuid:moment_id>/", DatingMomentModerationQueueView.as_view(), name="dating-moment-moderation-detail"),
     path("moments/<uuid:moment_id>/reactions/", DatingMomentReactionView.as_view(), name="dating-moment-reactions"),
     path("moments/<uuid:moment_id>/comments/", DatingMomentCommentsView.as_view(), name="dating-moment-comments"),
     path("moments/<uuid:moment_id>/report/", DatingMomentReportView.as_view(), name="dating-moment-report"),
