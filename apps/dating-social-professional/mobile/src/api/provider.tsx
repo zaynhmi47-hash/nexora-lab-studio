@@ -47,6 +47,7 @@ class DatingApi {
   getMomentComments(momentId: string) { return this.request<{ items: DatingMomentComment[] }>('/api/v1/dating/moments/' + momentId + '/comments/'); }
   createMomentComment(momentId: string, body: string, parentId?: string) { return this.request<{ id: string; body: string; moment_id: string; parent_id: string | null; created_at: string }>('/api/v1/dating/moments/' + momentId + '/comments/', { method: 'POST', body: JSON.stringify({ body, ...(parentId ? { parent_id: parentId } : {}) }) }); }
   deleteMomentComment(momentId: string, commentId: string) { return this.request<{ status: 'deleted' }>('/api/v1/dating/moments/' + momentId + '/comments/?comment_id=' + encodeURIComponent(commentId), { method: 'DELETE' }); }
+  reportMoment(momentId: string, reason: string, details = '') { return this.request<{ status: 'reported'; report_id: string }>('/api/v1/dating/moments/' + momentId + '/report/', { method: 'POST', body: JSON.stringify({ reason, details }) }); }
   async getDiscovery(filters: Record<string, string> = {}) {
     const normalized = { ...filters };
     if (normalized.distance && !normalized.max_distance_km) {
