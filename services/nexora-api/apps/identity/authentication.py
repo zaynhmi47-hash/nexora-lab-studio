@@ -29,7 +29,8 @@ class FirebaseIdentityAuthentication(BaseAuthentication):
         token = parts[1].decode("utf-8", errors="strict")
         provider = self.provider or FirebaseProviderRegistry().identity()
         try:
-            user = IdentityService(provider).authenticate_token(token)
+            device_id = request.META.get("HTTP_X_NEXORA_DEVICE_ID")
+            user = IdentityService(provider).authenticate_token(token, device_id=device_id)
         except Exception as exc:
             raise AuthenticationFailed("Authentication credentials were not accepted.") from exc
         return user, None
