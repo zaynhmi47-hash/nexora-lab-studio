@@ -95,5 +95,5 @@ class DatingMomentView(APIView):
         moment = DatingMoment.objects.filter(id=moment_id, author=request.user).first()
         if not moment:
             return Response({"detail": "Moment not found."}, status=status.HTTP_404_NOT_FOUND)
-        moment.delete()
+        moment.soft_delete()
         return Response({"status": "deleted"})
