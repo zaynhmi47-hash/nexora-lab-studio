@@ -5,7 +5,7 @@ from django.test import override_settings
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.dating_social_professional.moments_api import DatingMomentView
-from apps.dating_social_professional.models import DatingMoment, DatingProfile
+from apps.dating_social_professional.models import DatingMoment, DatingMomentModerationJob, DatingProfile
 from apps.identity.models import NexoraUser
 
 
@@ -24,6 +24,7 @@ def test_moment_create_feed_private_visibility_and_owner_delete():
     moment_id = created.data["id"]
     moment = DatingMoment.objects.get(id=moment_id)
     assert moment.moderation_status == DatingMoment.ModerationStatus.PENDING
+    assert DatingMomentModerationJob.objects.filter(moment=moment, status="queued").exists()
 
     feed_request = factory.get("/api/v1/dating/moments/")
     force_authenticate(feed_request, user=reader)
