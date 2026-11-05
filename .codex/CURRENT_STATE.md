@@ -162,3 +162,10 @@ No application runtime code was changed by this audit. Test execution was not pe
 - Comment deletion is owner-only and soft-deleted. Interaction endpoints are rate-limited using the existing dating action throttle.
 - API routes: `POST/DELETE /api/v1/dating/moments/<moment_id>/reactions/` and `GET/POST/DELETE /api/v1/dating/moments/<moment_id>/comments/`.
 - Added focused regression tests for idempotent reactions, soft unlike, comment/reply creation, and cross-Moment reply rejection. Tests/migrations remain unexecuted in the remote editing session.
+
+
+## Dating Moments — mobile interaction API contract (2026-11-05)
+
+- Added typed mobile API methods for like/unlike and comment list/create/delete, alongside the existing Moments feed/create/delete methods.
+- Feed contract now includes `like_count`, `comment_count`, and `is_liked_by_me`; the backend computes these using filtered aggregates and an existence query.
+- The Moments screen has not yet been updated with visible like/comment controls or thread UI. Mobile typecheck and backend tests/migrations remain unexecuted.
