@@ -176,6 +176,9 @@ def test_verified_firebase_login_is_recorded_once_per_auth_time_and_linked_to_de
     user = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE)
     raw_device_id = "login-event-device-identifier"
     device = register_device(user=user, device_id=raw_device_id)
+    IdentityProviderAccount.objects.create(
+        user=user, provider="firebase", provider_subject="firebase-login-history-user"
+    )
     provider = Mock()
     provider.verify_token.return_value = IdentityClaims(
         provider="firebase",
