@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.db import migrations, models
 import django.db.models.deletion
 
@@ -6,7 +5,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
     dependencies = [
         ("dating_social_professional", "0014_dating_moment_media_storage"),
-        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ("identity", "0001_initial"),
     ]
 
     operations = [
@@ -33,7 +32,7 @@ class Migration(migrations.Migration):
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 related_name="dating_moments_reviewed",
-                to=settings.AUTH_USER_MODEL,
+                to="identity.nexorauser",
             ),
         ),
         migrations.AddField(
