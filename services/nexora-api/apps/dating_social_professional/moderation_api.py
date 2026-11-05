@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .api import DatingActiveUserPermission
-from .models import DatingMoment, DatingMomentModerationJob
+from .models import DatingMoment, DatingMomentModerationJob, DatingSafetyAuditEvent
 from .moments_api import DatingMomentView
 
 
@@ -67,6 +67,7 @@ class DatingMomentModerationQueueView(APIView):
 
         serializer = DatingMomentModerationInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        previous_status = moment.moderation_status
         moment.moderation_status = serializer.validated_data["status"]
         moment.moderation_reason = serializer.validated_data.get("reason", "").strip()
         moment.moderation_reviewed_at = timezone.now()
@@ -75,6 +76,11 @@ class DatingMomentModerationQueueView(APIView):
             "moderation_status", "moderation_reason",
             "moderation_reviewed_at", "moderation_reviewed_by", "updated_at",
         ])
+        DatingSafetyAuditEvent.objects.create(
+            actor=request.user, moment=moment, action="moment_moderated",
+            previous_state=previous_status, new_state=moment.moderation_status,
+            note=moment.moderation_reason,
+        )
         return Response({
             "id": str(moment.id),
             "moderation_status": moment.moderation_status,
