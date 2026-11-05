@@ -1,5 +1,4 @@
 from django.db import transaction
-from django.db.models import Count
 from django.utils import timezone
 
 from .models import (
