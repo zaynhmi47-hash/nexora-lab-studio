@@ -140,6 +140,7 @@ def test_moment_upload_stores_validated_image_and_returns_signed_url():
     assert response.status_code == 201
     moment = DatingMoment.objects.get(id=response.data["id"])
     assert moment.media_type == "image"
+    assert moment.moderation_status == DatingMoment.ModerationStatus.PENDING
     assert moment.storage_key.startswith(f"{user.id}/")
     assert response.data["media_url"] == "https://media.example/signed.jpg"
     assert storage.upload_request.content_type == "image/jpeg"
