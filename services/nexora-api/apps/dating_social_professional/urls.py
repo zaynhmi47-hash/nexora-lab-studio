@@ -2,7 +2,7 @@ from django.urls import path
 
 from .moments_api import DatingMomentView
 from .moderation_api import DatingMomentModerationQueueView
-from .trust_safety_api import TrustSafetyReportsView, DatingMomentAppealView, TrustSafetyAppealsView
+from .trust_safety_api import TrustSafetyReportsView, DatingMomentAppealView, TrustSafetyAppealsView, TrustSafetyOverviewView, TrustSafetyAuditView
 from .interactions_api import DatingMomentCommentsView, DatingMomentReactionView, DatingMomentReportView
 from .api import ConversationPresenceView, NotificationPreferencesView, PushTokenView, BlockView, ConversationBlockView, ConversationDetailView, ConversationMessagesView, ConversationReadView, ConversationReportView, ConversationView, DiscoveryView, MatchLifecycleView, ProfileDetailView, MatchesView, NotificationView, MeProfileView, ProfileMediaView, ReportView, SwipeView
 
@@ -12,6 +12,8 @@ urlpatterns = [
     path("moderation/moments/<uuid:moment_id>/", DatingMomentModerationQueueView.as_view(), name="dating-moment-moderation-detail"),
     path("moderation/appeals/", TrustSafetyAppealsView.as_view(), name="dating-moderation-appeals"),
     path("moderation/appeals/<uuid:appeal_id>/", TrustSafetyAppealsView.as_view(), name="dating-moderation-appeal-detail"),
+    path("moderation/overview/", TrustSafetyOverviewView.as_view(), name="dating-trust-safety-overview"),
+    path("moderation/audit/", TrustSafetyAuditView.as_view(), name="dating-trust-safety-audit"),
     path("moderation/reports/", TrustSafetyReportsView.as_view(), name="dating-trust-safety-reports"),
     path("moderation/reports/<uuid:report_id>/", TrustSafetyReportsView.as_view(), name="dating-trust-safety-report-detail"),
     path("moments/<uuid:moment_id>/appeal/", DatingMomentAppealView.as_view(), name="dating-moment-appeal"),
