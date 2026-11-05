@@ -128,7 +128,11 @@ function MomentCard({ item, onDelete }: { item: DatingMoment; onDelete: (id: str
         {item.is_own ? <Pressable onPress={() => onDelete(item.id)} hitSlop={10}><Text style={styles.deleteText}>Hapus</Text></Pressable> : <Pressable onPress={chooseReportReason} disabled={reportMoment.isPending} hitSlop={10}><Text style={styles.deleteText}>Laporkan</Text></Pressable>}
       </View>
       <Text style={styles.momentCaption}>{item.caption}</Text>
-      {item.media_url ? <Text style={styles.mediaLink} numberOfLines={2}>{item.media_url}</Text> : null}
+      {item.media_url && item.media_type === 'image' ? (
+        <Image source={{ uri: item.media_url }} style={styles.feedMediaImage} resizeMode="cover" accessibilityLabel="Media Moment" />
+      ) : item.media_url && item.media_type === 'video' ? (
+        <View style={styles.feedVideoCard}><Text style={styles.feedVideoLabel}>VIDEO MOMENT</Text><Text style={styles.feedVideoUrl} numberOfLines={1}>{item.media_url}</Text></View>
+      ) : item.media_url ? <Text style={styles.mediaLink} numberOfLines={2}>{item.media_url}</Text> : null}
 
       <View style={styles.interactionBar}>
         <Pressable
@@ -439,6 +443,10 @@ const styles = StyleSheet.create({
   deleteText: { color: '#B42318', fontSize: 12, fontWeight: '700' },
   momentCaption: { color: '#303441', fontSize: 15, lineHeight: 23 },
   mediaLink: { color: '#5D49B8', fontSize: 12, lineHeight: 17 },
+  feedMediaImage: { width: '100%', height: 260, borderRadius: 14, backgroundColor: '#F1F1F5' },
+  feedVideoCard: { height: 150, borderRadius: 14, backgroundColor: '#242735', alignItems: 'center', justifyContent: 'center', padding: 16, gap: 8 },
+  feedVideoLabel: { color: '#FFFFFF', fontSize: 14, fontWeight: '900', letterSpacing: 1 },
+  feedVideoUrl: { color: '#D8D4EA', fontSize: 10 },
   interactionBar: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#F0F0F4', paddingTop: 11, gap: 12 },
   interactionButton: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 5, paddingRight: 12 },
   interactionText: { color: '#666D79', fontSize: 13, fontWeight: '700' },
