@@ -103,11 +103,11 @@ class DatingMomentView(APIView):
         head = upload.read(16)
         upload.seek(0)
         valid_signature = (
-            (content_type == "image/jpeg" and head.startswith(b"\\xff\\xd8\\xff"))
-            or (content_type == "image/png" and head.startswith(b"\\x89PNG\\r\\n\\x1a\\n"))
+            (content_type == "image/jpeg" and head.startswith(bytes([0xFF, 0xD8, 0xFF])))
+            or (content_type == "image/png" and head.startswith(bytes([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])))
             or (content_type == "image/webp" and len(head) >= 12 and head[:4] == b"RIFF" and head[8:12] == b"WEBP")
             or (content_type in {"video/mp4", "video/quicktime"} and len(head) >= 8 and head[4:8] == b"ftyp")
-            or (content_type == "video/webm" and head.startswith(b"\\x1a\\x45\\xdf\\xa3"))
+            or (content_type == "video/webm" and head.startswith(bytes([0x1A, 0x45, 0xDF, 0xA3])))
         )
         if not valid_signature:
             raise serializers.ValidationError({"file": "The uploaded file does not match its declared media format."})
