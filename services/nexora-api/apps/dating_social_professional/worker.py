@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from infrastructure.firebase.registry import FirebaseProviderRegistry
@@ -19,7 +20,11 @@ def process_pending_media_jobs(*, limit=20, max_attempts=5):
         with transaction.atomic():
             job = (
                 DatingMomentMediaJob.objects.select_for_update(skip_locked=True)
-                .filter(status=DatingMomentMediaJob.Status.QUEUED, available_at__lte=timezone.now(), deleted_at__isnull=True)
+                .filter(
+                    Q(status=DatingMomentMediaJob.Status.QUEUED, available_at__lte=timezone.now())
+                    | Q(status=DatingMomentMediaJob.Status.PROCESSING, locked_at__lt=timezone.now() - timedelta(minutes=15)),
+                    deleted_at__isnull=True,
+                )
                 .order_by("available_at", "created_at")
                 .first()
             )
