@@ -9,7 +9,7 @@ from apps.identity.models import NexoraUser
 
 from .api import DatingActiveUserPermission
 from .moderation_api import DatingMomentModeratorPermission
-from .models import DatingModerationAppeal, DatingMoment, DatingReport, DatingSafetyAuditEvent
+from .models import DatingModerationAppeal, DatingMoment, DatingMomentModerationJob, DatingReport, DatingSafetyAuditEvent
 
 
 class ReportReviewSerializer(serializers.Serializer):
@@ -200,3 +200,62 @@ class TrustSafetyAppealsView(APIView):
             "moment_moderation_status": moment.moderation_status,
             "reviewed_at": appeal.reviewed_at.isoformat(),
         })
+
+
+
+class TrustSafetyOverviewView(APIView):
+    permission_classes = [DatingActiveUserPermission, DatingMomentModeratorPermission]
+
+    def get(self, request):
+        return Response({
+            "reports": {
+                "open": DatingReport.objects.filter(status=DatingReport.Status.OPEN, deleted_at__isnull=True).count(),
+                "investigating": DatingReport.objects.filter(status=DatingReport.Status.INVESTIGATING, deleted_at__isnull=True).count(),
+                "urgent": DatingReport.objects.filter(
+                    priority=DatingReport.Priority.URGENT,
+                    status__in=[DatingReport.Status.OPEN, DatingReport.Status.INVESTIGATING],
+                    deleted_at__isnull=True,
+                ).count(),
+            },
+            "moments": {
+                "pending_review": DatingMoment.objects.filter(
+                    moderation_status=DatingMoment.ModerationStatus.PENDING,
+                    deleted_at__isnull=True,
+                ).count(),
+                "ai_assessment_failed": DatingMomentModerationJob.objects.filter(
+                    status=DatingMomentModerationJob.Status.FAILED,
+                    deleted_at__isnull=True,
+                ).count(),
+            },
+            "appeals": {
+                "open": DatingModerationAppeal.objects.filter(
+                    status=DatingModerationAppeal.Status.OPEN,
+                    deleted_at__isnull=True,
+                ).count(),
+            },
+        })
+
+
+class TrustSafetyAuditView(APIView):
+    permission_classes = [DatingActiveUserPermission, DatingMomentModeratorPermission]
+
+    def get(self, request):
+        try:
+            limit = min(100, max(1, int(request.query_params.get("limit", "50"))))
+        except (TypeError, ValueError):
+            return Response({"detail": "limit must be an integer."}, status=status.HTTP_400_BAD_REQUEST)
+        events = DatingSafetyAuditEvent.objects.filter(
+            deleted_at__isnull=True
+        ).select_related("actor").order_by("-created_at")[:limit]
+        return Response({"items": [{
+            "id": str(event.id),
+            "actor_id": str(event.actor_id),
+            "action": event.action,
+            "report_id": str(event.report_id) if event.report_id else None,
+            "appeal_id": str(event.appeal_id) if event.appeal_id else None,
+            "moment_id": str(event.moment_id) if event.moment_id else None,
+            "previous_state": event.previous_state,
+            "new_state": event.new_state,
+            "note": event.note,
+            "created_at": event.created_at.isoformat(),
+        } for event in events]})
