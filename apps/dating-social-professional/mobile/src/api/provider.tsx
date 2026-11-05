@@ -16,6 +16,8 @@ export type DatingMoment = {
   like_count: number;
   comment_count: number;
   is_liked_by_me: boolean;
+  moderation_status?: 'pending' | 'approved' | 'rejected';
+  moderation_reason?: string;
 };
 
 export type DatingMomentComment = { id: string; author: { id: string; display_name: string }; body: string; created_at: string; replies: DatingMomentComment[] };
