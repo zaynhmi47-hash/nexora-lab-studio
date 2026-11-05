@@ -145,3 +145,23 @@ class IdentitySessionRevocationView(APIView):
             "scope": "all_firebase_sessions",
             "message": "Firebase refresh tokens for this account were revoked. Sign in again on devices that should remain active.",
         })
+
+class IdentityLoginHistoryView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        try:
+            limit = min(100, max(1, int(request.query_params.get("limit", "30"))))
+        except (TypeError, ValueError):
+            return Response({"detail": "limit must be an integer."}, status=status.HTTP_400_BAD_REQUEST)
+        events = IdentityLoginEvent.objects.filter(
+            user=request.user, deleted_at__isnull=True
+        ).select_related("device").order_by("-occurred_at")[:limit]
+        return Response({"items": [{
+            "event_type": event.event_type,
+            "occurred_at": event.occurred_at.isoformat(),
+            "device": {
+                "display_name": event.device.display_name,
+                "platform": event.device.platform,
+            } if event.device else None,
+        } for event in events]})
