@@ -81,6 +81,7 @@ class DatingMomentView(APIView):
             "like_count": getattr(moment, "like_count", 0),
             "comment_count": getattr(moment, "comment_count", 0),
             "is_liked_by_me": getattr(moment, "is_liked_by_me", False),
+            **({"moderation_status": moment.moderation_status, "moderation_reason": moment.moderation_reason} if own else {}),
         }
 
     @staticmethod
@@ -128,16 +129,17 @@ class DatingMomentView(APIView):
             is_liked_by_me=Exists(DatingMomentReaction.objects.filter(moment_id=OuterRef("pk"), user=request.user, deleted_at__isnull=True)),
         ).filter(
             visibility=DatingMoment.Visibility.PUBLIC,
+            moderation_status=DatingMoment.ModerationStatus.APPROVED,
             author__status=NexoraUser.Status.ACTIVE,
             author__dating_profile__discovery_enabled=True,
         ).exclude(author_id__in=blocked_ids).exclude(author_id__in=blocked_targets)
-        own_private = DatingMoment.objects.select_related("author", "author__dating_profile").annotate(
+        own_items = DatingMoment.objects.select_related("author", "author__dating_profile").annotate(
             like_count=Count("reactions", filter=Q(reactions__deleted_at__isnull=True), distinct=True),
             comment_count=Count("comments", filter=Q(comments__deleted_at__isnull=True), distinct=True),
             is_liked_by_me=Exists(DatingMomentReaction.objects.filter(moment_id=OuterRef("pk"), user=request.user, deleted_at__isnull=True)),
-        ).filter(author=request.user, visibility=DatingMoment.Visibility.PRIVATE)
-        public_items = list(queryset.order_by("-created_at")[:limit])
-        own_items = list(own_private.order_by("-created_at")[:limit])
+        ).filter(author=request.user)
+        public_items = list(queryset.exclude(author=request.user).order_by("-created_at")[:limit])
+        own_items = list(own_items.order_by("-created_at")[:limit])
         merged = sorted(public_items + own_items, key=lambda item: item.created_at, reverse=True)[:limit]
         return Response({"items": [self.serialize(item, own=item.author_id == request.user.id) for item in merged]})
 
@@ -181,6 +183,7 @@ class DatingMomentView(APIView):
                 author=request.user,
                 storage_key=storage_key,
                 media_type=media_type,
+                moderation_status=DatingMoment.ModerationStatus.PENDING,
                 **serializer.validated_data,
             )
         except Exception:
