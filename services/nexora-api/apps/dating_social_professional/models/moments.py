@@ -13,6 +13,11 @@ class DatingMoment(AuditableBaseModel):
         IMAGE = "image", "Image"
         VIDEO = "video", "Video"
 
+    class ModerationStatus(models.TextChoices):
+        PENDING = "pending", "Pending review"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
     author = models.ForeignKey(NexoraUser, on_delete=models.PROTECT, related_name="dating_moments")
     caption = models.TextField(max_length=2000)
     # media_url is retained for legacy/external media references.
@@ -20,6 +25,10 @@ class DatingMoment(AuditableBaseModel):
     storage_key = models.CharField(max_length=512, blank=True)
     media_type = models.CharField(max_length=16, choices=MediaType.choices, blank=True)
     visibility = models.CharField(max_length=16, choices=Visibility.choices, default=Visibility.PUBLIC, db_index=True)
+    moderation_status = models.CharField(max_length=16, choices=ModerationStatus.choices, default=ModerationStatus.APPROVED, db_index=True)
+    moderation_reviewed_at = models.DateTimeField(null=True, blank=True)
+    moderation_reviewed_by = models.ForeignKey(NexoraUser, on_delete=models.SET_NULL, null=True, blank=True, related_name="dating_moments_reviewed")
+    moderation_reason = models.CharField(max_length=500, blank=True)
 
     class Meta:
         db_table = "dating_moments"
