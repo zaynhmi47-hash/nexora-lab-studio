@@ -9,6 +9,7 @@ export type DatingMoment = {
   author: { id: string; display_name: string; photo_url: string };
   caption: string;
   media_url: string;
+  media_type?: 'image' | 'video' | '';
   visibility: 'public' | 'private';
   created_at: string;
   is_own: boolean;
@@ -40,7 +41,7 @@ class DatingApi {
     return response.json() as Promise<T>;
   }
   getMoments() { return this.request<{ items: DatingMoment[] }>('/api/v1/dating/moments/'); }
-  createMoment(payload: { caption: string; media_url?: string; visibility: 'public' | 'private' }) { return this.request<DatingMoment>('/api/v1/dating/moments/', { method: 'POST', body: JSON.stringify(payload) }); }
+  createMoment(payload: { caption: string; media_url?: string; visibility: 'public' | 'private'; file?: { uri: string; name: string; type: string } }) { if (payload.file) { const form = new FormData(); form.append('caption', payload.caption); form.append('visibility', payload.visibility); form.append('file', payload.file as unknown as Blob); return this.request<DatingMoment>('/api/v1/dating/moments/', { method: 'POST', body: form }); } return this.request<DatingMoment>('/api/v1/dating/moments/', { method: 'POST', body: JSON.stringify({ caption: payload.caption, media_url: payload.media_url, visibility: payload.visibility }) }); }
   deleteMoment(momentId: string) { return this.request<{ status: 'deleted' }>('/api/v1/dating/moments/?moment_id=' + encodeURIComponent(momentId), { method: 'DELETE' }); }
   likeMoment(momentId: string) { return this.request<{ status: 'liked'; reaction_id: string }>('/api/v1/dating/moments/' + momentId + '/reactions/', { method: 'POST' }); }
   unlikeMoment(momentId: string) { return this.request<{ status: 'unliked' }>('/api/v1/dating/moments/' + momentId + '/reactions/', { method: 'DELETE' }); }
