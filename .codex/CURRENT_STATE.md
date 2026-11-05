@@ -177,3 +177,14 @@ No application runtime code was changed by this audit. Test execution was not pe
 - Added pending, loading, empty, retry, and error handling for interactions. Feed and thread queries are invalidated after successful writes to keep counts and thread content fresh.
 - Comment deletion and reporting controls are intentionally not exposed in this UI slice; moderation/ownership mapping is a follow-up.
 - Mobile typecheck and backend test/migration execution have not been performed in this remote GitHub editing session.
+
+
+## Dating Moments — social notifications and reporting (2026-11-05)
+
+- Added the `social` notification type and migration `0013_notification_social_type`.
+- A newly-created like or comment now creates an in-app notification for the Moment owner; repeated idempotent likes do not create duplicate notifications, and self-interactions do not notify the author.
+- Notifications include structured `momentId`, `actorId`, action, and optional `commentId` metadata. The existing notification feed can display these records.
+- Added `POST /api/v1/dating/moments/<moment_id>/report/`, reusing the existing DatingSafetyService and DatingReport pipeline rather than introducing a parallel moderation store.
+- Mobile now exposes a Moment report action with reason selection and routes social notification taps to the Moments feed.
+- Tightened interaction visibility to exclude soft-deleted Moments, comments, replies, and inactive comment authors. Comment payloads include `is_own` for ownership-aware UI.
+- Added regression coverage for social notifications and Moment reports. Migration execution, backend tests, mobile typecheck, and end-to-end behavior still need verification in Codespaces/CI. Push delivery is not implemented by this in-app notification slice.
