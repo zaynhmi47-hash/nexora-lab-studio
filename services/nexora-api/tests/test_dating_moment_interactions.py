@@ -51,3 +51,55 @@ def test_moment_comment_and_reply_are_scoped_to_same_moment():
     invalid = factory.post(f"/api/v1/dating/moments/{other_moment.id}/comments/", {"body": "Wrong thread", "parent_id": created.data["id"]}, format="json")
     force_authenticate(invalid, user=user)
     assert DatingMomentCommentsView.as_view()(invalid, moment_id=other_moment.id).status_code == 400
+
+
+@pytest.mark.django_db
+def test_social_interaction_creates_notification_for_moment_owner():
+    from apps.dating_social_professional.models import DatingNotification
+
+    author = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, display_name="Author")
+    actor = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, display_name="Reader")
+    DatingProfile.objects.create(user=author, display_name="Author", birth_date=datetime.date(1998, 1, 1))
+    DatingProfile.objects.create(user=actor, display_name="Reader", birth_date=datetime.date(1998, 1, 1))
+    moment = DatingMoment.objects.create(author=author, caption="Public moment")
+    factory = APIRequestFactory()
+
+    like = factory.post(f"/api/v1/dating/moments/{moment.id}/reactions/")
+    force_authenticate(like, user=actor)
+    assert DatingMomentReactionView.as_view()(like, moment_id=moment.id).status_code == 201
+    assert DatingNotification.objects.filter(
+        recipient=author, type="social", data__momentId=str(moment.id), data__action="like"
+    ).count() == 1
+
+    comment = factory.post(
+        f"/api/v1/dating/moments/{moment.id}/comments/", {"body": "Nice moment"}, format="json"
+    )
+    force_authenticate(comment, user=actor)
+    assert DatingMomentCommentsView.as_view()(comment, moment_id=moment.id).status_code == 201
+    assert DatingNotification.objects.filter(
+        recipient=author, type="social", data__momentId=str(moment.id), data__action="comment"
+    ).count() == 1
+
+
+@pytest.mark.django_db
+def test_moment_report_uses_existing_safety_report_pipeline():
+    from apps.dating_social_professional.interactions_api import DatingMomentReportView
+    from apps.dating_social_professional.models import DatingReport
+
+    author = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, display_name="Author")
+    actor = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, display_name="Reader")
+    DatingProfile.objects.create(user=author, display_name="Author", birth_date=datetime.date(1998, 1, 1))
+    DatingProfile.objects.create(user=actor, display_name="Reader", birth_date=datetime.date(1998, 1, 1))
+    moment = DatingMoment.objects.create(author=author, caption="Reported moment")
+    request = APIRequestFactory().post(
+        f"/api/v1/dating/moments/{moment.id}/report/",
+        {"reason": "inappropriate", "details": "Please review."},
+        format="json",
+    )
+    force_authenticate(request, user=actor)
+    response = DatingMomentReportView.as_view()(request, moment_id=moment.id)
+    assert response.status_code == 201
+    report = DatingReport.objects.get(id=response.data["report_id"])
+    assert report.reporter_id == actor.id
+    assert report.reported_id == author.id
+    assert f"[moment:{moment.id}]" in report.details
