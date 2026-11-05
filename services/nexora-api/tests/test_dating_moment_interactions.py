@@ -163,3 +163,21 @@ def test_moment_upload_rejects_mismatched_media_signature():
     response = DatingMomentView.as_view()(request)
     assert response.status_code == 400
     assert DatingMoment.objects.filter(author=user).count() == 0
+
+
+@pytest.mark.django_db
+def test_unapproved_moment_is_hidden_from_other_users_interactions():
+    author = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, display_name="Author")
+    reader = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, display_name="Reader")
+    DatingProfile.objects.create(user=author, display_name="Author", birth_date=datetime.date(1998, 1, 1))
+    DatingProfile.objects.create(user=reader, display_name="Reader", birth_date=datetime.date(1998, 1, 1))
+    moment = DatingMoment.objects.create(
+        author=author,
+        caption="Pending content",
+        moderation_status=DatingMoment.ModerationStatus.PENDING,
+    )
+    request = APIRequestFactory().post(f"/api/v1/dating/moments/{moment.id}/reactions/")
+    force_authenticate(request, user=reader)
+    response = DatingMomentReactionView.as_view()(request, moment_id=moment.id)
+    assert response.status_code == 404
+    assert DatingMomentReaction.objects.filter(moment=moment, user=reader).count() == 0
