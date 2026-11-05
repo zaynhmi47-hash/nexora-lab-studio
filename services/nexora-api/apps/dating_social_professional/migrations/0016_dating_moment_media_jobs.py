@@ -1,3 +1,5 @@
+import uuid
+
 import django.db.models.deletion
 import django.utils.timezone
 from django.db import migrations, models
@@ -17,7 +19,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="DatingMomentMediaJob",
             fields=[
-                ("id", models.UUIDField(default=__import__("uuid").uuid4, editable=False, primary_key=True, serialize=False)),
+                ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
                 ("deleted_at", models.DateTimeField(blank=True, db_index=True, null=True)),
