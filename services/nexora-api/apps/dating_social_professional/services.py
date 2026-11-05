@@ -6,7 +6,7 @@ from django.db.models import Q, Prefetch
 
 from apps.identity.models import NexoraUser
 
-from .models import DatingBlock, DatingConversation, DatingConversationPresence, DatingMatch, DatingProfile, DatingProfileMedia, DatingReport, DatingSwipe
+from .models import DatingBlock, DatingConversation, DatingConversationPresence, DatingMatch, DatingProfile, DatingProfileMedia, DatingReport, DatingSafetyAuditEvent, DatingSwipe
 from .notifications.service import DatingNotificationService
 
 
@@ -44,7 +44,13 @@ class DatingSafetyService:
             raise ValueError("This account is unavailable.")
         if target.status != NexoraUser.Status.ACTIVE:
             raise ValueError("This profile is unavailable.")
-        return DatingReport.objects.create(reporter=actor, reported=target, reason=reason, details=details)
+        report = DatingReport.objects.create(reporter=actor, reported=target, reason=reason, details=details)
+        DatingSafetyAuditEvent.objects.create(
+            actor=actor, report=report, action="report_created",
+            new_state=DatingReport.Status.OPEN,
+            metadata={"reason": reason},
+        )
+        return report
 
     @staticmethod
     @transaction.atomic
