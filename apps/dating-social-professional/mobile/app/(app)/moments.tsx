@@ -146,6 +146,8 @@ function MomentCard({ item, onDelete }: { item: DatingMoment; onDelete: (id: str
         <View style={styles.authorMeta}>
           <Text style={styles.authorName}>{item.author.display_name || 'Pengguna Nexora'}</Text>
           <Text style={styles.timestamp}>{formatMomentDate(item.created_at)} · {item.visibility === 'private' ? 'Pribadi' : 'Publik'}</Text>
+          {item.is_own && item.moderation_status === 'pending' ? <Text style={styles.timestamp}>Menunggu peninjauan sebelum tampil di feed publik.</Text> : null}
+          {item.is_own && item.moderation_status === 'rejected' ? <Text style={styles.timestamp}>Tidak disetujui: {item.moderation_reason || 'Silakan periksa Pedoman Komunitas.'}</Text> : null}
         </View>
         {item.is_own ? <Pressable onPress={() => onDelete(item.id)} hitSlop={10}><Text style={styles.deleteText}>Hapus</Text></Pressable> : <Pressable onPress={chooseReportReason} disabled={reportMoment.isPending} hitSlop={10}><Text style={styles.deleteText}>Laporkan</Text></Pressable>}
       </View>
@@ -257,6 +259,7 @@ export default function MomentsScreen() {
       setMediaUrl('');
       setSelectedMedia(null);
       setVisibility('public');
+      Alert.alert('Moment dikirim', 'Moment Anda menunggu peninjauan dan belum akan tampil di feed publik.');
       await queryClient.invalidateQueries({ queryKey: ['dating', 'moments'] });
     },
     onError: (error) => Alert.alert('Tidak dapat membuat Moment', error instanceof Error ? error.message : 'Silakan coba lagi.'),
