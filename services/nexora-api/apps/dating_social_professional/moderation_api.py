@@ -1,9 +1,11 @@
 from django.utils import timezone
 from rest_framework import serializers, status
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import BasePermission
+from django.conf import settings
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .api import DatingActiveUserPermission
 from .models import DatingMoment
 from .moments_api import DatingMomentView
 
@@ -16,10 +18,18 @@ class DatingMomentModerationInputSerializer(serializers.Serializer):
     reason = serializers.CharField(max_length=500, required=False, allow_blank=True)
 
 
-class DatingMomentModerationQueueView(APIView):
-    """Staff-only human review queue. No automated moderation provider is implied."""
+class DatingMomentModeratorPermission(BasePermission):
+    message = "This account is not authorized to review Dating Moments."
 
-    permission_classes = [IsAdminUser]
+    def has_permission(self, request, view):
+        configured_ids = getattr(settings, "DATING_MOMENT_MODERATOR_USER_IDS", ())
+        return str(getattr(request.user, "id", "")) in {str(value) for value in configured_ids}
+
+
+class DatingMomentModerationQueueView(APIView):
+    """Allowlisted human review queue. No automated moderation provider is implied."""
+
+    permission_classes = [DatingActiveUserPermission, DatingMomentModeratorPermission]
 
     def get(self, request):
         try:
