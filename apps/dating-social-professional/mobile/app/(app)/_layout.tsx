@@ -9,6 +9,7 @@ export default function AppLayout() {
   const notifications = useQuery({ queryKey: ['dating', 'notifications'], queryFn: () => api.getNotifications(), refetchInterval: 30000 });
   return (
     <Tabs screenOptions={{ headerShown: false }}>
+      <Tabs.Screen name="moments" options={{ title: "Moments" }} />
       <Tabs.Screen name="discover" options={{ title: 'Discover' }} />
       <Tabs.Screen name="matches" options={{ title: 'Matches' }} />
       <Tabs.Screen name="chats" options={{ title: 'Chats' }} />
