@@ -16,7 +16,7 @@ from infrastructure.firebase.registry import FirebaseProviderRegistry
 from infrastructure.storage.ports.object_storage import UploadRequest
 
 from .api import DatingActiveUserPermission, DatingActionThrottle
-from .models import DatingBlock, DatingMoment, DatingMomentComment, DatingMomentReaction, DatingProfile
+from .models import DatingBlock, DatingMoment, DatingMomentComment, DatingMomentMediaJob, DatingMomentReaction, DatingProfile
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +63,16 @@ class DatingMomentView(APIView):
         return access.url or moment.media_url
 
     @classmethod
+    def _thumbnail_access_url(cls, moment):
+        if not moment.thumbnail_key:
+            return None
+        reference = ObjectReference(namespace="dating/moment-thumbnails", key=moment.thumbnail_key)
+        access = FirebaseProviderRegistry().storage().create_access_reference(
+            reference, expires_at=timezone.now() + cls.access_ttl
+        )
+        return access.url
+
+    @classmethod
     def serialize(cls, moment, *, own=False):
         profile = getattr(moment.author, "dating_profile", None)
         return {
@@ -75,6 +85,7 @@ class DatingMomentView(APIView):
             "caption": moment.caption,
             "media_url": cls._media_access_url(moment),
             "media_type": moment.media_type or ("image" if moment.media_url else ""),
+            "thumbnail_url": cls._thumbnail_access_url(moment),
             "visibility": moment.visibility if own else "public",
             "created_at": moment.created_at.isoformat(),
             "is_own": own,
@@ -186,6 +197,8 @@ class DatingMomentView(APIView):
                 moderation_status=DatingMoment.ModerationStatus.PENDING,
                 **serializer.validated_data,
             )
+            if storage_key:
+                DatingMomentMediaJob.objects.create(moment=moment)
         except Exception:
             if reference is not None:
                 try:
