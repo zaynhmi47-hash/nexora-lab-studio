@@ -300,3 +300,6 @@ No application runtime code was changed by this audit. Test execution was not pe
 - Added tests for hashed identifiers, device registration, ownership-scoped listing, trusted-device reauthentication, revoked token verification, account-wide revocation, and provider failure behavior.
 - Not implemented in this phase: per-device token revocation (not supported by current Firebase token model), MFA enrollment/challenge UX, suspicious-login location analysis, password reset/recovery flows, and client-side device registration UI.
 - Apply migration with python manage.py migrate. Tests and migrations have not been run in the remote GitHub editing session.
+
+- Login history is also populated by the Firebase authentication backend: verified Firebase `auth_time` values create one `login_verified` event per sign-in time, with an optional association to a registered device supplied via `X-Nexora-Device-ID`. Device registration/seen and trust/revocation actions are separate auditable events. This records a verified provider sign-in, not a geo-location or IP-based login inference.
+- Identity migrations now include `0003_login_verified_event.py`. Clients should send the same opaque device ID in `X-Nexora-Device-ID` on authenticated API calls after registering the device.
