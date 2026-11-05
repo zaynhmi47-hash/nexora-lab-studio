@@ -19,3 +19,9 @@ The current discover screen is intentionally a thin vertical slice. It establish
 - Added the Moments tab with authenticated feed loading, pull-to-refresh, text composer, public/private selection, optional media URL, and owner-only delete action.
 - TanStack Query owns feed state and invalidates after successful create/delete mutations.
 - Direct media upload, video playback, reactions, comments, pagination, and moderation UI are intentionally deferred; the current API supports a media URL only.
+
+
+## Moments interaction API client
+
+- Mobile API provider now exposes feed creation/deletion, like/unlike, comment listing/creation/deletion, and the feed interaction counters/liked-by-me state.
+- The current Moments screen still needs the interaction controls and comment thread UI; this commit adds the typed API boundary only.
