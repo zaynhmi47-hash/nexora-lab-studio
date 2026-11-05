@@ -12,7 +12,13 @@ export type DatingMoment = {
   visibility: 'public' | 'private';
   created_at: string;
   is_own: boolean;
+  like_count: number;
+  comment_count: number;
+  is_liked_by_me: boolean;
 };
+
+export type DatingMomentComment = { id: string; author: { id: string; display_name: string }; body: string; created_at: string; replies: DatingMomentComment[] };
+
 
 export type DiscoveryProfile = { id: string; displayName: string; age: number | null; birthDate: string | null; bio: string; photoUrl: string | null; relationshipIntent: string; interests: string[]; education: string; occupation: string; locationCity: string; locationCountry: string; maxDistanceKm: number; profileCompletion: number; compatibilityScore: number; distanceKm: number | null; sharedInterests: string[] };
 export type DatingProfile = DiscoveryProfile & { discoveryEnabled: boolean; preferredMinAge: number; preferredMaxAge: number };
@@ -33,6 +39,14 @@ class DatingApi {
     if (!response.ok) throw new Error('Nexora Dating API request failed.');
     return response.json() as Promise<T>;
   }
+  getMoments() { return this.request<{ items: DatingMoment[] }>('/api/v1/dating/moments/'); }
+  createMoment(payload: { caption: string; media_url?: string; visibility: 'public' | 'private' }) { return this.request<DatingMoment>('/api/v1/dating/moments/', { method: 'POST', body: JSON.stringify(payload) }); }
+  deleteMoment(momentId: string) { return this.request<{ status: 'deleted' }>('/api/v1/dating/moments/?moment_id=' + encodeURIComponent(momentId), { method: 'DELETE' }); }
+  likeMoment(momentId: string) { return this.request<{ status: 'liked'; reaction_id: string }>('/api/v1/dating/moments/' + momentId + '/reactions/', { method: 'POST' }); }
+  unlikeMoment(momentId: string) { return this.request<{ status: 'unliked' }>('/api/v1/dating/moments/' + momentId + '/reactions/', { method: 'DELETE' }); }
+  getMomentComments(momentId: string) { return this.request<{ items: DatingMomentComment[] }>('/api/v1/dating/moments/' + momentId + '/comments/'); }
+  createMomentComment(momentId: string, body: string, parentId?: string) { return this.request<{ id: string; body: string; moment_id: string; parent_id: string | null; created_at: string }>('/api/v1/dating/moments/' + momentId + '/comments/', { method: 'POST', body: JSON.stringify({ body, ...(parentId ? { parent_id: parentId } : {}) }) }); }
+  deleteMomentComment(momentId: string, commentId: string) { return this.request<{ status: 'deleted' }>('/api/v1/dating/moments/' + momentId + '/comments/?comment_id=' + encodeURIComponent(commentId), { method: 'DELETE' }); }
   async getDiscovery(filters: Record<string, string> = {}) {
     const normalized = { ...filters };
     if (normalized.distance && !normalized.max_distance_km) {
