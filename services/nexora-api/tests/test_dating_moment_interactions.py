@@ -103,3 +103,62 @@ def test_moment_report_uses_existing_safety_report_pipeline():
     assert report.reporter_id == actor.id
     assert report.reported_id == author.id
     assert f"[moment:{moment.id}]" in report.details
+
+
+@pytest.mark.django_db
+def test_moment_upload_stores_validated_image_and_returns_signed_url():
+    from datetime import timedelta
+    from unittest.mock import patch
+    from django.core.files.uploadedfile import SimpleUploadedFile
+    from django.utils import timezone
+    from infrastructure.storage.ports.object_storage import StorageAccessReference
+    from infrastructure.common.types import ObjectReference
+    from apps.dating_social_professional.moments_api import DatingMomentView
+
+    user = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, display_name="Uploader")
+    DatingProfile.objects.create(user=user, display_name="Uploader", birth_date=datetime.date(1998, 1, 1))
+
+    class FakeStorage:
+        def upload(self, request):
+            self.upload_request = request
+
+        def create_access_reference(self, reference, *, expires_at):
+            return StorageAccessReference(reference=reference, expires_at=expires_at, url="https://media.example/signed.jpg")
+
+    storage = FakeStorage()
+    upload = SimpleUploadedFile("moment.jpg", b"\\xff\\xd8\\xff" + b"test-image-data", content_type="image/jpeg")
+    request = APIRequestFactory().post(
+        "/api/v1/dating/moments/",
+        {"caption": "A photo moment", "visibility": "public", "file": upload},
+        format="multipart",
+    )
+    force_authenticate(request, user=user)
+    with patch("apps.dating_social_professional.moments_api.FirebaseProviderRegistry") as registry:
+        registry.return_value.storage.return_value = storage
+        response = DatingMomentView.as_view()(request)
+
+    assert response.status_code == 201
+    moment = DatingMoment.objects.get(id=response.data["id"])
+    assert moment.media_type == "image"
+    assert moment.storage_key.startswith(f"{user.id}/")
+    assert response.data["media_url"] == "https://media.example/signed.jpg"
+    assert storage.upload_request.content_type == "image/jpeg"
+
+
+@pytest.mark.django_db
+def test_moment_upload_rejects_mismatched_media_signature():
+    from django.core.files.uploadedfile import SimpleUploadedFile
+    from apps.dating_social_professional.moments_api import DatingMomentView
+
+    user = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, display_name="Uploader")
+    DatingProfile.objects.create(user=user, display_name="Uploader", birth_date=datetime.date(1998, 1, 1))
+    upload = SimpleUploadedFile("moment.jpg", b"not-a-jpeg-file", content_type="image/jpeg")
+    request = APIRequestFactory().post(
+        "/api/v1/dating/moments/",
+        {"caption": "Invalid upload", "file": upload},
+        format="multipart",
+    )
+    force_authenticate(request, user=user)
+    response = DatingMomentView.as_view()(request)
+    assert response.status_code == 400
+    assert DatingMoment.objects.filter(author=user).count() == 0
