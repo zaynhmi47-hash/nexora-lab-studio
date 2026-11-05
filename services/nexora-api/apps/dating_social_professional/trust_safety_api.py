@@ -25,7 +25,13 @@ class TrustSafetyReportsView(APIView):
     def get(self, request):
         queryset = DatingReport.objects.filter(deleted_at__isnull=True).select_related(
             "reporter", "reported", "assigned_to", "reviewed_by"
-        ).order_by(Case(\n            When(priority=DatingReport.Priority.URGENT, then=0),\n            When(priority=DatingReport.Priority.HIGH, then=1),\n            When(priority=DatingReport.Priority.NORMAL, then=2),\n            When(priority=DatingReport.Priority.LOW, then=3),\n            output_field=IntegerField(),\n        ), "created_at")
+        ).order_by(Case(
+            When(priority=DatingReport.Priority.URGENT, then=0),
+            When(priority=DatingReport.Priority.HIGH, then=1),
+            When(priority=DatingReport.Priority.NORMAL, then=2),
+            When(priority=DatingReport.Priority.LOW, then=3),
+            output_field=IntegerField(),
+        ), "created_at")
         state = request.query_params.get("status")
         priority = request.query_params.get("priority")
         if state:
