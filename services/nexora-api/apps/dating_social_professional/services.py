@@ -37,6 +37,7 @@ class DatingSafetyService:
         return deleted > 0
 
     @staticmethod
+    @transaction.atomic
     def report(*, actor: NexoraUser, target: NexoraUser, reason: str, details: str = "") -> DatingReport:
         if actor.id == target.id:
             raise ValueError("A user cannot report themselves.")
