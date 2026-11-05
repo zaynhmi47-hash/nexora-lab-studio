@@ -169,3 +169,11 @@ No application runtime code was changed by this audit. Test execution was not pe
 - Added typed mobile API methods for like/unlike and comment list/create/delete, alongside the existing Moments feed/create/delete methods.
 - Feed contract now includes `like_count`, `comment_count`, and `is_liked_by_me`; the backend computes these using filtered aggregates and an existence query.
 - The Moments screen has not yet been updated with visible like/comment controls or thread UI. Mobile typecheck and backend tests/migrations remain unexecuted.
+
+
+## Dating Moments — interaction UI (2026-11-05)
+
+- Updated the existing Moments screen with like/unlike actions, like/comment counters, on-demand comment threads, top-level comment composer, and one-level reply composer.
+- Added pending, loading, empty, retry, and error handling for interactions. Feed and thread queries are invalidated after successful writes to keep counts and thread content fresh.
+- Comment deletion and reporting controls are intentionally not exposed in this UI slice; moderation/ownership mapping is a follow-up.
+- Mobile typecheck and backend test/migration execution have not been performed in this remote GitHub editing session.
