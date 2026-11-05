@@ -126,7 +126,7 @@ def test_moment_upload_stores_validated_image_and_returns_signed_url():
             return StorageAccessReference(reference=reference, expires_at=expires_at, url="https://media.example/signed.jpg")
 
     storage = FakeStorage()
-    upload = SimpleUploadedFile("moment.jpg", b"\\xff\\xd8\\xff" + b"test-image-data", content_type="image/jpeg")
+    upload = SimpleUploadedFile("moment.jpg", bytes([0xFF, 0xD8, 0xFF]) + b"test-image-data", content_type="image/jpeg")
     request = APIRequestFactory().post(
         "/api/v1/dating/moments/",
         {"caption": "A photo moment", "visibility": "public", "file": upload},
