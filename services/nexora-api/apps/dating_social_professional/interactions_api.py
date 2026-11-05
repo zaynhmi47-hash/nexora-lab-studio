@@ -19,7 +19,10 @@ def _visible_moment(request, moment_id):
     ).first()
     if not moment:
         return None
-    if moment.author_id != request.user.id and moment.visibility != DatingMoment.Visibility.PUBLIC:
+    if moment.author_id != request.user.id and (
+        moment.visibility != DatingMoment.Visibility.PUBLIC
+        or moment.moderation_status != DatingMoment.ModerationStatus.APPROVED
+    ):
         return None
     if DatingBlock.objects.filter(
         Q(blocker_id=request.user.id, blocked_id=moment.author_id)
