@@ -2,6 +2,7 @@ from .conversation import DatingConversation, DatingMessage
 from .match import DatingMatch
 from .moments import DatingMoment
 from .media_processing import DatingMomentMediaJob
+from .moderation import DatingMomentModerationJob
 from .interactions import DatingMomentComment, DatingMomentReaction
 from .notification import DatingNotification
 from .push import DatingPushToken
@@ -10,4 +11,4 @@ from .preferences import DatingConversationPresence, DatingNotificationPreferenc
 from .safety import DatingBlock, DatingReport
 from .swipe import DatingSwipe
 
-__all__ = ["DatingBlock", "DatingMoment", "DatingMomentMediaJob", "DatingMomentComment", "DatingMomentReaction", "DatingConversation", "DatingConversationPresence", "DatingMatch", "DatingMessage", "DatingNotification", "DatingNotificationPreference", "DatingProfile", "DatingProfileMedia", "DatingPushToken", "DatingReport", "DatingSwipe"]
+__all__ = ["DatingBlock", "DatingMoment", "DatingMomentMediaJob", "DatingMomentModerationJob", "DatingMomentComment", "DatingMomentReaction", "DatingConversation", "DatingConversationPresence", "DatingMatch", "DatingMessage", "DatingNotification", "DatingNotificationPreference", "DatingProfile", "DatingProfileMedia", "DatingPushToken", "DatingReport", "DatingSwipe"]
