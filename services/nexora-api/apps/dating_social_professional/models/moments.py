@@ -9,9 +9,16 @@ class DatingMoment(AuditableBaseModel):
         PUBLIC = "public", "Public"
         PRIVATE = "private", "Only me"
 
+    class MediaType(models.TextChoices):
+        IMAGE = "image", "Image"
+        VIDEO = "video", "Video"
+
     author = models.ForeignKey(NexoraUser, on_delete=models.PROTECT, related_name="dating_moments")
     caption = models.TextField(max_length=2000)
+    # media_url is retained for legacy/external media references.
     media_url = models.URLField(max_length=2048, blank=True)
+    storage_key = models.CharField(max_length=512, blank=True)
+    media_type = models.CharField(max_length=16, choices=MediaType.choices, blank=True)
     visibility = models.CharField(max_length=16, choices=Visibility.choices, default=Visibility.PUBLIC, db_index=True)
 
     class Meta:
