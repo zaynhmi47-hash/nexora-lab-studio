@@ -1,15 +1,20 @@
 import { useEffect, useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useDatingApi } from '@/src/api/provider';
+import { datingColors, datingRadii, datingSpacing, datingTypography } from '@/src/ui/tokens';
+
+const intents = [{ value: 'dating', label: 'Dating' }, { value: 'relationship', label: 'Long-term' }, { value: 'friendship', label: 'Friendship' }];
 
 export default function ProfileScreen() {
   const api = useDatingApi();
-  const queryClient = useQueryClient();
-  const { data, isLoading } = useQuery({ queryKey: ['dating', 'profile'], queryFn: () => api.getMyProfile() });
-  const mediaQuery = useQuery({ queryKey: ['dating', 'profile-media', data?.id], queryFn: () => api.getProfileMedia(data!.id), enabled: !!data?.id });
+  const client = useQueryClient();
+  const profile = useQuery({ queryKey: ['dating', 'profile'], queryFn: () => api.getMyProfile() });
+  const data = profile.data;
+  const media = useQuery({ queryKey: ['dating', 'profile-media', data?.id], queryFn: () => api.getProfileMedia(data!.id), enabled: !!data?.id });
   const [mediaUrl, setMediaUrl] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
@@ -20,71 +25,46 @@ export default function ProfileScreen() {
   const [education, setEducation] = useState('');
   const [occupation, setOccupation] = useState('');
   const [city, setCity] = useState('');
-  const [maxDistance, setMaxDistance] = useState('100');
-  const [discoveryEnabled, setDiscoveryEnabled] = useState(true);
-
-  useEffect(() => { if (data) { setDisplayName(data.displayName); setBio(data.bio); setIntent(data.relationshipIntent || 'dating'); setMinAge(String(data.preferredMinAge)); setMaxAge(String(data.preferredMaxAge)); setInterests(data.interests.join(', ')); setEducation(data.education); setOccupation(data.occupation); setCity(data.locationCity); setMaxDistance(String(data.maxDistanceKm)); setDiscoveryEnabled(data.discoveryEnabled); } }, [data]);
-  const save = useMutation({
-    mutationFn: () => api.updateMyProfile({ display_name: displayName, bio, relationship_intent: intent, preferred_min_age: Number(minAge), preferred_max_age: Number(maxAge), interests: interests.split(',').map((item) => item.trim()).filter(Boolean).slice(0, 20), education, occupation, location_city: city, max_distance_km: Number(maxDistance), discovery_enabled: discoveryEnabled }),
-    onSuccess: (next) => queryClient.setQueryData(['dating', 'profile'], next),
-  });
-
-  const addMedia = async () => { if (!data || !mediaUrl.trim()) return; try { await api.addProfileMedia(data.id, { url: mediaUrl.trim(), media_type: 'image', sort_order: mediaQuery.data?.items.length ?? 0, is_primary: !(mediaQuery.data?.items.length) }); setMediaUrl(''); await mediaQuery.refetch(); } catch (error) { Alert.alert('Media', error instanceof Error ? error.message : 'Unable to add media.'); } };
-  const pickMedia = async () => {
-    if (!data) return;
-    if ((mediaQuery.data?.items.length ?? 0) >= 6) { Alert.alert('Media', 'You can have at most 6 profile photos.'); return; }
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) { Alert.alert('Media', 'Photo library permission is required.'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, quality: 0.85 });
-    if (result.canceled || !result.assets[0]) return;
-    const asset = result.assets[0];
-    try {
-      await api.uploadProfileMedia(data.id, { uri: asset.uri, name: asset.fileName ?? `profile-${Date.now()}.jpg`, mimeType: asset.mimeType });
-      await mediaQuery.refetch();
-    } catch (error) {
-      Alert.alert('Media', error instanceof Error ? error.message : 'Unable to upload photo.');
-    }
-  };
-  const setPrimary = async (mediaId: string) => { if (!data) return; try { await api.updateProfileMedia(data.id, mediaId, { is_primary: true }); await mediaQuery.refetch(); await queryClient.invalidateQueries({ queryKey: ['dating', 'profile'] }); } catch (error) { Alert.alert('Media', error instanceof Error ? error.message : 'Unable to set primary photo.'); } };
-  const moveMedia = async (mediaId: string, nextIndex: number) => { if (!data) return; try { await api.updateProfileMedia(data.id, mediaId, { sort_order: nextIndex }); await mediaQuery.refetch(); } catch (error) { Alert.alert('Media', error instanceof Error ? error.message : 'Unable to reorder photos.'); } };
-  const removeMedia = async (mediaId: string) => { if (!data) return; try { await api.removeProfileMedia(data.id, mediaId); await mediaQuery.refetch(); await queryClient.invalidateQueries({ queryKey: ['dating', 'profile'] }); } catch (error) { Alert.alert('Media', error instanceof Error ? error.message : 'Unable to remove media.'); } };
-
-  return <ScrollView contentContainerStyle={styles.container}>
-    <Text style={styles.title}>Your profile</Text>
-    <Text style={styles.label}>Profile photos</Text>
-    <View style={styles.gallery}>
-      {mediaQuery.data?.items.map((item, index, items) => (
-        <View key={item.id} style={styles.mediaItem}>
-          <Image source={{ uri: item.url }} style={styles.mediaImage} />
-          <Text>{item.isPrimary ? 'Primary' : 'Photo ' + (item.sortOrder + 1)}</Text>
-          <View style={styles.mediaActions}>
-            {!item.isPrimary ? <Pressable onPress={() => setPrimary(item.id)}><Text>Set primary</Text></Pressable> : null}
-            {index > 0 ? <Pressable onPress={() => moveMedia(item.id, index - 1)}><Text>Move left</Text></Pressable> : null}
-            {index < items.length - 1 ? <Pressable onPress={() => moveMedia(item.id, index + 1)}><Text>Move right</Text></Pressable> : null}
-            <Pressable onPress={() => removeMedia(item.id)}><Text>Remove</Text></Pressable>
-          </View>
-        </View>
-      ))}
-    </View>)}</View>
-    <TextInput style={styles.input} value={mediaUrl} onChangeText={setMediaUrl} placeholder="Image URL" autoCapitalize="none" />
-    <View style={styles.choices}><Pressable onPress={pickMedia} style={styles.save}><Text>Choose photo</Text></Pressable><Pressable onPress={addMedia} style={styles.save}><Text>Add URL</Text></Pressable></View>
-    {isLoading ? <Text>Loading…</Text> : null}
-    <TextInput style={styles.input} value={displayName} onChangeText={setDisplayName} placeholder="Display name" />
-    <TextInput style={[styles.input, styles.bio]} value={bio} onChangeText={setBio} placeholder="Tell people about you" multiline />
-    <View style={styles.choices}>{['dating', 'relationship', 'friendship'].map((value) => <Pressable key={value} onPress={() => setIntent(value)} style={[styles.choice, intent === value && styles.selected]}><Text>{value}</Text></Pressable>)}</View>
-    <Text style={styles.label}>About you</Text>
-    <TextInput style={styles.input} value={interests} onChangeText={setInterests} placeholder="Interests (comma separated)" />
-    <TextInput style={styles.input} value={education} onChangeText={setEducation} placeholder="Education" />
-    <TextInput style={styles.input} value={occupation} onChangeText={setOccupation} placeholder="Occupation" />
-    <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="City" />
-    {data ? <Text style={styles.completion}>Profile completion: {data.profileCompletion}%</Text> : null}
-    <View style={styles.preferenceRow}><View style={styles.preferenceCopy}><Text style={styles.label}>Discovery</Text><Text style={styles.muted}>Allow your profile to appear in discovery.</Text></View><Switch value={discoveryEnabled} onValueChange={setDiscoveryEnabled} /></View>
-    <Text style={styles.label}>Maximum discovery distance (km)</Text><TextInput style={styles.input} value={maxDistance} onChangeText={setMaxDistance} keyboardType="number-pad" />
-    <Text style={styles.label}>Preferred age range</Text>
-    <View style={styles.ageRow}><TextInput style={[styles.input, styles.ageInput]} value={minAge} onChangeText={setMinAge} keyboardType="number-pad" /><Text>to</Text><TextInput style={[styles.input, styles.ageInput]} value={maxAge} onChangeText={setMaxAge} keyboardType="number-pad" /></View>
-    <Pressable disabled={save.isPending} onPress={() => save.mutate()} style={styles.save}><Text>{save.isPending ? 'Saving…' : 'Save profile'}</Text></Pressable>
-    {save.isSuccess ? <Text>Saved.</Text> : null}
-    <Pressable onPress={() => router.push('/(app)/settings/notifications')} style={styles.settings}><Text style={styles.settingsTitle}>Notification settings</Text><Text style={styles.settingsSubtitle}>Control match, message, and safety push notifications.</Text></Pressable>
+  const [distance, setDistance] = useState('100');
+  const [visible, setVisible] = useState(true);
+  useEffect(() => { if (!data) return; setDisplayName(data.displayName); setBio(data.bio); setIntent(data.relationshipIntent || 'dating'); setMinAge(String(data.preferredMinAge)); setMaxAge(String(data.preferredMaxAge)); setInterests(data.interests.join(', ')); setEducation(data.education); setOccupation(data.occupation); setCity(data.locationCity); setDistance(String(data.maxDistanceKm)); setVisible(data.discoveryEnabled); }, [data]);
+  const save = useMutation({ mutationFn: () => api.updateMyProfile({ display_name: displayName.trim(), bio: bio.trim(), relationship_intent: intent, preferred_min_age: Number(minAge), preferred_max_age: Number(maxAge), interests: interests.split(',').map((x) => x.trim()).filter(Boolean).slice(0, 20), education: education.trim(), occupation: occupation.trim(), location_city: city.trim(), max_distance_km: Number(distance), discovery_enabled: visible }), onSuccess: (next) => client.setQueryData(['dating', 'profile'], next) });
+  const photos = media.data?.items ?? [];
+  const addUrl = async () => { if (!data || !mediaUrl.trim()) return; try { await api.addProfileMedia(data.id, { url: mediaUrl.trim(), media_type: 'image', sort_order: photos.length, is_primary: photos.length === 0 }); setMediaUrl(''); await media.refetch(); } catch (e) { Alert.alert('Photo', e instanceof Error ? e.message : 'Unable to add photo.'); } };
+  const choosePhoto = async () => { if (!data) return; if (photos.length >= 6) { Alert.alert('Photo limit', 'You can add up to 6 photos.'); return; } const permission = await ImagePicker.requestMediaLibraryPermissionsAsync(); if (!permission.granted) { Alert.alert('Permission needed', 'Allow photo library access to continue.'); return; } const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, quality: 0.85 }); if (result.canceled || !result.assets[0]) return; const asset = result.assets[0]; try { await api.uploadProfileMedia(data.id, { uri: asset.uri, name: asset.fileName ?? 'profile-photo.jpg', mimeType: asset.mimeType }); await media.refetch(); } catch (e) { Alert.alert('Upload failed', e instanceof Error ? e.message : 'Unable to upload photo.'); } };
+  const updatePhoto = async (id: string, changes: { is_primary?: boolean; sort_order?: number }) => { if (!data) return; try { await api.updateProfileMedia(data.id, id, changes); await media.refetch(); await client.invalidateQueries({ queryKey: ['dating', 'profile'] }); } catch (e) { Alert.alert('Photo', e instanceof Error ? e.message : 'Unable to update photo.'); } };
+  const removePhoto = async (id: string) => { if (!data) return; try { await api.removeProfileMedia(data.id, id); await media.refetch(); await client.invalidateQueries({ queryKey: ['dating', 'profile'] }); } catch (e) { Alert.alert('Photo', e instanceof Error ? e.message : 'Unable to remove photo.'); } };
+  if (profile.isLoading) return <View style={s.center}><ActivityIndicator color={datingColors.primary} /><Text style={s.muted}>Loading profile…</Text></View>;
+  if (profile.isError || !data) return <View style={s.center}><Ionicons name="person-circle-outline" size={48} color={datingColors.primary} /><Text style={s.heading}>Profile unavailable</Text><Pressable onPress={() => profile.refetch()} style={s.primary}><Text style={s.primaryText}>Try again</Text></Pressable></View>;
+  const completion = Math.max(0, Math.min(100, data.profileCompletion ?? 0));
+  const valid = displayName.trim().length > 0 && Number(minAge) >= 18 && Number(maxAge) >= Number(minAge) && Number(distance) >= 1;
+  return <ScrollView style={s.screen} contentContainerStyle={s.container} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={profile.isRefetching} onRefresh={() => { void profile.refetch(); void media.refetch(); }} tintColor={datingColors.primary} />}>
+    <View style={s.top}><View><Text style={s.eyebrow}>NEXORA DATING</Text><Text style={s.title}>Your profile</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Notification settings" onPress={() => router.push('/(app)/settings/notifications')} style={s.icon}><Ionicons name="settings-outline" size={21} color={datingColors.text} /></Pressable></View>
+    <View style={s.progressCard}><View style={s.progressTop}><View style={s.flex}><Text style={s.cardTitle}>Make a great first impression</Text><Text style={s.mutedLeft}>A complete profile helps people get to know you.</Text></View><Text style={s.percent}>{completion}%</Text></View><View style={s.track}><View style={[s.fill, { width: completion + '%' }]} /></View><Text style={s.helper}>{completion === 100 ? 'Your profile is complete.' : 'Add a few details to strengthen your profile.'}</Text></View>
+    <View style={s.section}><View style={s.row}><View style={s.flex}><Text style={s.heading}>Your photos</Text><Text style={s.mutedLeft}>Choose up to 6. Your main photo appears first.</Text></View><Text style={s.percentSmall}>{photos.length}/6</Text></View>
+      {media.isLoading ? <ActivityIndicator color={datingColors.primary} /> : null}{media.isError ? <Pressable onPress={() => media.refetch()}><Text style={s.link}>Couldn't load photos · Retry</Text></Pressable> : null}
+      <View style={s.gallery}>{photos.map((item, index) => <View key={item.id} style={s.photoWrap}><Image source={{ uri: item.url }} style={s.photo} />{item.isPrimary ? <Text style={s.mainTag}>MAIN</Text> : null}<View style={s.photoActions}>{!item.isPrimary ? <Pressable accessibilityLabel="Set main photo" onPress={() => updatePhoto(item.id, { is_primary: true })} style={s.action}><Ionicons name="star-outline" size={15} color={datingColors.primary} /></Pressable> : null}{index > 0 ? <Pressable accessibilityLabel="Move photo earlier" onPress={() => updatePhoto(item.id, { sort_order: index - 1 })} style={s.action}><Ionicons name="arrow-back" size={15} color={datingColors.text} /></Pressable> : null}{index < photos.length - 1 ? <Pressable accessibilityLabel="Move photo later" onPress={() => updatePhoto(item.id, { sort_order: index + 1 })} style={s.action}><Ionicons name="arrow-forward" size={15} color={datingColors.text} /></Pressable> : null}<Pressable accessibilityLabel="Remove photo" onPress={() => removePhoto(item.id)} style={s.action}><Ionicons name="trash-outline" size={15} color={datingColors.danger} /></Pressable></View></View>)}</View>
+      <Pressable disabled={photos.length >= 6} onPress={choosePhoto} style={[s.secondary, photos.length >= 6 && s.disabled]}><Ionicons name="add" size={18} color={datingColors.primary} /><Text style={s.secondaryText}>Choose from gallery</Text></Pressable><View style={s.urlRow}><TextInput value={mediaUrl} onChangeText={setMediaUrl} placeholder="Or paste an image URL" placeholderTextColor={datingColors.textSecondary} autoCapitalize="none" style={s.urlInput} /><Pressable disabled={!mediaUrl.trim()} onPress={addUrl} style={s.urlButton}><Text style={s.secondaryText}>Add</Text></Pressable></View>
+    </View>
+    <View style={s.section}><Text style={s.heading}>The basics</Text><Text style={s.mutedLeft}>Give people a friendly introduction.</Text><Text style={s.label}>Display name</Text><TextInput value={displayName} onChangeText={setDisplayName} placeholder="What should people call you?" placeholderTextColor={datingColors.textSecondary} style={s.input} maxLength={60} /><Text style={s.label}>About me</Text><TextInput value={bio} onChangeText={setBio} placeholder="A little about your personality and what you enjoy…" placeholderTextColor={datingColors.textSecondary} style={[s.input, s.bio]} multiline maxLength={500} /><Text style={s.counter}>{bio.length}/500</Text><Text style={s.label}>I'm here for</Text><View style={s.chips}>{intents.map((x) => <Pressable key={x.value} onPress={() => setIntent(x.value)} style={[s.chip, intent === x.value && s.chipActive]}><Text style={[s.chipText, intent === x.value && s.chipTextActive]}>{x.label}</Text></Pressable>)}</View></View>
+    <View style={s.section}><Text style={s.heading}>More about you</Text><Text style={s.label}>Interests</Text><TextInput value={interests} onChangeText={setInterests} placeholder="Music, hiking, films…" placeholderTextColor={datingColors.textSecondary} style={s.input} /><Text style={s.helper}>Separate interests with commas.</Text><Text style={s.label}>Education</Text><TextInput value={education} onChangeText={setEducation} placeholder="Your education" placeholderTextColor={datingColors.textSecondary} style={s.input} /><Text style={s.label}>Occupation</Text><TextInput value={occupation} onChangeText={setOccupation} placeholder="What do you do?" placeholderTextColor={datingColors.textSecondary} style={s.input} /><Text style={s.label}>City</Text><TextInput value={city} onChangeText={setCity} placeholder="Your city" placeholderTextColor={datingColors.textSecondary} style={s.input} /></View>
+    <View style={s.section}><Text style={s.heading}>Discovery preferences</Text><View style={s.row}><View style={s.flex}><Text style={s.label}>Show me in Discover</Text><Text style={s.helper}>Turn off to pause profile discovery.</Text></View><Switch value={visible} onValueChange={setVisible} trackColor={{ false: datingColors.border, true: datingColors.primary }} thumbColor={datingColors.white} /></View><Text style={s.label}>Preferred age range</Text><View style={s.row}><TextInput value={minAge} onChangeText={setMinAge} keyboardType="number-pad" style={[s.input, s.age]} /><Text style={s.muted}>to</Text><TextInput value={maxAge} onChangeText={setMaxAge} keyboardType="number-pad" style={[s.input, s.age]} /></View><Text style={s.label}>Maximum distance (km)</Text><TextInput value={distance} onChangeText={setDistance} keyboardType="number-pad" style={s.input} /></View>
+    <View style={s.section}><Text style={s.heading}>Account & safety</Text><Pressable onPress={() => router.push('/(app)/settings/notifications')} style={s.row}><Ionicons name="notifications-outline" size={21} color={datingColors.primary} /><View style={s.flex}><Text style={s.cardTitle}>Notification settings</Text><Text style={s.helper}>Manage match and message alerts.</Text></View><Ionicons name="chevron-forward" size={18} color={datingColors.textSecondary} /></Pressable></View>
+    {save.isError ? <Text style={s.error}>{save.error instanceof Error ? save.error.message : 'Unable to save your profile.'}</Text> : null}{save.isSuccess ? <Text style={s.success}>Your profile has been saved.</Text> : null}<Pressable disabled={!valid || save.isPending} onPress={() => save.mutate()} style={[s.primary, (!valid || save.isPending) && s.disabled]}>{save.isPending ? <ActivityIndicator color={datingColors.white} /> : <><Ionicons name="checkmark" size={18} color={datingColors.white} /><Text style={s.primaryText}>Save changes</Text></>}</Pressable><Text style={s.footer}>You can update your profile whenever you like.</Text>
   </ScrollView>;
 }
-const styles = StyleSheet.create({ gallery: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 }, mediaItem: { width: 110, gap: 6 }, mediaActions: { gap: 6 }, mediaImage: { width: 110, height: 110, borderRadius: 14 }, container: { flex: 1, padding: 24, gap: 14 }, title: { fontSize: 30, fontWeight: '800', marginBottom: 8 }, input: { borderWidth: 1, borderRadius: 14, padding: 14 }, bio: { minHeight: 120, textAlignVertical: 'top' }, choices: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' }, choice: { padding: 12, borderWidth: 1, borderRadius: 12 }, label: { fontWeight: '700' }, ageRow: { flexDirection: 'row', alignItems: 'center', gap: 10 }, ageInput: { flex: 1 }, selected: { opacity: 0.55 }, save: { padding: 16, borderWidth: 1, borderRadius: 14, alignItems: 'center' }, completion: { fontWeight: '700' }, settings: { borderWidth: 1, borderRadius: 14, padding: 16, gap: 4 }, settingsTitle: { fontWeight: '800' }, settingsSubtitle: { opacity: 0.6 } });
+
+const s = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: datingColors.background }, container: { padding: datingSpacing.lg, paddingTop: datingSpacing.xl, paddingBottom: 44, gap: datingSpacing.lg },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12, backgroundColor: datingColors.background }, top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  eyebrow: { color: datingColors.primary, fontSize: 10, fontWeight: '900', letterSpacing: 1.5 }, title: { color: datingColors.text, fontSize: datingTypography.title, fontWeight: '900', marginTop: 4 },
+  icon: { width: 44, height: 44, borderRadius: datingRadii.pill, backgroundColor: datingColors.surface, borderWidth: 1, borderColor: datingColors.border, alignItems: 'center', justifyContent: 'center' },
+  progressCard: { padding: 18, backgroundColor: datingColors.surface, borderRadius: datingRadii.lg, borderWidth: 1, borderColor: datingColors.border, gap: 12 }, progressTop: { flexDirection: 'row', alignItems: 'center', gap: 12 }, flex: { flex: 1, gap: 4 },
+  cardTitle: { color: datingColors.text, fontSize: 14, fontWeight: '800' }, mutedLeft: { color: datingColors.textSecondary, fontSize: 12, lineHeight: 17 }, percent: { color: datingColors.primary, fontSize: 24, fontWeight: '900' }, track: { height: 8, backgroundColor: datingColors.surfaceMuted, borderRadius: 20, overflow: 'hidden' }, fill: { height: '100%', backgroundColor: datingColors.primary, borderRadius: 20 },
+  section: { padding: 18, backgroundColor: datingColors.surface, borderRadius: datingRadii.lg, borderWidth: 1, borderColor: datingColors.border, gap: 12 }, row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 }, heading: { color: datingColors.text, fontSize: datingTypography.subheading, fontWeight: '800' }, percentSmall: { color: datingColors.primary, fontWeight: '800' },
+  gallery: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 }, photoWrap: { width: '31%', minWidth: 85, flexGrow: 1, gap: 6 }, photo: { width: '100%', aspectRatio: 0.82, borderRadius: datingRadii.md, backgroundColor: datingColors.surfaceMuted }, mainTag: { position: 'absolute', top: 6, left: 6, color: datingColors.white, backgroundColor: datingColors.primary, borderRadius: 20, overflow: 'hidden', paddingHorizontal: 7, paddingVertical: 4, fontSize: 8, fontWeight: '900' },
+  photoActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 }, action: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: datingColors.surfaceMuted, borderRadius: 20 },
+  secondary: { minHeight: 46, borderRadius: datingRadii.md, borderWidth: 1, borderColor: datingColors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 }, secondaryText: { color: datingColors.primary, fontWeight: '800', fontSize: 12 }, urlRow: { flexDirection: 'row', gap: 8 }, urlInput: { flex: 1, minWidth: 0, borderWidth: 1, borderColor: datingColors.border, borderRadius: datingRadii.md, paddingHorizontal: 12, color: datingColors.text, backgroundColor: datingColors.background }, urlButton: { paddingHorizontal: 16, borderRadius: datingRadii.md, justifyContent: 'center', backgroundColor: datingColors.surfaceMuted },
+  label: { color: datingColors.text, fontSize: 13, fontWeight: '700', marginTop: 3 }, input: { minHeight: 48, borderWidth: 1, borderColor: datingColors.border, borderRadius: datingRadii.md, paddingHorizontal: 13, paddingVertical: 11, color: datingColors.text, backgroundColor: datingColors.background, fontSize: 14 }, bio: { minHeight: 110, textAlignVertical: 'top', paddingTop: 13 }, counter: { alignSelf: 'flex-end', color: datingColors.textSecondary, fontSize: 10, marginTop: -7 }, chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, chip: { borderWidth: 1, borderColor: datingColors.border, borderRadius: 30, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: datingColors.background }, chipActive: { borderColor: datingColors.primary, backgroundColor: datingColors.primary }, chipText: { color: datingColors.textSecondary, fontWeight: '700', fontSize: 12 }, chipTextActive: { color: datingColors.white },
+  helper: { color: datingColors.textSecondary, fontSize: 11, lineHeight: 16 }, muted: { color: datingColors.textSecondary, fontSize: 12 }, age: { flex: 1 }, primary: { minHeight: 52, borderRadius: 30, backgroundColor: datingColors.primary, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }, primaryText: { color: datingColors.white, fontWeight: '900' }, disabled: { opacity: 0.45 }, link: { color: datingColors.primary, fontWeight: '700' }, error: { color: datingColors.danger, textAlign: 'center' }, success: { color: datingColors.success, textAlign: 'center', fontWeight: '700' }, footer: { color: datingColors.textSecondary, fontSize: 11, textAlign: 'center' },
+});
