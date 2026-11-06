@@ -71,3 +71,12 @@ The tokens are a foundation, not a claim that every screen has been migrated. Re
 - Both screens use the shared design tokens and maintain pull-to-refresh.
 - Existing API behavior is preserved: both screens currently source rows from `getMatches()`; tapping a row reuses its conversation ID when present or creates/opens a conversation through the existing API.
 - A dedicated server-side conversation-list endpoint, live message updates, message search, and filters are not claimed as implemented; those require a separate API/realtime slice.
+
+
+### Profile UI/UX overhaul
+
+- Reworked the Profile tab into a guided, section-based editing experience using the shared Nexora Dating visual tokens.
+- Added a profile-completion progress surface, photo gallery management, primary-photo selection, ordering/removal controls, and photo-library upload while retaining the existing profile media API.
+- Grouped editable identity, bio, relationship intent, interests, education, occupation, city, and discovery preferences into clearer sections.
+- Added pull-to-refresh, loading/error states, inline save feedback, basic age/distance validation, and accessible labels for photo actions.
+- Kept all writes on the existing dating API methods; no new backend fields or endpoints are assumed.
