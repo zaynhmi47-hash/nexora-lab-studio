@@ -11,7 +11,8 @@ export default function MatchesScreen() {
     queryFn: () => api.getMatches(),
   });
 
-  const openConversation = async (match: (typeof data extends { items: (infer T)[] } ? T : never)) => {
+  type MatchItem = NonNullable<typeof data>['items'][number];
+  const openConversation = async (match: MatchItem) => {
     try {
       const conversation = match.conversationId
         ? { id: match.conversationId }
