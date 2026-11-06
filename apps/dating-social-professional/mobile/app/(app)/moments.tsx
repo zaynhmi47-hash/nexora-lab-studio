@@ -15,6 +15,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useDatingApi, type DatingMoment, type DatingMomentComment } from '@/src/api/provider';
 import { useDatingSession } from '@/src/auth/session';
+import { datingColors, datingRadii, datingShadows, datingSpacing } from '@/src/ui/tokens';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useVideoPlayer, VideoView } from 'expo-video';
@@ -169,7 +170,7 @@ function MomentCard({ item, onDelete }: { item: DatingMoment; onDelete: (id: str
           disabled={like.isPending}
           style={styles.interactionButton}
         >
-          {like.isPending ? <ActivityIndicator size="small" color="#5D49B8" /> : <Text style={[styles.interactionText, item.is_liked_by_me && styles.likedText]}>{item.is_liked_by_me ? '♥ Disukai' : '♡ Suka'}</Text>}
+          {like.isPending ? <ActivityIndicator size="small" color="#7652A5" /> : <Text style={[styles.interactionText, item.is_liked_by_me && styles.likedText]}>{item.is_liked_by_me ? '♥ Disukai' : '♡ Suka'}</Text>}
           <Text style={styles.interactionCount}>{item.like_count ?? 0}</Text>
         </Pressable>
         <Pressable
@@ -237,6 +238,7 @@ export default function MomentsScreen() {
   const [mediaUrl, setMediaUrl] = useState('');
   const [selectedMedia, setSelectedMedia] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
+  const [composerExpanded, setComposerExpanded] = useState(true);
 
   const feed = useQuery({
     queryKey: ['dating', 'moments'],
@@ -312,13 +314,29 @@ export default function MomentsScreen() {
       keyboardShouldPersistTaps="handled"
     >
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>NEXORA SOCIAL</Text>
-        <Text style={styles.title}>Moments</Text>
-        <Text style={styles.subtitle}>Bagikan cerita, temukan kesamaan, mulai percakapan.</Text>
+        <View style={styles.headerTop}>
+          <View style={styles.headerCopy}>
+            <Text style={styles.eyebrow}>NEXORA · SOCIAL</Text>
+            <Text style={styles.title}>Moments</Text>
+          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel="Segarkan Moments" onPress={() => void feed.refetch()} style={styles.headerRefresh}>
+            <Text style={styles.headerRefreshText}>↻</Text>
+          </Pressable>
+        </View>
+        <Text style={styles.subtitle}>Cerita kecil bisa menjadi awal koneksi besar.</Text>
       </View>
 
       <View style={styles.composer}>
-        <Text style={styles.sectionTitle}>Bagikan sesuatu</Text>
+        <View style={styles.composerHeading}>
+          <View style={styles.composerHeadingCopy}>
+            <Text style={styles.sectionTitle}>Bagikan sesuatu</Text>
+            <Text style={styles.composerSubtitle}>Punya cerita untuk dibagikan?</Text>
+          </View>
+          <Pressable accessibilityRole="button" onPress={() => setComposerExpanded((value) => !value)} style={styles.collapseButton}>
+            <Text style={styles.collapseButtonText}>{composerExpanded ? 'Tutup' : 'Tulis'}</Text>
+          </Pressable>
+        </View>
+        {composerExpanded ? <>
         <TextInput
           value={caption}
           onChangeText={setCaption}
@@ -416,11 +434,15 @@ export default function MomentsScreen() {
           </Pressable>
         </View>
         <Text style={styles.helper}>Foto dan video akan diproses untuk thumbnail. Setiap Moment ditinjau sebelum tampil di feed publik.</Text>
+        </> : null}
       </View>
 
       <View style={styles.feedHeader}>
-        <Text style={styles.sectionTitle}>Cerita terbaru</Text>
-        <Pressable onPress={() => void feed.refetch()}><Text style={styles.refreshText}>Segarkan</Text></Pressable>
+        <View style={styles.feedHeadingCopy}>
+          <Text style={styles.sectionTitle}>Cerita terbaru</Text>
+          <Text style={styles.feedSubtitle}>Temukan hal menarik dari komunitas</Text>
+        </View>
+        <Text style={styles.feedCount}>{items.length} MOMENT</Text>
       </View>
 
       {feed.isLoading ? <View style={styles.loading}><ActivityIndicator /><Text style={styles.muted}>Memuat Moments…</Text></View> : null}
@@ -445,87 +467,99 @@ export default function MomentsScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F5F6F8' },
-  content: { padding: 18, paddingBottom: 36, gap: 16 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 12, backgroundColor: '#F5F6F8' },
-  header: { paddingTop: 8, gap: 5 },
-  eyebrow: { color: '#6A55C7', fontSize: 11, fontWeight: '800', letterSpacing: 1.5 },
-  title: { color: '#171923', fontSize: 30, fontWeight: '800' },
-  subtitle: { color: '#69707D', fontSize: 14, lineHeight: 20 },
-  composer: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 16, gap: 12, borderWidth: 1, borderColor: '#E9EAF0' },
-  sectionTitle: { color: '#202331', fontSize: 17, fontWeight: '800' },
-  captionInput: { minHeight: 112, maxHeight: 190, borderRadius: 14, backgroundColor: '#F7F7FA', padding: 13, color: '#202331', fontSize: 15, lineHeight: 22 },
-  counter: { textAlign: 'right', color: '#858B96', fontSize: 11, marginTop: -7 },
+  screen: { flex: 1, backgroundColor: datingColors.background },
+  content: { paddingHorizontal: datingSpacing.lg, paddingTop: datingSpacing.md, paddingBottom: 36, gap: datingSpacing.md },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 12, backgroundColor: '#F8F7F5' },
+  header: { paddingTop: 8, gap: 8 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerCopy: { gap: 2 },
+  headerRefresh: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E9E5E2', alignItems: 'center', justifyContent: 'center' },
+  headerRefreshText: { color: '#5D3C8C', fontSize: 25, fontWeight: '600', marginTop: -3 },
+  eyebrow: { color: '#7652A5', fontSize: 11, fontWeight: '800', letterSpacing: 1.5 },
+  title: { color: datingColors.text, fontSize: 30, fontWeight: '900', letterSpacing: -0.8 },
+  subtitle: { color: '#77717D', fontSize: 14, lineHeight: 20 },
+  composer: { backgroundColor: '#FFFFFF', borderRadius: 22, padding: 16, gap: 14, borderWidth: 1, borderColor: '#E9E5E2', ...datingShadows.card },
+  composerHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  composerHeadingCopy: { flex: 1, gap: 3 },
+  composerSubtitle: { color: '#77717D', fontSize: 12 },
+  collapseButton: { backgroundColor: '#FCEBED', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999 },
+  collapseButtonText: { color: '#5D3C8C', fontSize: 12, fontWeight: '800' },
+  sectionTitle: { color: '#24212A', fontSize: 17, fontWeight: '800' },
+  captionInput: { minHeight: 112, maxHeight: 190, borderRadius: 14, backgroundColor: '#F1EFED', padding: 13, color: '#24212A', fontSize: 15, lineHeight: 22 },
+  counter: { textAlign: 'right', color: '#77717D', fontSize: 11, marginTop: -7 },
   mediaPickerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  mediaPickerButton: { alignSelf: 'flex-start', backgroundColor: '#F1EEFC', borderRadius: 11, paddingHorizontal: 14, paddingVertical: 10 },
-  mediaPickerText: { color: '#5141A4', fontSize: 12, fontWeight: '800' },
-  removeMediaText: { color: '#B42318', fontSize: 12, fontWeight: '700' },
+  mediaPickerButton: { alignSelf: 'flex-start', backgroundColor: '#FCEBED', borderRadius: 11, paddingHorizontal: 14, paddingVertical: 10 },
+  mediaPickerText: { color: '#5D3C8C', fontSize: 12, fontWeight: '800' },
+  removeMediaText: { color: '#C34F59', fontSize: 12, fontWeight: '700' },
   selectedMedia: { gap: 6 },
-  mediaPreview: { width: '100%', height: 180, borderRadius: 12, backgroundColor: '#F1F1F5' },
-  videoPreview: { height: 80, borderRadius: 12, backgroundColor: '#242735', alignItems: 'center', justifyContent: 'center', padding: 12 },
+  mediaPreview: { width: '100%', height: 180, borderRadius: 12, backgroundColor: '#F1EFED' },
+  videoPreview: { height: 80, borderRadius: 12, backgroundColor: '#24212A', alignItems: 'center', justifyContent: 'center', padding: 12 },
   videoPreviewText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
-  mediaMeta: { color: '#858B96', fontSize: 11 },
-  urlInput: { height: 44, borderRadius: 12, borderWidth: 1, borderColor: '#E7E8EE', paddingHorizontal: 12, color: '#202331' },
+  mediaMeta: { color: '#77717D', fontSize: 11 },
+  urlInput: { height: 44, borderRadius: 12, borderWidth: 1, borderColor: '#E9E5E2', paddingHorizontal: 12, color: '#24212A' },
   composerFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
-  visibilityGroup: { flexDirection: 'row', backgroundColor: '#F1F1F5', borderRadius: 12, padding: 3 },
+  visibilityGroup: { flexDirection: 'row', backgroundColor: '#F1EFED', borderRadius: 12, padding: 3 },
   visibilityButton: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: 9 },
   visibilityActive: { backgroundColor: '#FFFFFF' },
-  visibilityText: { color: '#747A86', fontSize: 12, fontWeight: '700' },
-  visibilityTextActive: { color: '#5141A4' },
-  postButton: { minWidth: 94, alignItems: 'center', justifyContent: 'center', backgroundColor: '#5D49B8', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 11 },
+  visibilityText: { color: '#77717D', fontSize: 12, fontWeight: '700' },
+  visibilityTextActive: { color: '#5D3C8C' },
+  postButton: { minWidth: 94, alignItems: 'center', justifyContent: 'center', backgroundColor: '#7652A5', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 11 },
   postButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
   disabled: { opacity: 0.45 },
   helper: { color: '#8A8F98', fontSize: 11, lineHeight: 16 },
-  feedHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
-  refreshText: { color: '#5D49B8', fontWeight: '700', fontSize: 13 },
+  feedHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, gap: 10 },
+  feedHeadingCopy: { flex: 1, gap: 3 },
+  feedSubtitle: { color: '#77717D', fontSize: 11 },
+  feedCount: { color: '#8B7A98', fontSize: 9, fontWeight: '900', letterSpacing: 1 },
+  refreshText: { color: '#7652A5', fontWeight: '700', fontSize: 13 },
   loading: { padding: 18, gap: 10 },
   muted: { color: '#777E89', fontSize: 13, lineHeight: 19, textAlign: 'center' },
-  emptyCard: { backgroundColor: '#FFFFFF', borderRadius: 18, borderWidth: 1, borderColor: '#E9EAF0', padding: 24, alignItems: 'center', gap: 9 },
-  emptyTitle: { color: '#242735', fontWeight: '800', fontSize: 16 },
-  retryButton: { backgroundColor: '#5D49B8', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10, marginTop: 4 },
+  emptyCard: { backgroundColor: '#FFFFFF', borderRadius: 18, borderWidth: 1, borderColor: '#E9E5E2', padding: 24, alignItems: 'center', gap: 9 },
+  emptyTitle: { color: '#24212A', fontWeight: '800', fontSize: 16 },
+  retryButton: { backgroundColor: '#7652A5', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10, marginTop: 4 },
   retryText: { color: '#FFFFFF', fontWeight: '700' },
-  momentCard: { backgroundColor: '#FFFFFF', borderRadius: 18, padding: 16, borderWidth: 1, borderColor: '#E9EAF0', gap: 13 },
+  momentCard: { backgroundColor: datingColors.surface, borderRadius: datingRadii.lg, padding: datingSpacing.md, borderWidth: 1, borderColor: datingColors.border, gap: 13, ...datingShadows.card },
   authorRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#E9E5FA', alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#5141A4', fontSize: 16, fontWeight: '800' },
+  avatarText: { color: '#5D3C8C', fontSize: 16, fontWeight: '800' },
   authorMeta: { flex: 1, gap: 3 },
-  authorName: { color: '#242735', fontWeight: '800', fontSize: 14 },
-  timestamp: { color: '#858B96', fontSize: 11 },
-  deleteText: { color: '#B42318', fontSize: 12, fontWeight: '700' },
-  momentCaption: { color: '#303441', fontSize: 15, lineHeight: 23 },
-  mediaLink: { color: '#5D49B8', fontSize: 12, lineHeight: 17 },
-  feedMediaImage: { width: '100%', height: 260, borderRadius: 14, backgroundColor: '#F1F1F5' },
+  authorName: { color: '#24212A', fontWeight: '800', fontSize: 14 },
+  timestamp: { color: '#77717D', fontSize: 11 },
+  deleteText: { color: '#C34F59', fontSize: 12, fontWeight: '700' },
+  momentCaption: { color: '#514B57', fontSize: 15, lineHeight: 23 },
+  mediaLink: { color: '#7652A5', fontSize: 12, lineHeight: 17 },
+  feedMediaImage: { width: '100%', height: 300, borderRadius: 16, backgroundColor: '#F1EFED' },
   videoMediaGroup: { gap: 8 },
-  videoThumbnail: { width: "100%", height: 190, borderRadius: 14, backgroundColor: "#E8E9EF" },
-  videoPlayerShell: { overflow: 'hidden', borderRadius: 14, backgroundColor: '#11131A' },
-  videoPlayer: { width: '100%', height: 280, backgroundColor: '#11131A' },
-  videoHint: { color: '#D8D4EA', fontSize: 10, paddingHorizontal: 10, paddingVertical: 7 },
-  interactionBar: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#F0F0F4', paddingTop: 11, gap: 12 },
+  videoThumbnail: { width: '100%', height: 190, borderRadius: 14, backgroundColor: '#F1EFED' },
+  videoPlayerShell: { overflow: 'hidden', borderRadius: 14, backgroundColor: '#24212A' },
+  videoPlayer: { width: '100%', height: 300, backgroundColor: '#24212A' },
+  videoHint: { color: '#FCEBED', fontSize: 10, paddingHorizontal: 10, paddingVertical: 7 },
+  interactionBar: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#E9E5E2', paddingTop: 11, gap: 12 },
   interactionButton: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 5, paddingRight: 12 },
-  interactionText: { color: '#666D79', fontSize: 13, fontWeight: '700' },
-  likedText: { color: '#C03968' },
-  interactionCount: { color: '#858B96', fontSize: 12 },
-  commentsPanel: { borderTopWidth: 1, borderTopColor: '#F0F0F4', paddingTop: 13, gap: 12 },
+  interactionText: { color: '#77717D', fontSize: 13, fontWeight: '700' },
+  likedText: { color: '#E86F78' },
+  interactionCount: { color: '#77717D', fontSize: 12 },
+  commentsPanel: { borderTopWidth: 1, borderTopColor: '#E9E5E2', paddingTop: 13, gap: 12 },
   commentsHeading: { color: '#252938', fontSize: 14, fontWeight: '800' },
   commentLoading: { padding: 12 },
   commentEmpty: { alignItems: 'center', gap: 7, padding: 10 },
   commentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   replyRow: { marginTop: 9, marginLeft: 12 },
-  commentAvatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#ECEAF5', alignItems: 'center', justifyContent: 'center' },
-  commentAvatarText: { color: '#5141A4', fontSize: 11, fontWeight: '800' },
+  commentAvatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#FCEBED', alignItems: 'center', justifyContent: 'center' },
+  commentAvatarText: { color: '#5D3C8C', fontSize: 11, fontWeight: '800' },
   commentBody: { flex: 1, gap: 5 },
   commentBubble: { backgroundColor: '#F6F6F9', borderRadius: 12, padding: 10, gap: 4 },
-  commentAuthor: { color: '#343746', fontSize: 12, fontWeight: '800' },
-  commentText: { color: '#424653', fontSize: 13, lineHeight: 19 },
+  commentAuthor: { color: '#24212A', fontSize: 12, fontWeight: '800' },
+  commentText: { color: '#514B57', fontSize: 13, lineHeight: 19 },
   commentActions: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 4 },
-  commentActionText: { color: '#5D49B8', fontSize: 11, fontWeight: '800' },
-  commentDate: { color: '#9297A0', fontSize: 10 },
-  replyingBanner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F1EEFC', borderRadius: 9, padding: 9 },
-  replyingText: { color: '#5141A4', fontSize: 11, fontWeight: '700' },
-  cancelReply: { color: '#5141A4', fontSize: 11, fontWeight: '800' },
+  commentActionText: { color: '#7652A5', fontSize: 11, fontWeight: '800' },
+  commentDate: { color: '#77717D', fontSize: 10 },
+  replyingBanner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FCEBED', borderRadius: 9, padding: 9 },
+  replyingText: { color: '#5D3C8C', fontSize: 11, fontWeight: '700' },
+  cancelReply: { color: '#5D3C8C', fontSize: 11, fontWeight: '800' },
   commentComposer: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
-  commentInput: { flex: 1, minHeight: 42, maxHeight: 110, borderRadius: 12, backgroundColor: '#F6F6F9', paddingHorizontal: 11, paddingVertical: 10, color: '#303441', fontSize: 13 },
-  sendCommentButton: { minHeight: 40, minWidth: 62, borderRadius: 11, backgroundColor: '#5D49B8', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
+  commentInput: { flex: 1, minHeight: 42, maxHeight: 110, borderRadius: 12, backgroundColor: '#F6F6F9', paddingHorizontal: 11, paddingVertical: 10, color: '#514B57', fontSize: 13 },
+  sendCommentButton: { minHeight: 40, minWidth: 62, borderRadius: 11, backgroundColor: '#7652A5', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
   sendCommentText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
-  commentGuidance: { color: '#9297A0', fontSize: 10 },
+  commentGuidance: { color: '#77717D', fontSize: 10 },
 });
