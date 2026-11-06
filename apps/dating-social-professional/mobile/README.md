@@ -33,3 +33,22 @@ The current discover screen is intentionally a thin vertical slice. It establish
 - Comment threads load on demand, support top-level comments and one-level replies, and refresh feed counters after successful mutations.
 - Comment and reaction requests use the authenticated dating API provider; loading, retry, pending, and error states are surfaced in the UI.
 - The current mobile thread UI does not yet expose comment deletion or reporting controls; these require ownership/session mapping and the next moderation slice.
+
+
+## UI/UX foundation — November 2026
+
+The mobile client now has a shared visual token foundation in `src/ui/tokens.ts`:
+- Warm neutral surfaces, deep plum primary, coral accent, semantic status colors.
+- Shared spacing, radius, typography, and card shadow scales.
+- Primary tab navigation uses consistent Ionicons, active/inactive states, notification badge styling, and keyboard-aware tab behavior.
+- Discovery now uses a compact editorial heading, a collapsible filter panel (instead of permanently consuming vertical space), and a clearer profile-card surface hierarchy.
+
+### Product design direction
+
+- **Discover:** profile-first discovery, strong photo hierarchy, concise compatibility/context, progressive filters, accessible swipe alternatives.
+- **Moments:** immersive social feed with clear creator identity, media-first cards, visible engagement and safety actions.
+- **Matches / Chats:** separate relationship discovery from active conversations; do not remove either route until the product flow is consolidated deliberately.
+- **Profile:** guided profile completion, gallery management, intent and interests, privacy and safety controls.
+- **System:** consistent loading, empty, error, disabled, pressed, and accessibility states; support compact Android screens and safe areas.
+
+The tokens are a foundation, not a claim that every screen has been migrated. Remaining UI work includes Moments, Matches, Chats, Profile, Notifications, settings/Security Center, responsive QA, and visual regression checks.
