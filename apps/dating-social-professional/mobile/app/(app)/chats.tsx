@@ -7,8 +7,9 @@ import { datingColors, datingRadii, datingShadows, datingSpacing } from '@/src/u
 export default function ChatsScreen() {
   const api = useDatingApi();
   const matches = useQuery({ queryKey: ['dating', 'matches'], queryFn: () => api.getMatches() });
+  type MatchItem = NonNullable<typeof matches.data>['items'][number];
   const open = useMutation({
-    mutationFn: async (match: (typeof matches.data extends { items: (infer T)[] } ? T : never)) => {
+    mutationFn: async (match: MatchItem) => {
       return match.conversationId ? { id: match.conversationId } : api.createConversation(match.id);
     },
     onSuccess: (conversation) => router.push(`/chat/${conversation.id}`),
