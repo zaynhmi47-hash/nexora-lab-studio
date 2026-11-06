@@ -62,3 +62,12 @@ The tokens are a foundation, not a claim that every screen has been migrated. Re
 - Improved feed card elevation, media presentation, interaction spacing, and comment panel styling.
 - Preserved existing API behavior: upload, public/private visibility, moderation messaging, likes, comments/replies, reporting, and owner deletion.
 - This is a presentation-layer improvement; no backend contract or moderation policy was changed.
+
+
+### Matches and Chats UI/UX overhaul
+
+- Matches now has a clear connection summary, richer match rows, unread indicators, relative context, and an intentional empty state that routes to Discover.
+- Chats now has a dedicated inbox presentation, last-message preview/time, unread badges, a clear empty state, and a pending state while opening a conversation.
+- Both screens use the shared design tokens and maintain pull-to-refresh.
+- Existing API behavior is preserved: both screens currently source rows from `getMatches()`; tapping a row reuses its conversation ID when present or creates/opens a conversation through the existing API.
+- A dedicated server-side conversation-list endpoint, live message updates, message search, and filters are not claimed as implemented; those require a separate API/realtime slice.
