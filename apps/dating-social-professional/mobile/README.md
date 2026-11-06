@@ -52,3 +52,13 @@ The mobile client now has a shared visual token foundation in `src/ui/tokens.ts`
 - **System:** consistent loading, empty, error, disabled, pressed, and accessibility states; support compact Android screens and safe areas.
 
 The tokens are a foundation, not a claim that every screen has been migrated. Remaining UI work includes Moments, Matches, Chats, Profile, Notifications, settings/Security Center, responsive QA, and visual regression checks.
+
+
+### Moments UI/UX overhaul
+
+- Migrated Moments screen surfaces and controls to the shared warm-neutral / plum / coral design direction.
+- Added a compact header with refresh action and clearer content hierarchy.
+- Made the composer collapsible so the feed can take priority after the user finishes composing.
+- Improved feed card elevation, media presentation, interaction spacing, and comment panel styling.
+- Preserved existing API behavior: upload, public/private visibility, moderation messaging, likes, comments/replies, reporting, and owner deletion.
+- This is a presentation-layer improvement; no backend contract or moderation policy was changed.
