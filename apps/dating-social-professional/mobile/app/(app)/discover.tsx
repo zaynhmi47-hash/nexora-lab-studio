@@ -13,6 +13,7 @@ export default function DiscoverScreen() {
   const router = useRouter();
   const { token, loading: sessionLoading } = useDatingSession();
   const queryClient = useQueryClient();
+  const [showFilters, setShowFilters] = useState(false);
   const [interestFilter, setInterestFilter] = useState('');
   const [cityFilter, setCityFilter] = useState('');
   const [intentFilter, setIntentFilter] = useState('');
@@ -172,11 +173,20 @@ export default function DiscoverScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Discover</Text>
+      <View style={styles.header}>
+        <View style={styles.headingGroup}>
+          <Text style={styles.eyebrow}>NEXORA · SOCIAL DATING</Text>
+          <Text style={styles.title}>Discover</Text>
+          <Text style={styles.subtitle}>Meet people who share your story.</Text>
+        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel="Toggle discovery filters" style={styles.filterToggle} onPress={() => setShowFilters((value) => !value)}>
+          <Text style={styles.filterToggleText}>{showFilters ? 'Close' : 'Filters'}</Text>
+        </Pressable>
+      </View>
       {sessionLoading ? <Text>Loading session…</Text> : null}
       {!sessionLoading && !token ? <Text>Sign in through Nexora Identity to start discovering.</Text> : null}
 
-      <View style={styles.filters}>
+      {showFilters ? <View style={styles.filters}>
         <View style={styles.filterGrid}>
           <TextInput style={styles.filterInput} value={interestFilter} onChangeText={setInterestFilter} placeholder="Interest" />
           <TextInput style={styles.filterInput} value={cityFilter} onChangeText={setCityFilter} placeholder="City" />
@@ -186,9 +196,9 @@ export default function DiscoverScreen() {
           <TextInput style={styles.filterInput} value={distanceFilter} onChangeText={setDistanceFilter} placeholder="Max distance (km)" keyboardType="number-pad" />
         </View>
         <Pressable style={styles.applyFilter} onPress={applyFilters}><Text>Apply filters</Text></Pressable>
-      </View>
+      </View> : null}
 
-      {isLoading ? <Text>Loading profiles…</Text> : null}
+      {isLoading ? <Text style={styles.helperText}>Finding people for you…</Text> : null}
       {!isLoading && isFetchingNextPage ? <Text>Loading more profiles…</Text> : null}
       {!isLoading && !current ? (
         <View style={styles.emptyState}>
@@ -275,10 +285,17 @@ export default function DiscoverScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, justifyContent: 'center', gap: 18 },
+  container: { flex: 1, paddingHorizontal: 18, paddingTop: 16, paddingBottom: 18, justifyContent: 'flex-start', gap: 14, backgroundColor: '#F8F7F5' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  headingGroup: { flex: 1, gap: 2 },
+  eyebrow: { color: '#8B7A98', fontSize: 9, fontWeight: '900', letterSpacing: 1.5 },
+  subtitle: { color: '#77717D', fontSize: 13 },
+  filterToggle: { backgroundColor: '#FFFFFF', borderColor: '#E9E5E2', borderWidth: 1, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 10 },
+  filterToggleText: { color: '#5D3C8C', fontSize: 12, fontWeight: '800' },
+  helperText: { color: '#77717D', fontSize: 13 },
   stack: { position: 'relative' },
-  title: { fontSize: 32, fontWeight: '800' },
-  card: { padding: 16, borderWidth: 1, borderRadius: 24, gap: 14 },
+  title: { fontSize: 30, fontWeight: '900', color: '#24212A', letterSpacing: -0.8 },
+  card: { padding: 12, backgroundColor: '#FFFFFF', borderColor: '#E9E5E2', borderWidth: 1, borderRadius: 24, gap: 10, shadowColor: '#21182B', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.07, shadowRadius: 18, elevation: 3 },
   nextCard: { position: 'absolute', left: 8, right: 8, top: 8, opacity: 0.35, transform: [{ scale: 0.97 }] },
   nextCardPlaceholder: { height: 460, alignItems: 'center', justifyContent: 'center', gap: 8 },
   nextCardLabel: { fontSize: 14, fontWeight: '700', opacity: 0.55, textTransform: 'uppercase' },
@@ -287,7 +304,7 @@ const styles = StyleSheet.create({
   likeOverlay: { left: 28, borderColor: '#168a4a', transform: [{ rotate: '-12deg' }] },
   passOverlay: { right: 28, borderColor: '#b3261e', transform: [{ rotate: '12deg' }] },
   swipeOverlayText: { fontSize: 28, fontWeight: '900' },
-  mediaFrame: { height: 320, borderRadius: 18, overflow: 'hidden', position: 'relative' },
+  mediaFrame: { height: 300, borderRadius: 18, overflow: 'hidden', position: 'relative', backgroundColor: '#F1EFED' },
   profileImage: { width: '100%', height: '100%' },
   imageFallback: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   imageFallbackText: { fontSize: 72, fontWeight: '800', opacity: 0.25 },
@@ -299,18 +316,18 @@ const styles = StyleSheet.create({
   imageBadge: { position: 'absolute', left: 12, bottom: 12, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: 'rgba(0,0,0,0.55)' },
   imageBadgeText: { color: '#fff', fontWeight: '700' },
   position: { opacity: 0.6, marginBottom: 4 },
-  name: { fontSize: 26, fontWeight: '800' },
+  name: { fontSize: 25, fontWeight: '900', color: '#24212A', letterSpacing: -0.4 },
   intent: { fontWeight: '700', textTransform: 'capitalize' },
   contextRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   compatibilityBadge: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
   compatibilityText: { fontWeight: '800' },
   contextText: { opacity: 0.65 },
   sharedInterests: { fontWeight: '700' },
-  bio: { fontSize: 16, lineHeight: 23 },
+  bio: { fontSize: 14, lineHeight: 20, color: '#514B57' },
   detailsHint: { marginTop: 6, opacity: 0.6 },
   actions: { flexDirection: 'row', gap: 12 },
-  passButton: { flex: 1, paddingVertical: 16, borderWidth: 1, borderRadius: 16, alignItems: 'center' },
-  likeButton: { flex: 1, paddingVertical: 16, borderWidth: 1, borderRadius: 16, alignItems: 'center' },
+  passButton: { flex: 1, paddingVertical: 14, backgroundColor: '#F8F7F5', borderColor: '#E9E5E2', borderWidth: 1, borderRadius: 16, alignItems: 'center' },
+  likeButton: { flex: 1, paddingVertical: 14, backgroundColor: '#7652A5', borderColor: '#7652A5', borderWidth: 1, borderRadius: 16, alignItems: 'center' },
   filters: { gap: 8 },
   filterGrid: { gap: 8 },
   applyFilter: { alignSelf: 'flex-start', borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 9 },
