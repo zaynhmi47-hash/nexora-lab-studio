@@ -34,7 +34,7 @@ class IsActiveNexverseModerator(BasePermission):
 
 def _moderation_payload(work, include_content=False):
     chapters = []
-    for chapter in work.chapters.order_by("chapter_number"):
+    for chapter in work.chapters.all():
         item = {
             "id": str(chapter.id),
             "number": chapter.chapter_number,
@@ -67,6 +67,15 @@ def _moderation_payload(work, include_content=False):
             "verified": work.author.is_verified,
         },
         "chapters": chapters,
+        "reviewHistory": [
+            {
+                "decision": event.decision,
+                "note": event.note,
+                "moderatorRole": event.moderator.role,
+                "createdAt": event.created_at.isoformat(),
+            }
+            for event in work.review_events.all()
+        ],
     }
 
 
@@ -107,7 +116,7 @@ class NexverseModerationWorkDetailView(APIView):
     def get(self, request, work_id):
         work = (
             NexverseWork.objects.select_related("author")
-            .prefetch_related("chapters")
+            .prefetch_related("chapters", "review_events__moderator__user")
             .filter(pk=work_id)
             .first()
         )
