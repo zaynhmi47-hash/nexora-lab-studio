@@ -121,5 +121,15 @@ The tokens are a foundation, not a claim that every screen has been migrated. Re
   - `POST /api/v1/dating/date-plans/<plan_id>/lifecycle/` with `action: cancel|complete`
   - `POST /api/v1/dating/date-plans/<plan_id>/reschedule/` to propose a change
   - `PUT /api/v1/dating/date-plans/<plan_id>/reschedule/` with `decision: accept|decline`
-- Mobile API provider methods and response types are available. Lifecycle controls have not yet been wired into the Date Planner screen.
+- Mobile API provider methods and response types are available; the Date Planner screen now exposes cancellation, completion, proposal editing, and partner accept/decline controls.
 - Scheduled reminders are intentionally not claimed: they need a durable background scheduler/worker and delivery policy, not a client-side timer. Migration, Django tests, and Expo typecheck/device QA still need to run in Codespaces.
+
+
+### Date Planner lifecycle UI integration
+
+- Connected the Date Planner screen to the lifecycle and reschedule API methods.
+- Accepted plans can show a pending reschedule proposal; only the other participant sees accept/decline controls. The proposer sees a waiting-for-partner state.
+- Either participant can propose a future date/time, timezone, location, and optional notes; the proposal form validates a future local time before sending.
+- Participants can cancel proposed or accepted plans after a confirmation prompt. Accepted plans whose scheduled time has passed can be marked completed.
+- Query state refreshes after lifecycle and reschedule mutations. This UI is wired to the backend contracts but has not yet been typechecked or tested on a device.
+- Durable scheduled reminders are not part of this slice. They require a configured production scheduler/worker and a reliable push-delivery policy; a mobile timer alone would not be dependable.
