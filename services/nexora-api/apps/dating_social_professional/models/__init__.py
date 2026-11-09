@@ -1,4 +1,5 @@
 from .account_risk import DatingAccountRiskProfile, DatingAccountSecurityEvent
+from .date_planner import DatingDatePlan, DatingRelationshipMilestone
 from .conversation import DatingConversation, DatingMessage
 from .match import DatingMatch
 from .moments import DatingMoment
@@ -12,4 +13,4 @@ from .preferences import DatingConversationPresence, DatingNotificationPreferenc
 from .safety import DatingBlock, DatingModerationAppeal, DatingReport, DatingSafetyAuditEvent
 from .swipe import DatingSwipe
 
-__all__ = ["DatingAccountRiskProfile", "DatingAccountSecurityEvent", "DatingBlock", "DatingModerationAppeal", "DatingSafetyAuditEvent", "DatingMoment", "DatingMomentMediaJob", "DatingMomentModerationJob", "DatingMomentComment", "DatingMomentReaction", "DatingConversation", "DatingConversationPresence", "DatingMatch", "DatingMessage", "DatingNotification", "DatingNotificationPreference", "DatingProfile", "DatingProfileMedia", "DatingPushToken", "DatingReport", "DatingSwipe"]
+__all__ = ["DatingAccountRiskProfile", "DatingAccountSecurityEvent", "DatingDatePlan", "DatingRelationshipMilestone", "DatingBlock", "DatingModerationAppeal", "DatingSafetyAuditEvent", "DatingMoment", "DatingMomentMediaJob", "DatingMomentModerationJob", "DatingMomentComment", "DatingMomentReaction", "DatingConversation", "DatingConversationPresence", "DatingMatch", "DatingMessage", "DatingNotification", "DatingNotificationPreference", "DatingProfile", "DatingProfileMedia", "DatingPushToken", "DatingReport", "DatingSwipe"]
