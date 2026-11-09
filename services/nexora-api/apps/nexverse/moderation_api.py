@@ -78,6 +78,7 @@ class NexverseModerationQueueView(APIView):
         queryset = (
             NexverseWork.objects.filter(review_status=NexverseWork.ReviewStatus.SUBMITTED)
             .select_related("author")
+            .prefetch_related("chapters")
             .order_by("submitted_at", "created_at")
         )
         try:
@@ -141,6 +142,14 @@ class NexverseModerationDecisionView(APIView):
 
             now = timezone.now()
             moderator = request.nexverse_moderator
+            if decision == "approve" and moderator.role not in (
+                NexverseModerator.Role.PUBLISHER, NexverseModerator.Role.ADMIN
+            ):
+                return Response({"detail": "Publisher or administrator role is required to approve and publish."}, status=403)
+            if decision == "reject" and moderator.role not in (
+                NexverseModerator.Role.REVIEWER, NexverseModerator.Role.ADMIN
+            ):
+                return Response({"detail": "Reviewer or administrator role is required to reject a submission."}, status=403)
             if decision == "approve":
                 if not work.chapters.exists():
                     return Response({"detail": "A work must contain at least one chapter."}, status=409)
