@@ -16,7 +16,7 @@ export default function WorkDetailScreen() {
       <Text style={styles.section}>Tentang cerita</Text><Text style={styles.synopsis}>{story.synopsis}</Text>
       <Text style={styles.section}>Daftar bab</Text>
       {[1, 2, 3].map(chapter => <View key={chapter} style={styles.chapter}><View><Text style={styles.chapterTitle}>Bab {chapter} · {['Pertemuan pertama', 'Kota yang menyimpan rahasia', 'Hal yang belum terucap'][chapter - 1]}</Text><Text style={styles.chapterMeta}>Pratinjau konten · 5 menit baca</Text></View><Ionicons name="chevron-forward" color={palette.muted} size={18} /></View>)}
-      <Pressable style={styles.primary} onPress={() => router.push(`/reader/${story.id}`)}><Text style={styles.primaryText}>Baca bab pertama</Text><Ionicons name="arrow-forward" color="#FFFFFF" size={17} /></Pressable>
+      <Pressable style={styles.primary} onPress={() => router.push({ pathname: '/reader/[slug]', params: { slug: story.id } })}><Text style={styles.primaryText}>Baca bab pertama</Text><Ionicons name="arrow-forward" color="#FFFFFF" size={17} /></Pressable>
       <Text style={styles.disclaimer}>Katalog dan bab pada build ini merupakan konten demo untuk pengembangan UI. Belum ada transaksi atau hak akses berbayar yang aktif.</Text>
     </ScrollView>
   );
