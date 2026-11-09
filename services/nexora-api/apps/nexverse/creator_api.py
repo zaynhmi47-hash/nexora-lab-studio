@@ -60,6 +60,13 @@ def _owned_work(user, work_id):
     return NexverseWork.objects.filter(author__user=user, pk=work_id).first()
 
 
+def _is_published_or_approved(work):
+    return (
+        work.review_status == NexverseWork.ReviewStatus.APPROVED
+        or work.status in (NexverseWork.Status.PUBLISHED, NexverseWork.Status.COMPLETED)
+    )
+
+
 class NexverseCreatorProfileView(APIView):
     authentication_classes = [FirebaseIdentityAuthentication]
     permission_classes = [IsAuthenticated]
@@ -156,6 +163,8 @@ class NexverseCreatorWorkDetailView(APIView):
             return Response({"detail": "Work not found."}, status=404)
         if work.review_status == NexverseWork.ReviewStatus.SUBMITTED:
             return Response({"detail": "A submitted work cannot be edited until review is complete."}, status=409)
+        if _is_published_or_approved(work):
+            return Response({"detail": "Published works are locked. A revision workflow is required before editing."}, status=409)
         fields = {
             "title": ("title", 255),
             "synopsis": ("synopsis", 20000),
@@ -196,6 +205,8 @@ class NexverseCreatorChapterListView(APIView):
             return Response({"detail": "Work not found."}, status=404)
         if work.review_status == NexverseWork.ReviewStatus.SUBMITTED:
             return Response({"detail": "A submitted work cannot be edited until review is complete."}, status=409)
+        if _is_published_or_approved(work):
+            return Response({"detail": "Published works are locked. A revision workflow is required before editing."}, status=409)
         try:
             number = int(request.data.get("number"))
         except (TypeError, ValueError):
@@ -235,6 +246,8 @@ class NexverseCreatorChapterDetailView(APIView):
             return Response({"detail": "Work not found."}, status=404)
         if work.review_status == NexverseWork.ReviewStatus.SUBMITTED:
             return Response({"detail": "A submitted work cannot be edited until review is complete."}, status=409)
+        if _is_published_or_approved(work):
+            return Response({"detail": "Published works are locked. A revision workflow is required before editing."}, status=409)
         chapter = work.chapters.filter(pk=chapter_id).first()
         if chapter is None:
             return Response({"detail": "Chapter not found."}, status=404)
@@ -266,6 +279,8 @@ class NexverseSubmitWorkView(APIView):
             return Response({"detail": "Work not found."}, status=404)
         if work.review_status == NexverseWork.ReviewStatus.SUBMITTED:
             return Response({"detail": "Work is already awaiting review."}, status=409)
+        if _is_published_or_approved(work):
+            return Response({"detail": "Published works cannot be resubmitted. Use the revision workflow."}, status=409)
         if not work.title.strip() or not work.synopsis.strip():
             return Response({"detail": "Add a title and synopsis before submitting."}, status=400)
         if not work.chapters.exists():
