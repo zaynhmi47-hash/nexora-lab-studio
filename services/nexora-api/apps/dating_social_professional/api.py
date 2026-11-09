@@ -758,7 +758,7 @@ class NotificationView(APIView):
 class NotificationPreferenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = DatingNotificationPreference
-        fields = ("push_enabled", "match_push_enabled", "message_push_enabled", "safety_push_enabled")
+        fields = ("push_enabled", "match_push_enabled", "message_push_enabled", "safety_push_enabled", "date_plan_push_enabled")
 
 
 class NotificationPreferencesView(APIView):
