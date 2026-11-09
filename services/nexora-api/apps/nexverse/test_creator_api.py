@@ -46,6 +46,26 @@ class NexverseCreatorApiTests(APITestCase):
         work.refresh_from_db()
         self.assertEqual(work.title, "Private Work")
 
+    def test_published_work_is_locked_until_revision_workflow_exists(self):
+        author = NexverseAuthor.objects.create(
+            user=self.writer, slug="published-author", pen_name="Published Author"
+        )
+        work = NexverseWork.objects.create(
+            author=author,
+            slug="published-work",
+            title="Published Work",
+            status=NexverseWork.Status.PUBLISHED,
+            review_status=NexverseWork.ReviewStatus.APPROVED,
+        )
+        response = self.client.patch(
+            f"/api/v1/nexverse/creator/works/{work.id}/",
+            {"title": "Unreviewed title change"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 409)
+        work.refresh_from_db()
+        self.assertEqual(work.title, "Published Work")
+
     def test_creator_can_submit_complete_work_for_review(self):
         self.client.post(
             "/api/v1/nexverse/creator/profile/",
