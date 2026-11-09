@@ -41,6 +41,14 @@ class NexversePublicApiTests(APITestCase):
             slug="draft-work",
             title="Draft Work",
         )
+        NexverseWork.objects.create(
+            author=self.work.author,
+            slug="unreviewed-published-work",
+            title="Unreviewed Published Work",
+            status=NexverseWork.Status.PUBLISHED,
+            visibility=NexverseWork.Visibility.PUBLIC,
+            review_status=NexverseWork.ReviewStatus.DRAFT,
+        )
         response = self.client.get("/api/v1/nexverse/works/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data["items"]), 1)
