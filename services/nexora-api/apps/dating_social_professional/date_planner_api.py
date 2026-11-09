@@ -82,6 +82,10 @@ def _serialize_plan(plan, viewer_id):
         "notes": plan.notes,
         "status": plan.status,
         "responded_at": plan.responded_at.isoformat() if plan.responded_at else None,
+        "cancelled_by": str(plan.cancelled_by_id) if plan.cancelled_by_id else None,
+        "cancelled_at": plan.cancelled_at.isoformat() if plan.cancelled_at else None,
+        "completed_at": plan.completed_at.isoformat() if plan.completed_at else None,
+        "reschedule": ({"proposed_by": str(plan.reschedule_proposed_by_id), "starts_at": plan.proposed_starts_at.isoformat(), "timezone": plan.proposed_timezone_name, "location_name": plan.proposed_location_name, "notes": plan.proposed_notes, "can_respond": plan.reschedule_proposed_by_id != viewer_id} if plan.reschedule_proposed_by_id and plan.proposed_starts_at else None),
         "created_at": plan.created_at.isoformat(),
     }
 
