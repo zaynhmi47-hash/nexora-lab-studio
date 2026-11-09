@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from django.utils.text import slugify
 from rest_framework import status
@@ -215,11 +215,8 @@ class NexverseCreatorChapterListView(APIView):
                 content=content,
                 is_free_preview=bool(request.data.get("freePreview", False)),
             )
-        except Exception as exc:
-            from django.db import IntegrityError
-            if isinstance(exc, IntegrityError):
-                return Response({"detail": "Chapter number already exists for this work."}, status=409)
-            raise
+        except IntegrityError:
+            return Response({"detail": "Chapter number already exists for this work."}, status=409)
         if work.review_status == NexverseWork.ReviewStatus.REJECTED:
             work.review_status = NexverseWork.ReviewStatus.DRAFT
             work.review_note = ""
