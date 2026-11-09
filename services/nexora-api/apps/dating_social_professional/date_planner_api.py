@@ -201,3 +201,41 @@ class DatingRelationshipMilestonesView(APIView):
                     data={"match_id": str(match.id), "stage": stage, "event": "relationship_milestone"},
                 )
         return self.get(request, match_id)
+
+
+class DatingDatePlanLifecycleView(APIView):
+    permission_classes = [DatingActiveUserPermission]
+    throttle_classes = [DatingActionThrottle]
+
+    def post(self, request, plan_id):
+        action = request.data.get("action")
+        if action not in {"cancel", "complete"}:
+            return Response({"detail": "action must be cancel or complete."}, status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            plan = DatingDatePlan.objects.select_for_update().select_related("match").filter(id=plan_id).first()
+            if not plan or _active_match_for_user(plan.match_id, request.user) is None:
+                return Response({"detail": "Date plan not found."}, status=status.HTTP_404_NOT_FOUND)
+            recipient_id = _partner_for(plan.match, request.user.id)
+            if action == "cancel":
+                if plan.status not in {DatingDatePlan.Status.PROPOSED, DatingDatePlan.Status.ACCEPTED}:
+                    return Response({"detail": "This plan cannot be cancelled in its current state."}, status=status.HTTP_409_CONFLICT)
+                plan.status = DatingDatePlan.Status.CANCELLED
+                plan.cancelled_by = request.user
+                plan.cancelled_at = timezone.now()
+                plan.reschedule_proposed_by = None
+                plan.proposed_starts_at = None
+                plan.proposed_timezone_name = ""
+                plan.proposed_location_name = ""
+                plan.proposed_notes = ""
+                plan.reschedule_proposed_at = None
+                plan.save(update_fields=("status", "cancelled_by", "cancelled_at", "reschedule_proposed_by", "proposed_starts_at", "proposed_timezone_name", "proposed_location_name", "proposed_notes", "reschedule_proposed_at", "updated_at"))
+                title, body, event = "Date cancelled", "Your match cancelled the planned date.", "date_plan_cancelled"
+            else:
+                if plan.status != DatingDatePlan.Status.ACCEPTED or plan.starts_at > timezone.now():
+                    return Response({"detail": "Only an accepted date in the past can be marked completed."}, status=status.HTTP_409_CONFLICT)
+                plan.status = DatingDatePlan.Status.COMPLETED
+                plan.completed_at = timezone.now()
+                plan.save(update_fields=("status", "completed_at", "updated_at"))
+                title, body, event = "Date marked completed", "Your match marked the planned date completed.", "date_plan_completed"
+            DatingNotificationService.create_and_dispatch(recipient_id=recipient_id, notification_type="social", title=title, body=body, data={"date_plan_id": str(plan.id), "event": event})
+        return Response(_serialize_plan(plan, request.user.id))
