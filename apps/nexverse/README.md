@@ -72,3 +72,33 @@ The mobile workspace now includes an internal Publisher Studio prototype:
 - The approve/revision controls are local UI demonstrations only. They do not call the moderation API and do not persist decisions.
 - The route is intentionally not linked from the public reader tabs. Production access still requires Nexora authentication, a server-issued moderator role, API integration, and server-confirmed decisions.
 - The dashboard currently uses clearly illustrative sample records; replace them with paginated API responses before operational use.
+
+
+## Publisher Studio API integration
+
+The Publisher Studio screens now call the protected moderation endpoints instead of local demo records:
+
+- The queue reads `GET /api/v1/nexverse/moderation/queue/`.
+- Manuscript review reads `GET /api/v1/nexverse/moderation/works/{work_id}/`.
+- Decisions are posted to `POST /api/v1/nexverse/moderation/works/{work_id}/decision/`.
+- The client sends a Firebase ID token as a Bearer token. The Django API verifies it through `FirebaseIdentityAuthentication` and enforces the moderator role on the server.
+- A successful decision is reflected in the UI only after the API returns success. A stale submission (HTTP 409) prompts a reload; permission failures are shown to the moderator.
+- Rejection requires a note in the client and is also enforced by the server.
+
+### Required Nexora Core integration
+
+Set `EXPO_PUBLIC_NEXORA_API_URL` to the API origin (for example, `https://api.example.com`). The client appends `/api/v1` automatically. See `mobile/.env.example`.
+
+The Nexverse app does not yet own a Firebase sign-in flow. When Nexora Core auth is available, configure the token provider once during app bootstrap, using the existing Firebase Auth instance:
+
+```ts
+import { configureNexverseAccessTokenProvider } from '@/services/moderation';
+
+// firebaseAuth is the shared Firebase Auth instance from Nexora Core.
+configureNexverseAccessTokenProvider(async () => {
+  const user = firebaseAuth.currentUser;
+  return user ? user.getIdToken() : null;
+});
+```
+
+Do not store or hardcode ID tokens in the app. The token provider should return a fresh Firebase ID token from the authenticated user. Until this provider and the API URL are configured, Publisher Studio intentionally displays an authentication/configuration state rather than demo data. The backend remains the authority for reviewer/publisher/admin permissions.
