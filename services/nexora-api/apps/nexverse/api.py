@@ -21,6 +21,10 @@ def author_payload(author):
 
 
 def work_payload(work, include_chapters=False):
+    chapter_count = getattr(work, "published_chapter_count", None)
+    if chapter_count is None:
+        chapter_count = work.chapters.filter(status=NexverseChapter.Status.PUBLISHED).count()
+
     payload = {
         "id": str(work.id),
         "slug": work.slug,
@@ -32,11 +36,14 @@ def work_payload(work, include_chapters=False):
         "status": work.status,
         "contentRating": work.content_rating,
         "author": author_payload(work.author),
-        "chapterCount": getattr(work, "published_chapter_count", None) if getattr(work, "published_chapter_count", None) is not None else work.chapters.filter(status=NexverseChapter.Status.PUBLISHED).count(),
+        "chapterCount": chapter_count,
         "viewCount": work.view_count,
         "publishedAt": work.published_at.isoformat() if work.published_at else None,
     }
     if include_chapters:
+        chapters = getattr(work, "published_chapters", None)
+        if chapters is None:
+            chapters = work.chapters.filter(status=NexverseChapter.Status.PUBLISHED)
         payload["chapters"] = [
             {
                 "id": str(chapter.id),
@@ -47,11 +54,7 @@ def work_payload(work, include_chapters=False):
                 "freePreview": chapter.is_free_preview,
                 "publishedAt": chapter.published_at.isoformat() if chapter.published_at else None,
             }
-            for chapter in getattr(
-                work,
-                "published_chapters",
-                work.chapters.filter(status=NexverseChapter.Status.PUBLISHED),
-            )
+            for chapter in chapters
         ]
     return payload
 
