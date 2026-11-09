@@ -42,6 +42,7 @@ class DatingDatePlan(AuditableBaseModel):
     proposed_location_name = models.CharField(max_length=180, blank=True)
     proposed_notes = models.CharField(max_length=1000, blank=True)
     reschedule_proposed_at = models.DateTimeField(null=True, blank=True)
+    reminder_version = models.PositiveIntegerField(default=0)
 
     class Meta:
         db_table = "dating_date_plans"
@@ -70,3 +71,40 @@ class DatingRelationshipMilestone(AuditableBaseModel):
             models.UniqueConstraint(fields=("match", "stage"), name="dating_milestone_match_stage_unique"),
         ]
         indexes = [models.Index(fields=("match", "stage"))]
+
+
+class DatingDatePlanReminder(AuditableBaseModel):
+    class ReminderType(models.TextChoices):
+        ONE_DAY = "one_day", "24 hours before"
+        ONE_HOUR = "one_hour", "1 hour before"
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        PROCESSING = "processing", "Processing"
+        SENT = "sent", "Sent"
+        FAILED = "failed", "Failed"
+        CANCELLED = "cancelled", "Cancelled"
+
+    date_plan = models.ForeignKey(DatingDatePlan, on_delete=models.CASCADE, related_name="reminders")
+    recipient = models.ForeignKey(NexoraUser, on_delete=models.CASCADE, related_name="dating_date_plan_reminders")
+    reminder_type = models.CharField(max_length=16, choices=ReminderType.choices)
+    schedule_version = models.PositiveIntegerField(default=0)
+    scheduled_for = models.DateTimeField(db_index=True)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING, db_index=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    available_at = models.DateTimeField(db_index=True)
+    locked_at = models.DateTimeField(null=True, blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        db_table = "dating_date_plan_reminders"
+        constraints = [
+            models.UniqueConstraint(
+                fields=("date_plan", "recipient", "reminder_type", "schedule_version"),
+                name="dating_plan_reminder_version_unique",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=("status", "available_at"), name="dating_plan_reminder_queue_idx"),
+        ]
