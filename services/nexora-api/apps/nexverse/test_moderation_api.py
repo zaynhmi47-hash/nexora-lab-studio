@@ -76,6 +76,19 @@ class NexverseModerationApiTests(APITestCase):
             ).exists()
         )
 
+    def test_reviewer_cannot_publish_without_publisher_role(self):
+        NexverseModerator.objects.create(
+            user=self.moderator_user, role=NexverseModerator.Role.REVIEWER
+        )
+        response = self.client.post(
+            f"/api/v1/nexverse/moderation/works/{self.work.id}/decision/",
+            {"decision": "approve", "note": "Looks good."},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 403)
+        self.work.refresh_from_db()
+        self.assertEqual(self.work.review_status, NexverseWork.ReviewStatus.SUBMITTED)
+
     def test_rejection_requires_note_and_keeps_work_unpublished(self):
         NexverseModerator.objects.create(user=self.moderator_user)
         missing_note = self.client.post(
