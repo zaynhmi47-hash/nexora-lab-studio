@@ -72,6 +72,7 @@ def _serialize_plan(plan, viewer_id):
         "id": str(plan.id),
         "match_id": str(plan.match_id),
         "organizer_id": str(plan.organizer_id),
+        "can_respond": plan.organizer_id != viewer_id,
         "partner_id": str(partner_id),
         "activity": plan.activity,
         "title": plan.title,
