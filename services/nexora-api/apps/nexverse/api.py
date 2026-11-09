@@ -1,5 +1,5 @@
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
-from django.db.models import F
+from django.db.models import Count, F, Prefetch, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import AllowAny
@@ -32,7 +32,7 @@ def work_payload(work, include_chapters=False):
         "status": work.status,
         "contentRating": work.content_rating,
         "author": author_payload(work.author),
-        "chapterCount": work.chapters.filter(status=NexverseChapter.Status.PUBLISHED).count(),
+        "chapterCount": getattr(work, "published_chapter_count", None) if getattr(work, "published_chapter_count", None) is not None else work.chapters.filter(status=NexverseChapter.Status.PUBLISHED).count(),
         "viewCount": work.view_count,
         "publishedAt": work.published_at.isoformat() if work.published_at else None,
     }
@@ -47,7 +47,11 @@ def work_payload(work, include_chapters=False):
                 "freePreview": chapter.is_free_preview,
                 "publishedAt": chapter.published_at.isoformat() if chapter.published_at else None,
             }
-            for chapter in work.chapters.filter(status=NexverseChapter.Status.PUBLISHED)
+            for chapter in getattr(
+                work,
+                "published_chapters",
+                work.chapters.filter(status=NexverseChapter.Status.PUBLISHED),
+            )
         ]
     return payload
 
@@ -60,10 +64,14 @@ class NexverseCatalogView(APIView):
         queryset = NexverseWork.objects.filter(
             status__in=(NexverseWork.Status.PUBLISHED, NexverseWork.Status.COMPLETED),
             visibility=NexverseWork.Visibility.PUBLIC,
-        ).select_related("author").prefetch_related("chapters")
-        query = request.query_params.get("q", "").strip()
-        genre = request.query_params.get("genre", "").strip()
-        language = request.query_params.get("language", "").strip()
+        ).select_related("author").annotate(
+            published_chapter_count=Count(
+                "chapters", filter=Q(chapters__status=NexverseChapter.Status.PUBLISHED)
+            )
+        )
+        query = request.query_params.get("q", "").strip()[:120]
+        genre = request.query_params.get("genre", "").strip()[:64]
+        language = request.query_params.get("language", "").strip()[:12]
         if query:
             queryset = queryset.filter(title__icontains=query)
         if genre:
@@ -104,7 +112,19 @@ class NexverseWorkDetailView(APIView):
 
     def get(self, request, work_slug):
         work = get_object_or_404(
-            NexverseWork.objects.select_related("author").prefetch_related("chapters"),
+            NexverseWork.objects.select_related("author")
+            .annotate(
+                published_chapter_count=Count(
+                    "chapters", filter=Q(chapters__status=NexverseChapter.Status.PUBLISHED)
+                )
+            )
+            .prefetch_related(
+                Prefetch(
+                    "chapters",
+                    queryset=NexverseChapter.objects.filter(status=NexverseChapter.Status.PUBLISHED),
+                    to_attr="published_chapters",
+                )
+            ),
             slug=work_slug,
             status__in=(NexverseWork.Status.PUBLISHED, NexverseWork.Status.COMPLETED),
             visibility=NexverseWork.Visibility.PUBLIC,
