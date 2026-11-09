@@ -9,6 +9,8 @@ export type DatingDatePlan = {
   activity: string; title: string; starts_at: string; timezone: string;
   location_name: string; notes: string; status: 'proposed' | 'accepted' | 'declined' | 'cancelled' | 'completed';
   responded_at: string | null; created_at: string;
+  cancelled_by?: string | null; cancelled_at?: string | null; completed_at?: string | null;
+  reschedule?: { proposed_by: string; starts_at: string; timezone: string; location_name: string; notes: string; can_respond: boolean } | null;
 };
 export type DatingRelationshipMilestone = {
   stage: string; label: string; acknowledged_by_me: boolean;
@@ -108,6 +110,9 @@ class DatingApi {
   respondToDatePlan(planId: string, decision: 'accept' | 'decline') {
     return this.request<DatingDatePlan>('/api/v1/dating/date-plans/' + planId + '/response/', { method: 'POST', body: JSON.stringify({ decision }) });
   }
+  updateDatePlanLifecycle(planId: string, action: 'cancel' | 'complete') { return this.request<DatingDatePlan>('/api/v1/dating/date-plans/' + planId + '/lifecycle/', { method: 'POST', body: JSON.stringify({ action }) }); }
+  proposeDatePlanReschedule(planId: string, payload: { starts_at: string; timezone_name: string; location_name: string; notes?: string }) { return this.request<DatingDatePlan>('/api/v1/dating/date-plans/' + planId + '/reschedule/', { method: 'POST', body: JSON.stringify(payload) }); }
+  respondToDatePlanReschedule(planId: string, decision: 'accept' | 'decline') { return this.request<DatingDatePlan>('/api/v1/dating/date-plans/' + planId + '/reschedule/', { method: 'PUT', body: JSON.stringify({ decision }) }); }
   getRelationshipMilestones(matchId: string) {
     return this.request<{ match_id: string; items: DatingRelationshipMilestone[] }>('/api/v1/dating/matches/' + matchId + '/relationship-milestones/');
   }
