@@ -1,8 +1,13 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { palette } from '@/constants/theme';
+import { getNexoraCoreAccessToken } from '@/services/firebaseAuth';
+import { configureNexverseAccessTokenProvider } from '@/services/moderation';
 
 export default function RootLayout() {
+  // Register the shared Firebase identity-token bridge before protected screens load.
+  configureNexverseAccessTokenProvider(getNexoraCoreAccessToken);
+
   return (
     <>
       <StatusBar style="dark" />
