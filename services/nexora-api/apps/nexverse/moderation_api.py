@@ -87,7 +87,7 @@ class NexverseModerationQueueView(APIView):
         queryset = (
             NexverseWork.objects.filter(review_status=NexverseWork.ReviewStatus.SUBMITTED)
             .select_related("author")
-            .prefetch_related("chapters")
+            .prefetch_related("chapters", "review_events__moderator__user")
             .order_by("submitted_at", "created_at")
         )
         try:
