@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 from apps.core.models import AuditableBaseModel
 from apps.identity.models import NexoraUser
@@ -92,7 +93,7 @@ class DatingDatePlanReminder(AuditableBaseModel):
     scheduled_for = models.DateTimeField(db_index=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING, db_index=True)
     attempts = models.PositiveSmallIntegerField(default=0)
-    available_at = models.DateTimeField(db_index=True)
+    available_at = models.DateTimeField(db_index=True, default=timezone.now)
     locked_at = models.DateTimeField(null=True, blank=True)
     sent_at = models.DateTimeField(null=True, blank=True)
     last_error = models.CharField(max_length=500, blank=True)
