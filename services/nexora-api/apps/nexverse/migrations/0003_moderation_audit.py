@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
             name="NexverseModerator",
             fields=[
                 ("id", models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, serialize=False)),
-                ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
                 ("deleted_at", models.DateTimeField(blank=True, db_index=True, null=True)),
                 ("role", models.CharField(
