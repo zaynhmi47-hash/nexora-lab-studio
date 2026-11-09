@@ -26,6 +26,25 @@ class NexverseAuthor(AuditableBaseModel):
         return self.pen_name
 
 
+class NexverseModerator(AuditableBaseModel):
+    class Role(models.TextChoices):
+        REVIEWER = "reviewer", "Reviewer"
+        PUBLISHER = "publisher", "Publisher"
+        ADMIN = "admin", "Administrator"
+
+    user = models.OneToOneField(
+        NexoraUser, on_delete=models.PROTECT, related_name="nexverse_moderator"
+    )
+    role = models.CharField(max_length=16, choices=Role.choices, default=Role.REVIEWER)
+    is_active = models.BooleanField(default=True, db_index=True)
+
+    class Meta:
+        db_table = "nexverse_moderators"
+
+    def __str__(self) -> str:
+        return f"{self.user_id}:{self.role}"
+
+
 class NexverseWork(AuditableBaseModel):
     class Status(models.TextChoices):
         DRAFT = "draft", "Draft"
@@ -67,6 +86,10 @@ class NexverseWork(AuditableBaseModel):
     submitted_at = models.DateTimeField(null=True, blank=True)
     reviewed_at = models.DateTimeField(null=True, blank=True)
     review_note = models.CharField(max_length=1000, blank=True)
+    reviewed_by = models.ForeignKey(
+        NexoraUser, null=True, blank=True, on_delete=models.PROTECT,
+        related_name="nexverse_reviewed_works",
+    )
 
     class Meta:
         db_table = "nexverse_works"
@@ -118,3 +141,26 @@ class NexverseChapter(AuditableBaseModel):
 
     def __str__(self) -> str:
         return f"{self.work.title} — {self.title}"
+
+
+
+class NexverseReviewEvent(AuditableBaseModel):
+    class Decision(models.TextChoices):
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    work = models.ForeignKey(
+        NexverseWork, on_delete=models.PROTECT, related_name="review_events"
+    )
+    moderator = models.ForeignKey(
+        NexverseModerator, on_delete=models.PROTECT, related_name="review_events"
+    )
+    decision = models.CharField(max_length=16, choices=Decision.choices)
+    note = models.CharField(max_length=1000, blank=True)
+
+    class Meta:
+        db_table = "nexverse_review_events"
+        ordering = ("-created_at",)
+
+    def __str__(self) -> str:
+        return f"{self.work_id}:{self.decision}"
