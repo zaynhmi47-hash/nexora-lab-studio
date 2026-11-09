@@ -33,6 +33,15 @@ class DatingDatePlan(AuditableBaseModel):
     notes = models.CharField(max_length=1000, blank=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PROPOSED, db_index=True)
     responded_at = models.DateTimeField(null=True, blank=True)
+    cancelled_by = models.ForeignKey(NexoraUser, null=True, blank=True, on_delete=models.PROTECT, related_name="dating_plans_cancelled")
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    reschedule_proposed_by = models.ForeignKey(NexoraUser, null=True, blank=True, on_delete=models.PROTECT, related_name="dating_plan_reschedules_proposed")
+    proposed_starts_at = models.DateTimeField(null=True, blank=True)
+    proposed_timezone_name = models.CharField(max_length=64, blank=True)
+    proposed_location_name = models.CharField(max_length=180, blank=True)
+    proposed_notes = models.CharField(max_length=1000, blank=True)
+    reschedule_proposed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "dating_date_plans"
