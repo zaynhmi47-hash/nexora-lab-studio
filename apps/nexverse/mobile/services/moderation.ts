@@ -84,7 +84,16 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!accessTokenProvider) {
     throw new ModerationApiError('Sesi Nexora belum terhubung. Masuk melalui autentikasi Nexora terlebih dahulu.', 401, 'AUTH_PROVIDER_MISSING');
   }
-  const token = await accessTokenProvider();
+  let token: string | null;
+  try {
+    token = await accessTokenProvider();
+  } catch {
+    throw new ModerationApiError(
+      'Konfigurasi Firebase Auth belum lengkap atau sesi tidak dapat dibaca.',
+      0,
+      'AUTH_CONFIGURATION_ERROR',
+    );
+  }
   if (!token) {
     throw new ModerationApiError('Sesi login tidak tersedia atau sudah berakhir.', 401, 'AUTH_REQUIRED');
   }
