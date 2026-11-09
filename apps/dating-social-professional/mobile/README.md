@@ -88,4 +88,16 @@ The tokens are a foundation, not a claim that every screen has been migrated. Re
 - Date Planner supports choosing an activity, entering date/time/place/notes, validating required fields, and reviewing a local plan preview.
 - Added a five-stage relationship journey guide: First hello, Getting to know, First date, Building trust, and Defining the relationship.
 - Added first-date safety guidance and copy that reinforces mutual consent, personal boundaries, and each relationship's own pace.
-- **Persistence boundary:** this slice is presentation/local state only. There is no confirmed planner or relationship-milestone API in the mobile contract, so plans and milestone progress are not saved to the account, synced, or shared with a match. A backend model/API and tests are required before claiming persistent collaboration or reminders.
+- **Persistence boundary:** the backend persistence layer and authenticated endpoints are now implemented (see below), but this mobile screen has not yet been wired to the API. Until that client integration is complete, the current preview and journey state remain local and are not saved, synced, or shared.
+
+### Date Planner backend — first persistence slice
+
+- Added PostgreSQL-backed `DatingDatePlan` and `DatingRelationshipMilestone` models with migration `0020_date_planner_relationship_journey`.
+- Date plans are attached to an existing active mutual match. The organizer proposes a plan; only the matched partner can accept or decline. The API rejects self-invitations, inactive matches, blocked pairs, and past start times.
+- Each participant acknowledges relationship milestones independently. The API exposes whether the current user, their partner, or both have acknowledged each stage; it does not infer a relationship status or automatically advance a couple.
+- In-app notification records are created for invitations, responses, and milestone acknowledgements.
+- Endpoints:
+  - `GET/POST /api/v1/dating/date-plans/`
+  - `POST /api/v1/dating/date-plans/<plan_id>/response/` with `decision: accept|decline`
+  - `GET/POST /api/v1/dating/matches/<match_id>/relationship-milestones/`
+- The current slice does not yet include editing/cancelling plans, reminders, calendar integration, partner-visible UI, or automated milestone progression. Backend tests and migration execution still need to be run in the Codespaces environment.
