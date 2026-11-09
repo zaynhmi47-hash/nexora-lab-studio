@@ -1,6 +1,11 @@
 from django.urls import path
 
 from .api import NexverseCatalogView, NexverseChapterContentView, NexverseWorkDetailView
+from .moderation_api import (
+    NexverseModerationDecisionView,
+    NexverseModerationQueueView,
+    NexverseModerationWorkDetailView,
+)
 from .creator_api import (
     NexverseCreatorChapterDetailView,
     NexverseCreatorChapterListView,
@@ -24,4 +29,7 @@ urlpatterns = [
     path("creator/works/<uuid:work_id>/chapters/", NexverseCreatorChapterListView.as_view(), name="nexverse-creator-chapter-list"),
     path("creator/works/<uuid:work_id>/chapters/<uuid:chapter_id>/", NexverseCreatorChapterDetailView.as_view(), name="nexverse-creator-chapter-detail"),
     path("creator/works/<uuid:work_id>/submit/", NexverseSubmitWorkView.as_view(), name="nexverse-creator-submit-work"),
+    path("moderation/queue/", NexverseModerationQueueView.as_view(), name="nexverse-moderation-queue"),
+    path("moderation/works/<uuid:work_id>/", NexverseModerationWorkDetailView.as_view(), name="nexverse-moderation-work-detail"),
+    path("moderation/works/<uuid:work_id>/decision/", NexverseModerationDecisionView.as_view(), name="nexverse-moderation-decision"),
 ]
