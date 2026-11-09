@@ -43,6 +43,15 @@ export default function MatchesScreen() {
         </View>
       </View>
 
+      <Pressable accessibilityRole="button" style={styles.plannerBanner} onPress={() => router.push('/(app)/date-planner')}>
+        <View style={styles.plannerIcon}><Text style={styles.plannerEmoji}>✦</Text></View>
+        <View style={styles.summaryCopy}>
+          <Text style={styles.plannerTitle}>Plan your next date</Text>
+          <Text style={styles.summarySubtitle}>Rancang pertemuan dan jelajahi relationship journey.</Text>
+        </View>
+        <Text style={styles.plannerArrow}>›</Text>
+      </Pressable>
+
       {isLoading ? <View style={styles.stateCard}><Text style={styles.stateTitle}>Menemukan koneksimu…</Text><Text style={styles.stateText}>Sebentar, kami sedang memuat daftar match.</Text></View> : null}
       {!isLoading && !data?.items.length ? (
         <View style={styles.emptyCard}>
@@ -88,6 +97,11 @@ const styles = StyleSheet.create({
   summaryCopy: { flex: 1, gap: 2 },
   summaryTitle: { color: datingColors.text, fontWeight: '900', fontSize: 14 },
   summarySubtitle: { color: datingColors.textSecondary, fontSize: 11 },
+  plannerBanner: { flexDirection: 'row', alignItems: 'center', gap: 11, padding: 13, borderRadius: datingRadii.lg, borderWidth: 1, borderColor: datingColors.border, backgroundColor: datingColors.surface },
+  plannerIcon: { width: 40, height: 40, borderRadius: 14, backgroundColor: datingColors.accentSoft, alignItems: 'center', justifyContent: 'center' },
+  plannerEmoji: { color: datingColors.primary, fontSize: 21, fontWeight: '900' },
+  plannerTitle: { color: datingColors.text, fontSize: 13, fontWeight: '900' },
+  plannerArrow: { color: datingColors.primary, fontSize: 25 },
   matchCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 13, backgroundColor: datingColors.surface, borderWidth: 1, borderColor: datingColors.border, borderRadius: datingRadii.lg, ...datingShadows.card },
   avatar: { width: 62, height: 62, borderRadius: 22, backgroundColor: datingColors.surfaceMuted },
   avatarPlaceholder: { width: 62, height: 62, borderRadius: 22, backgroundColor: datingColors.accentSoft, alignItems: 'center', justifyContent: 'center' },
