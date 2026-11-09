@@ -101,3 +101,12 @@ The tokens are a foundation, not a claim that every screen has been migrated. Re
   - `POST /api/v1/dating/date-plans/<plan_id>/response/` with `decision: accept|decline`
   - `GET/POST /api/v1/dating/matches/<match_id>/relationship-milestones/`
 - The current slice does not yet include editing/cancelling plans, reminders, calendar integration, partner-visible UI, or automated milestone progression. Backend tests and migration execution still need to be run in the Codespaces environment.
+
+### Date Planner mobile API integration
+
+- The Date Planner screen now uses the authenticated dating API provider and TanStack Query for matches, date plans, and per-match relationship milestones.
+- Users can select an active match, submit a future-dated invitation with device-local time and IANA timezone, and see sent/received plans synchronized from the server.
+- Invited participants can accept or decline proposed plans; the API response includes a viewer-scoped `can_respond` flag so organizers do not see response controls.
+- Each participant can acknowledge each relationship stage once. The screen shows separate acknowledgement states and highlights only mutual agreement.
+- Query caches are refreshed after successful creation, response, and milestone acknowledgement. The screen includes loading, empty, error, and pending states.
+- The mobile integration is committed, but Expo typecheck, device testing, and backend migration/API tests have not yet been run in Codespaces. The current API has no plan edit/cancel controls or reminder scheduling.
