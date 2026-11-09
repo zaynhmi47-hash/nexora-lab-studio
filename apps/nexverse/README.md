@@ -1,53 +1,50 @@
 # Nexverse
 
-Nexverse is the public-facing reading and entertainment product in the Nexora ecosystem.
+Nexverse is the reading, publishing and entertainment product in the Nexora ecosystem. The product is one modular application: reading and discovery first, followed by creator publishing, publisher operations, monetization and broader media formats.
 
-## Current implementation
+## Mobile app
 
-The first mobile foundation is in `mobile/` using Expo Router and React Native:
-
-- Home discovery surface with featured story
-- Genre and text search
-- Story detail and chapter preview
-- Reading experience with adjustable typography
-- Personal library and profile shells
-- Local fixture catalog clearly marked as demo content
-
-## Run locally
-
-From the repository root:
+The Expo Router application is in `mobile/`.
 
 ```bash
 pnpm install
 pnpm --filter nexverse-mobile start
-```
-
-Type-check:
-
-```bash
 pnpm --filter nexverse-mobile typecheck
 ```
 
-## Important boundaries
+Current mobile surfaces include Home, Discover, Library, Profile, story detail, reader and the internal Publisher Studio. Some public-reader surfaces still use local fixtures; Publisher Studio queue and review actions use the protected API.
 
-- Catalog fixtures are demonstration data, not production content.
-- Authentication, saved library, reading progress, publishing workflows, rights, paid access and creator royalties are not yet connected.
-- All paid-content entitlement checks must be server-side.
-- Nexverse domain APIs belong in `services/nexora-api/apps/nexverse/` and are mounted under `/api/v1/nexverse/`.
-- The Django API includes public catalog search/filtering, work details, chapter metadata and free-preview chapter content.
-- Creator endpoints support author onboarding, draft works and chapters, ownership-scoped editing and submission for review.
-- Moderation endpoints provide a protected queue, full manuscript review, approve/reject decisions and review history.
-- Only works with both a published publication status and an approved review status appear in the public catalog or chapter delivery APIs.
-- Paid chapter bodies are deliberately withheld with `ENTITLEMENT_REQUIRED` until the server-side entitlement service is connected.
+## Backend boundaries
+
+- Nexverse domain APIs live in `services/nexora-api/apps/nexverse/` and are mounted under `/api/v1/nexverse/`.
+- Identity is anchored to the shared Nexora Core `NexoraUser`; Nexverse does not create a second account system.
+- Creator endpoints provide author onboarding, draft works and chapters, ownership-scoped editing and submission for review.
+- Moderation endpoints provide a protected queue, manuscript review, approve/reject decisions and an audit history.
+- Only works with both published publication status and approved review status appear in public catalog and chapter delivery APIs.
+- Paid chapter bodies remain withheld with `ENTITLEMENT_REQUIRED` until server-side entitlement checks are connected. Never implement paid-content authorization only in the mobile client.
 - Reuse Nexora Core identity, files, notifications and generic payment primitives.
 
-## Moderation API
+## Publisher Studio API
 
 - `GET /api/v1/nexverse/moderation/queue/`
-- `GET /api/v1/nexverse/moderation/works/{work_id}/` (includes manuscript chapter bodies and review history)
-- `POST /api/v1/nexverse/moderation/works/{work_id}/decision/` with `{"decision":"approve","note":"..."}` or `{"decision":"reject","note":"..." }`
+- `GET /api/v1/nexverse/moderation/works/{work_id}/`
+- `POST /api/v1/nexverse/moderation/works/{work_id}/decision/` with `{"decision":"approve","note":"..."}` or `{"decision":"reject","note":"..."}`
 
-Moderation access is not self-service. An operations administrator must provision a `NexverseModerator` record for an existing Nexora identity. Roles are `reviewer` (reject/review), `publisher` (approve and publish), and `admin` (both). Example provisioning from Django shell:
+The backend verifies Firebase ID tokens through `FirebaseIdentityAuthentication` and enforces the active Nexverse moderator role on every request. Roles are provisioned operationally for existing Nexora identities: `reviewer` can reject, `publisher` can approve/publish, and `admin` can do both. Decisions are persisted with a review audit event. The mobile client does not grant moderator permissions.
+
+## Firebase Auth bridge
+
+The mobile app registers `getNexoraCoreAccessToken` as the moderation API token provider during root-layout startup. It uses the Firebase JS SDK with React Native AsyncStorage persistence and calls `currentUser.getIdToken()` on demand; ID tokens are not copied into app storage or hardcoded.
+
+Configure the variables in `mobile/.env.example`: `EXPO_PUBLIC_NEXORA_API_URL` (API origin without `/api/v1`) and the `EXPO_PUBLIC_FIREBASE_*` client configuration for the same Nexora identity project used by Nexora Core.
+
+The bridge deliberately does not create a second Nexora identity or a standalone login flow. It exposes the Firebase session available to this app. The Nexverse mobile sign-in/onboarding UI and reusable cross-app Nexora Core auth package are still separate work; until an authenticated Firebase user is present, Publisher Studio displays an authentication state. The server remains authoritative for identity mapping and moderator permissions.
+
+Never place Firebase Admin service-account credentials in Expo environment variables. Client Firebase configuration values are public identifiers; server credentials belong only in the backend secret environment.
+
+## Moderator provisioning
+
+An operations administrator provisions a moderator against an existing Nexora identity from the Django shell:
 
 ```python
 from apps.identity.models import NexoraUser
@@ -60,45 +57,6 @@ NexverseModerator.objects.update_or_create(
 )
 ```
 
-Approvals publish the work and its chapters atomically and create an audit event. Rejections require a note and keep the work unpublished. The mobile client still uses demo fixtures; API integration and a dedicated publisher dashboard UI remain separate implementation work.
+## Validation notes
 
-
-## Publisher Studio UI
-
-The mobile workspace now includes an internal Publisher Studio prototype:
-
-- `/publisher` — editorial overview, sample moderation metrics, search and queue filters.
-- `/publisher/works/{id}` — manuscript preview, expandable chapter excerpts, review-history placeholder and moderator note field.
-- The approve/revision controls are local UI demonstrations only. They do not call the moderation API and do not persist decisions.
-- The route is intentionally not linked from the public reader tabs. Production access still requires Nexora authentication, a server-issued moderator role, API integration, and server-confirmed decisions.
-- The dashboard currently uses clearly illustrative sample records; replace them with paginated API responses before operational use.
-
-
-## Publisher Studio API integration
-
-The Publisher Studio screens now call the protected moderation endpoints instead of local demo records:
-
-- The queue reads `GET /api/v1/nexverse/moderation/queue/`.
-- Manuscript review reads `GET /api/v1/nexverse/moderation/works/{work_id}/`.
-- Decisions are posted to `POST /api/v1/nexverse/moderation/works/{work_id}/decision/`.
-- The client sends a Firebase ID token as a Bearer token. The Django API verifies it through `FirebaseIdentityAuthentication` and enforces the moderator role on the server.
-- A successful decision is reflected in the UI only after the API returns success. A stale submission (HTTP 409) prompts a reload; permission failures are shown to the moderator.
-- Rejection requires a note in the client and is also enforced by the server.
-
-### Required Nexora Core integration
-
-Set `EXPO_PUBLIC_NEXORA_API_URL` to the API origin (for example, `https://api.example.com`). The client appends `/api/v1` automatically. See `mobile/.env.example`.
-
-The Nexverse app does not yet own a Firebase sign-in flow. When Nexora Core auth is available, configure the token provider once during app bootstrap, using the existing Firebase Auth instance:
-
-```ts
-import { configureNexverseAccessTokenProvider } from '@/services/moderation';
-
-// firebaseAuth is the shared Firebase Auth instance from Nexora Core.
-configureNexverseAccessTokenProvider(async () => {
-  const user = firebaseAuth.currentUser;
-  return user ? user.getIdToken() : null;
-});
-```
-
-Do not store or hardcode ID tokens in the app. The token provider should return a fresh Firebase ID token from the authenticated user. Until this provider and the API URL are configured, Publisher Studio intentionally displays an authentication/configuration state rather than demo data. The backend remains the authority for reviewer/publisher/admin permissions.
+Run the commands above after installing workspace dependencies. A successful GitHub write is not evidence that the app type-checks or that a live Firebase/API environment is configured; those checks must be run in the repository environment with the required environment variables.
