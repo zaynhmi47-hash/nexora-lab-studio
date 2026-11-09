@@ -8,7 +8,7 @@ export function StoryCard({ story, horizontal = false }: { story: Story; horizon
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`Buka novel ${story.title}`}
-      onPress={() => router.push(`/work/${story.id}`)}
+      onPress={() => router.push({ pathname: '/work/[slug]', params: { slug: story.id } })}
       style={[styles.card, horizontal && styles.horizontal]}
     >
       <Image source={{ uri: story.cover }} style={[styles.cover, horizontal && styles.horizontalCover]} />
