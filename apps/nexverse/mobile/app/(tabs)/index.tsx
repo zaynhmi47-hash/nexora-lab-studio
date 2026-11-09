@@ -28,7 +28,7 @@ export default function HomeScreen() {
         <View><Text style={styles.kicker}>PILIHAN EDITOR</Text><Text style={styles.sectionTitle}>Cerita unggulan</Text></View>
         <Pressable onPress={() => router.push('/discover')}><Text style={styles.seeAll}>Lihat semua</Text></Pressable>
       </View>
-      <Pressable style={styles.feature} onPress={() => router.push(`/work/${featured.id}`)}>
+      <Pressable style={styles.feature} onPress={() => router.push({ pathname: '/work/[slug]', params: { slug: featured.id } })}>
         <Image source={{ uri: featured.cover }} style={styles.featureImage} />
         <View style={styles.featureShade} />
         <View style={styles.featureCopy}>
