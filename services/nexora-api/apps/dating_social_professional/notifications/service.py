@@ -44,6 +44,7 @@ class DatingNotificationService:
             "match": preferences.match_push_enabled,
             "message": preferences.message_push_enabled,
             "safety": preferences.safety_push_enabled,
+            "date_plan": preferences.date_plan_push_enabled,
         }.get(notification.type, False)
         if not preferences.push_enabled or not enabled:
             return
