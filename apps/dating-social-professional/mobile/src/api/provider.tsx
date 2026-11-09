@@ -4,6 +4,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useDatingSession } from '@/src/auth/session';
 
 
+export type DatingDatePlan = {
+  id: string; match_id: string; organizer_id: string; partner_id: string;
+  activity: string; title: string; starts_at: string; timezone: string;
+  location_name: string; notes: string; status: 'proposed' | 'accepted' | 'declined' | 'cancelled' | 'completed';
+  responded_at: string | null; created_at: string;
+};
+export type DatingRelationshipMilestone = {
+  stage: string; label: string; acknowledged_by_me: boolean;
+  acknowledged_by_partner: boolean; mutually_acknowledged: boolean;
+};
 export type DatingMoment = {
   id: string;
   author: { id: string; display_name: string; photo_url: string };
@@ -91,6 +101,19 @@ class DatingApi {
   clearConversationPresence(conversationId: string) { return this.request<{ status: 'inactive' }>(`/api/v1/dating/conversations/${conversationId}/presence/`, { method: 'DELETE' }); }
   registerPushToken(token: string, platform: string) { return this.request<{ id: string; status: 'registered' }>('/api/v1/dating/push-tokens/', { method: 'POST', body: JSON.stringify({ token, platform }) }); }
   unregisterPushToken(token: string) { return this.request<{ status: 'unregistered' }>('/api/v1/dating/push-tokens/', { method: 'DELETE', body: JSON.stringify({ token }) }); }
+  getDatePlans() { return this.request<{ items: DatingDatePlan[] }>('/api/v1/dating/date-plans/'); }
+  createDatePlan(payload: { match: string; activity: string; title: string; starts_at: string; timezone_name: string; location_name: string; notes?: string }) {
+    return this.request<DatingDatePlan>('/api/v1/dating/date-plans/', { method: 'POST', body: JSON.stringify(payload) });
+  }
+  respondToDatePlan(planId: string, decision: 'accept' | 'decline') {
+    return this.request<DatingDatePlan>('/api/v1/dating/date-plans/' + planId + '/response/', { method: 'POST', body: JSON.stringify({ decision }) });
+  }
+  getRelationshipMilestones(matchId: string) {
+    return this.request<{ match_id: string; items: DatingRelationshipMilestone[] }>('/api/v1/dating/matches/' + matchId + '/relationship-milestones/');
+  }
+  acknowledgeRelationshipMilestone(matchId: string, stage: string) {
+    return this.request<{ match_id: string; items: DatingRelationshipMilestone[] }>('/api/v1/dating/matches/' + matchId + '/relationship-milestones/', { method: 'POST', body: JSON.stringify({ stage }) });
+  }
   createConversation(matchId: string) { return this.request<{ id: string; matchId: string }>('/api/v1/dating/conversations/', { method: 'POST', body: JSON.stringify({ match_id: matchId }) }); }
   getMessages(conversationId: string, options: { before?: string; limit?: number } = {}) { const query = new URLSearchParams(); if (options.before) query.set('before', options.before); if (options.limit) query.set('limit', String(options.limit)); const suffix = query.toString() ? `?${query.toString()}` : ''; return this.request<{ items: DatingMessage[]; next_before: string | null }>(`/api/v1/dating/conversations/${conversationId}/messages/${suffix}`); }
   sendMessage(conversationId: string, body: string) { return this.request<DatingMessage>(`/api/v1/dating/conversations/${conversationId}/messages/`, { method: 'POST', body: JSON.stringify({ body }) }); }
