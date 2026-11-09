@@ -97,7 +97,6 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
         Accept: 'application/json',
         Authorization: 'Bearer ' + token,
         ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-        ...init.headers,
       },
     });
   } catch {
