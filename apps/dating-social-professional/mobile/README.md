@@ -80,3 +80,12 @@ The tokens are a foundation, not a claim that every screen has been migrated. Re
 - Grouped editable identity, bio, relationship intent, interests, education, occupation, city, and discovery preferences into clearer sections.
 - Added pull-to-refresh, loading/error states, inline save feedback, basic age/distance validation, and accessible labels for photo actions.
 - Kept all writes on the existing dating API methods; no new backend fields or endpoints are assumed.
+
+
+### Date Planner & Relationship Journey UI
+
+- Added a dedicated Date Planner route reachable from the Matches screen; it is registered as a hidden route so the six primary tabs remain unchanged.
+- Date Planner supports choosing an activity, entering date/time/place/notes, validating required fields, and reviewing a local plan preview.
+- Added a five-stage relationship journey guide: First hello, Getting to know, First date, Building trust, and Defining the relationship.
+- Added first-date safety guidance and copy that reinforces mutual consent, personal boundaries, and each relationship's own pace.
+- **Persistence boundary:** this slice is presentation/local state only. There is no confirmed planner or relationship-milestone API in the mobile contract, so plans and milestone progress are not saved to the account, synced, or shared with a match. A backend model/API and tests are required before claiming persistent collaboration or reminders.
