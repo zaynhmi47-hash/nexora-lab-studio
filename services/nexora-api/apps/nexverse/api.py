@@ -66,6 +66,7 @@ class NexverseCatalogView(APIView):
     def get(self, request):
         queryset = NexverseWork.objects.filter(
             status__in=(NexverseWork.Status.PUBLISHED, NexverseWork.Status.COMPLETED),
+            review_status=NexverseWork.ReviewStatus.APPROVED,
             visibility=NexverseWork.Visibility.PUBLIC,
         ).select_related("author").annotate(
             published_chapter_count=Count(
@@ -130,6 +131,7 @@ class NexverseWorkDetailView(APIView):
             ),
             slug=work_slug,
             status__in=(NexverseWork.Status.PUBLISHED, NexverseWork.Status.COMPLETED),
+            review_status=NexverseWork.ReviewStatus.APPROVED,
             visibility=NexverseWork.Visibility.PUBLIC,
         )
         NexverseWork.objects.filter(pk=work.pk).update(view_count=F("view_count") + 1)
