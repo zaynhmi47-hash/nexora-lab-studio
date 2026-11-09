@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 from .api import DatingActiveUserPermission, DatingActionThrottle
 from .models import DatingBlock, DatingDatePlan, DatingMatch, DatingRelationshipMilestone
 from .notifications.service import DatingNotificationService
+from .date_reminders import cancel_date_plan_reminders, schedule_date_plan_reminders
 
 
 def _partner_for(match, user_id):
@@ -145,6 +146,8 @@ class DatingDatePlanResponseView(APIView):
             plan.status = DatingDatePlan.Status.ACCEPTED if decision == "accept" else DatingDatePlan.Status.DECLINED
             plan.responded_at = timezone.now()
             plan.save(update_fields=("status", "responded_at", "updated_at"))
+            if decision == "accept":
+                schedule_date_plan_reminders(plan)
             DatingNotificationService.create_and_dispatch(
                 recipient_id=plan.organizer_id,
                 notification_type="social",
@@ -233,6 +236,7 @@ class DatingDatePlanLifecycleView(APIView):
                 plan.proposed_notes = ""
                 plan.reschedule_proposed_at = None
                 plan.save(update_fields=("status", "cancelled_by", "cancelled_at", "reschedule_proposed_by", "proposed_starts_at", "proposed_timezone_name", "proposed_location_name", "proposed_notes", "reschedule_proposed_at", "updated_at"))
+                cancel_date_plan_reminders(plan)
                 title, body, event = "Date cancelled", "Your match cancelled the planned date.", "date_plan_cancelled"
             else:
                 if plan.status != DatingDatePlan.Status.ACCEPTED or plan.starts_at > timezone.now():
@@ -303,5 +307,7 @@ class DatingDatePlanRescheduleView(APIView):
             plan.proposed_notes = ""
             plan.reschedule_proposed_at = None
             plan.save(update_fields=("starts_at", "timezone_name", "location_name", "notes", "reschedule_proposed_by", "proposed_starts_at", "proposed_timezone_name", "proposed_location_name", "proposed_notes", "reschedule_proposed_at", "updated_at"))
+            if decision == "accept":
+                schedule_date_plan_reminders(plan)
             DatingNotificationService.create_and_dispatch(recipient_id=proposer_id, notification_type="social", title="Reschedule response", body="Your reschedule proposal was " + ("accepted." if decision == "accept" else "declined."), data={"date_plan_id": str(plan.id), "event": "date_plan_reschedule_response", "decision": decision})
         return Response(_serialize_plan(plan, request.user.id))
