@@ -61,3 +61,14 @@ NexverseModerator.objects.update_or_create(
 ```
 
 Approvals publish the work and its chapters atomically and create an audit event. Rejections require a note and keep the work unpublished. The mobile client still uses demo fixtures; API integration and a dedicated publisher dashboard UI remain separate implementation work.
+
+
+## Publisher Studio UI
+
+The mobile workspace now includes an internal Publisher Studio prototype:
+
+- `/publisher` — editorial overview, sample moderation metrics, search and queue filters.
+- `/publisher/works/{id}` — manuscript preview, expandable chapter excerpts, review-history placeholder and moderator note field.
+- The approve/revision controls are local UI demonstrations only. They do not call the moderation API and do not persist decisions.
+- The route is intentionally not linked from the public reader tabs. Production access still requires Nexora authentication, a server-issued moderator role, API integration, and server-confirmed decisions.
+- The dashboard currently uses clearly illustrative sample records; replace them with paginated API responses before operational use.
