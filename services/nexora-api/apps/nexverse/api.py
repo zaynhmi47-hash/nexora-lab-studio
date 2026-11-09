@@ -149,6 +149,7 @@ class NexverseChapterContentView(APIView):
             pk=chapter_id,
             work__slug=work_slug,
             work__status__in=(NexverseWork.Status.PUBLISHED, NexverseWork.Status.COMPLETED),
+            work__review_status=NexverseWork.ReviewStatus.APPROVED,
             work__visibility=NexverseWork.Visibility.PUBLIC,
             status=NexverseChapter.Status.PUBLISHED,
         )
