@@ -110,3 +110,16 @@ The tokens are a foundation, not a claim that every screen has been migrated. Re
 - Each participant can acknowledge each relationship stage once. The screen shows separate acknowledgement states and highlights only mutual agreement.
 - Query caches are refreshed after successful creation, response, and milestone acknowledgement. The screen includes loading, empty, error, and pending states.
 - The mobile integration is committed, but Expo typecheck, device testing, and backend migration/API tests have not yet been run in Codespaces. The current API has no plan edit/cancel controls or reminder scheduling.
+
+
+### Date Planner lifecycle and mutual rescheduling — backend/API slice
+
+- Added cancellation and completion lifecycle actions. Either participant can cancel a proposed or accepted plan; a plan can only be marked completed after its scheduled start time.
+- Added a reschedule proposal flow for accepted plans. Either participant can propose a future date/time, timezone, location, and notes; the other participant must explicitly accept or decline before the stored plan changes.
+- A plan can have only one pending reschedule proposal. Cancellation clears any pending proposal. Lifecycle and reschedule writes are serialized with row locks and return conflict responses for invalid state transitions.
+- Added migration `0021_date_plan_lifecycle_reschedule` and API routes:
+  - `POST /api/v1/dating/date-plans/<plan_id>/lifecycle/` with `action: cancel|complete`
+  - `POST /api/v1/dating/date-plans/<plan_id>/reschedule/` to propose a change
+  - `PUT /api/v1/dating/date-plans/<plan_id>/reschedule/` with `decision: accept|decline`
+- Mobile API provider methods and response types are available. Lifecycle controls have not yet been wired into the Date Planner screen.
+- Scheduled reminders are intentionally not claimed: they need a durable background scheduler/worker and delivery policy, not a client-side timer. Migration, Django tests, and Expo typecheck/device QA still need to run in Codespaces.
