@@ -5,7 +5,7 @@ import { useDatingSession } from '@/src/auth/session';
 
 
 export type DatingDatePlan = {
-  id: string; match_id: string; organizer_id: string; partner_id: string;
+  id: string; match_id: string; organizer_id: string; partner_id: string; can_respond: boolean;
   activity: string; title: string; starts_at: string; timezone: string;
   location_name: string; notes: string; status: 'proposed' | 'accepted' | 'declined' | 'cancelled' | 'completed';
   responded_at: string | null; created_at: string;
