@@ -37,6 +37,12 @@ class NexverseWork(AuditableBaseModel):
         PUBLIC = "public", "Public"
         UNLISTED = "unlisted", "Unlisted"
 
+    class ReviewStatus(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        SUBMITTED = "submitted", "Submitted for review"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
     author = models.ForeignKey(
         NexverseAuthor, on_delete=models.PROTECT, related_name="works"
     )
@@ -55,6 +61,12 @@ class NexverseWork(AuditableBaseModel):
     content_rating = models.CharField(max_length=16, default="general")
     published_at = models.DateTimeField(null=True, blank=True)
     view_count = models.PositiveBigIntegerField(default=0)
+    review_status = models.CharField(
+        max_length=16, choices=ReviewStatus.choices, default=ReviewStatus.DRAFT, db_index=True
+    )
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_note = models.CharField(max_length=1000, blank=True)
 
     class Meta:
         db_table = "nexverse_works"
