@@ -13,6 +13,7 @@ class NexversePublicApiTests(APITestCase):
             slug="test-work",
             title="Test Work",
             status=NexverseWork.Status.PUBLISHED,
+            review_status=NexverseWork.ReviewStatus.APPROVED,
             visibility=NexverseWork.Visibility.PUBLIC,
         )
         self.preview = NexverseChapter.objects.create(
