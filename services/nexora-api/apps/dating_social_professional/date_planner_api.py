@@ -239,3 +239,65 @@ class DatingDatePlanLifecycleView(APIView):
                 title, body, event = "Date marked completed", "Your match marked the planned date completed.", "date_plan_completed"
             DatingNotificationService.create_and_dispatch(recipient_id=recipient_id, notification_type="social", title=title, body=body, data={"date_plan_id": str(plan.id), "event": event})
         return Response(_serialize_plan(plan, request.user.id))
+
+
+class DatingDatePlanRescheduleView(APIView):
+    permission_classes = [DatingActiveUserPermission]
+    throttle_classes = [DatingActionThrottle]
+
+    def post(self, request, plan_id):
+        from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+        starts_at = request.data.get("starts_at")
+        timezone_name = request.data.get("timezone_name")
+        location_name = str(request.data.get("location_name", "")).strip()
+        notes = str(request.data.get("notes", ""))
+        try:
+            ZoneInfo(timezone_name)
+            parsed_starts_at = serializers.DateTimeField().to_internal_value(starts_at)
+        except (ZoneInfoNotFoundError, ValueError, TypeError, serializers.ValidationError):
+            return Response({"detail": "Provide a future starts_at and valid IANA timezone_name."}, status=status.HTTP_400_BAD_REQUEST)
+        if parsed_starts_at <= timezone.now() or not location_name:
+            return Response({"detail": "A future date and location are required."}, status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            plan = DatingDatePlan.objects.select_for_update().select_related("match").filter(id=plan_id).first()
+            if not plan or _active_match_for_user(plan.match_id, request.user) is None:
+                return Response({"detail": "Date plan not found."}, status=status.HTTP_404_NOT_FOUND)
+            if plan.status != DatingDatePlan.Status.ACCEPTED or plan.reschedule_proposed_by_id:
+                return Response({"detail": "Only an accepted date without a pending proposal can be rescheduled."}, status=status.HTTP_409_CONFLICT)
+            plan.reschedule_proposed_by = request.user
+            plan.proposed_starts_at = parsed_starts_at
+            plan.proposed_timezone_name = timezone_name
+            plan.proposed_location_name = location_name[:180]
+            plan.proposed_notes = notes[:1000]
+            plan.reschedule_proposed_at = timezone.now()
+            plan.save(update_fields=("reschedule_proposed_by", "proposed_starts_at", "proposed_timezone_name", "proposed_location_name", "proposed_notes", "reschedule_proposed_at", "updated_at"))
+            DatingNotificationService.create_and_dispatch(recipient_id=_partner_for(plan.match, request.user.id), notification_type="social", title="Reschedule proposal", body="Your match proposed a change to your accepted date.", data={"date_plan_id": str(plan.id), "event": "date_plan_reschedule"})
+        return Response(_serialize_plan(plan, request.user.id))
+
+    def put(self, request, plan_id):
+        decision = request.data.get("decision")
+        if decision not in {"accept", "decline"}:
+            return Response({"detail": "decision must be accept or decline."}, status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            plan = DatingDatePlan.objects.select_for_update().select_related("match").filter(id=plan_id).first()
+            if not plan or _active_match_for_user(plan.match_id, request.user) is None:
+                return Response({"detail": "Date plan not found."}, status=status.HTTP_404_NOT_FOUND)
+            if not plan.reschedule_proposed_by_id or plan.reschedule_proposed_by_id == request.user.id:
+                return Response({"detail": "No proposal from your match is awaiting your response."}, status=status.HTTP_409_CONFLICT)
+            if plan.status != DatingDatePlan.Status.ACCEPTED:
+                return Response({"detail": "This date can no longer be rescheduled."}, status=status.HTTP_409_CONFLICT)
+            proposer_id = plan.reschedule_proposed_by_id
+            if decision == "accept":
+                plan.starts_at = plan.proposed_starts_at
+                plan.timezone_name = plan.proposed_timezone_name
+                plan.location_name = plan.proposed_location_name
+                plan.notes = plan.proposed_notes
+            plan.reschedule_proposed_by = None
+            plan.proposed_starts_at = None
+            plan.proposed_timezone_name = ""
+            plan.proposed_location_name = ""
+            plan.proposed_notes = ""
+            plan.reschedule_proposed_at = None
+            plan.save(update_fields=("starts_at", "timezone_name", "location_name", "notes", "reschedule_proposed_by", "proposed_starts_at", "proposed_timezone_name", "proposed_location_name", "proposed_notes", "reschedule_proposed_at", "updated_at"))
+            DatingNotificationService.create_and_dispatch(recipient_id=proposer_id, notification_type="social", title="Reschedule response", body="Your reschedule proposal was " + ("accepted." if decision == "accept" else "declined."), data={"date_plan_id": str(plan.id), "event": "date_plan_reschedule_response", "decision": decision})
+        return Response(_serialize_plan(plan, request.user.id))
