@@ -89,6 +89,7 @@ export default function AppLayout() {
       />
       <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
       <Tabs.Screen name="profile/[profileId]" options={{ href: null, headerShown: false }} />
+      <Tabs.Screen name="date-planner" options={{ href: null, headerShown: false }} />
     </Tabs>
   );
 }
