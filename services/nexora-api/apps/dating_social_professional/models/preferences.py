@@ -10,6 +10,7 @@ class DatingNotificationPreference(AuditableBaseModel):
     match_push_enabled = models.BooleanField(default=True)
     message_push_enabled = models.BooleanField(default=True)
     safety_push_enabled = models.BooleanField(default=True)
+    date_plan_push_enabled = models.BooleanField(default=True)
 
     class Meta:
         db_table = "dating_notification_preferences"
