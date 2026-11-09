@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .account_risk_api import MyAccountSecurityView, TrustSafetyAccountRiskView
+from .date_planner_api import DatingDatePlansView, DatingDatePlanResponseView, DatingRelationshipMilestonesView
 from .moments_api import DatingMomentView
 from .moderation_api import DatingMomentModerationQueueView
 from .trust_safety_api import TrustSafetyReportsView, DatingMomentAppealView, TrustSafetyAppealsView, TrustSafetyOverviewView, TrustSafetyAuditView
@@ -8,6 +9,9 @@ from .interactions_api import DatingMomentCommentsView, DatingMomentReactionView
 from .api import ConversationPresenceView, NotificationPreferencesView, PushTokenView, BlockView, ConversationBlockView, ConversationDetailView, ConversationMessagesView, ConversationReadView, ConversationReportView, ConversationView, DiscoveryView, MatchLifecycleView, ProfileDetailView, MatchesView, NotificationView, MeProfileView, ProfileMediaView, ReportView, SwipeView
 
 urlpatterns = [
+    path("date-plans/", DatingDatePlansView.as_view(), name="dating-date-plans"),
+    path("date-plans/<uuid:plan_id>/response/", DatingDatePlanResponseView.as_view(), name="dating-date-plan-response"),
+    path("matches/<uuid:match_id>/relationship-milestones/", DatingRelationshipMilestonesView.as_view(), name="dating-relationship-milestones"),
     path("moments/", DatingMomentView.as_view(), name="dating-moments"),
     path("moderation/moments/", DatingMomentModerationQueueView.as_view(), name="dating-moment-moderation-queue"),
     path("moderation/moments/<uuid:moment_id>/", DatingMomentModerationQueueView.as_view(), name="dating-moment-moderation-detail"),
