@@ -26,7 +26,7 @@
     "react-native-screens": "~4.16.0",
     "zustand": "^5.0.8",
     "@tanstack/react-query": "^5.85.5",
-    "expo-notifications": "~0.33.0",
+    "expo-notifications": "~57.0.25",
     "expo-image-picker": "~17.0.0",
     "expo-video": "~57.0.5",
     "expo-image-manipulator": "~57.0.21"
