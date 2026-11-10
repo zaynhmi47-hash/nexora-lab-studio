@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type PropsWith
 import { firebaseSignOut, isFirebaseConfigured, registerWithEmail, signInWithEmail, signInWithGoogle, subscribeToFirebaseAuth, type FirebaseAuthSession } from './firebaseAdapter';
 import type { AuthActions, AuthState, AuthUser } from './types';
 
-interface AuthContextValue extends AuthState, AuthActions { firebaseConfigured: boolean; }
+interface AuthContextValue extends AuthState, AuthActions { firebaseConfigured: boolean; initializing: boolean; }
 const initialState: AuthState = { status: 'unknown', user: null };
 const AuthContext = createContext<AuthContextValue | null>(null);
 
