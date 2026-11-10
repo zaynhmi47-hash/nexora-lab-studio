@@ -18,6 +18,7 @@ export default function RootLayout() {
       }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="publisher/index" options={{ title: 'Publisher Studio' }} />
+        <Stack.Screen name="publisher/login" options={{ title: 'Masuk Publisher Studio' }} />
         <Stack.Screen name="publisher/works/[id]" options={{ title: 'Review Naskah' }} />
         <Stack.Screen name="work/[slug]" />
         <Stack.Screen name="reader/[slug]" options={{ animation: 'fade' }} />
