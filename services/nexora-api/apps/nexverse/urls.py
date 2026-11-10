@@ -8,6 +8,7 @@ from .moderation_api import (
 )
 from .reader_api import NexverseBookmarkDetailView, NexverseBookmarkListView, NexverseReadingProgressDetailView, NexverseReadingProgressListView
 from .monetization_api import NexverseChapterOffersView, NexverseEntitlementListView, NexversePurchaseListCreateView
+from .earnings_api import NexverseCreatorEarningsView
 from .creator_api import (
     NexverseCreatorChapterDetailView,
     NexverseCreatorChapterListView,
@@ -32,6 +33,7 @@ urlpatterns = [
         NexverseChapterContentView.as_view(),
         name="nexverse-chapter-content",
     ),
+    path("creator/earnings/", NexverseCreatorEarningsView.as_view(), name="nexverse-creator-earnings"),
     path("creator/profile/", NexverseCreatorProfileView.as_view(), name="nexverse-creator-profile"),
     path("creator/works/", NexverseCreatorWorkListView.as_view(), name="nexverse-creator-work-list"),
     path("creator/works/<uuid:work_id>/", NexverseCreatorWorkDetailView.as_view(), name="nexverse-creator-work-detail"),
