@@ -17,6 +17,7 @@ def user_has_chapter_entitlement(user, chapter) -> bool:
         status=NexverseEntitlement.Status.ACTIVE,
         purchase__status=NexversePurchase.Status.PAID,
         starts_at__lte=now,
+        deleted_at__isnull=True,
     ).filter(
         models_expiry_filter(now)
     ).exists()
@@ -29,12 +30,22 @@ def models_expiry_filter(now):
 
 
 @transaction.atomic
-def confirm_verified_purchase(*, purchase_id, provider: str, provider_reference: str):
+def confirm_verified_purchase(
+    *,
+    purchase_id,
+    provider: str,
+    provider_reference: str,
+    verified_amount_minor: int,
+    verified_currency: str,
+):
     """Settle a purchase only after a trusted payment adapter verifies its webhook."""
     provider = provider.strip().lower()
     provider_reference = provider_reference.strip()
     if not provider or not provider_reference:
         raise ValueError("A verified provider and provider reference are required.")
+
+    if verified_amount_minor <= 0 or not verified_currency.strip():
+        raise ValueError("Verified amount and currency are required.")
 
     purchase = NexversePurchase.objects.select_for_update().select_related(
         "chapter", "chapter__work"
@@ -47,6 +58,16 @@ def confirm_verified_purchase(*, purchase_id, provider: str, provider_reference:
 
     if purchase.status != NexversePurchase.Status.PENDING:
         raise ValueError("Only pending purchases can be settled.")
+    if (
+        verified_amount_minor != purchase.amount_minor
+        or verified_currency.strip().upper() != purchase.currency
+    ):
+        raise ValueError("Verified payment amount or currency does not match the purchase snapshot.")
+    if NexversePurchase.objects.filter(
+        payment_provider=provider,
+        provider_reference=provider_reference,
+    ).exclude(pk=purchase.pk).exists():
+        raise ValueError("Payment provider reference has already been used.")
 
     now = timezone.now()
     purchase.status = NexversePurchase.Status.PAID
