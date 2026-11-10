@@ -20,6 +20,7 @@ class NexverseMonetizationApiTests(APITestCase):
         author_user = NexoraUser.objects.create(
             email="premium-author@example.test", status=NexoraUser.Status.ACTIVE
         )
+        self.author_user = author_user
         author = NexverseAuthor.objects.create(
             user=author_user, slug="premium-author", pen_name="Premium Author"
         )
@@ -144,6 +145,33 @@ class NexverseMonetizationApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["items"][0]["amountMinor"], 12500)
+
+    def test_creator_earnings_are_recorded_and_refunds_are_reversed(self):
+        created = self.create_purchase_intent()
+        purchase_id = created.data["item"]["id"]
+        confirm_verified_purchase(
+            purchase_id=purchase_id,
+            provider="test-gateway",
+            provider_reference="txn-earnings-001",
+        )
+        self.client.force_authenticate(user=self.author_user)
+        earnings = self.client.get("/api/v1/nexverse/creator/earnings/")
+        self.assertEqual(earnings.status_code, 200)
+        self.assertEqual(earnings.data["totals"][0]["creditedMinor"], 12500)
+        self.assertEqual(earnings.data["totals"][0]["reversedMinor"], 0)
+        self.assertEqual(len(earnings.data["items"]), 1)
+
+        revoke_refunded_purchase(purchase_id=purchase_id)
+        earnings = self.client.get("/api/v1/nexverse/creator/earnings/")
+        self.assertEqual(earnings.data["totals"][0]["creditedMinor"], 12500)
+        self.assertEqual(earnings.data["totals"][0]["reversedMinor"], 12500)
+        self.assertEqual(len(earnings.data["items"]), 2)
+
+    def test_creator_cannot_see_another_authors_earnings(self):
+        self.client.force_authenticate(user=self.author_user)
+        response = self.client.get("/api/v1/nexverse/creator/earnings/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["items"], [])
 
     def test_purchase_history_is_scoped_to_current_account(self):
         self.create_purchase_intent()
