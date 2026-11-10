@@ -96,3 +96,53 @@ class NexverseReadingProgressDetailView(APIView):
             )
         progress = NexverseReadingProgress.objects.select_related("work", "chapter").get(pk=progress.pk)
         return Response({"item": _progress_payload(progress)}, status=status.HTTP_200_OK)
+
+
+class NexverseBookmarkListView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from .models import NexverseBookmark
+
+        bookmarks = (
+            NexverseBookmark.objects.filter(user=request.user, work__in=_readable_work_queryset())
+            .select_related("work", "work__author")
+            .order_by("-created_at")[:200]
+        )
+        return Response({
+            "items": [
+                {
+                    "workId": str(item.work_id),
+                    "workSlug": item.work.slug,
+                    "title": item.work.title,
+                    "author": item.work.author.pen_name,
+                    "coverImageUrl": item.work.cover_image_url,
+                    "genre": item.work.genre,
+                    "bookmarkedAt": item.created_at.isoformat(),
+                }
+                for item in bookmarks
+            ]
+        })
+
+
+class NexverseBookmarkDetailView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, work_id):
+        from .models import NexverseBookmark
+
+        work = get_object_or_404(_readable_work_queryset(), pk=work_id)
+        bookmark, created = NexverseBookmark.objects.get_or_create(user=request.user, work=work)
+        return Response(
+            {"bookmarked": True, "created": created, "workId": str(work.id)},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+    def delete(self, request, work_id):
+        from .models import NexverseBookmark
+
+        work = get_object_or_404(_readable_work_queryset(), pk=work_id)
+        deleted, _ = NexverseBookmark.objects.filter(user=request.user, work=work).delete()
+        return Response({"bookmarked": False, "deleted": bool(deleted), "workId": str(work.id)})
