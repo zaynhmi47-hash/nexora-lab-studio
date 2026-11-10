@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import NexverseChapter, NexverseWork
+from .monetization import user_has_chapter_entitlement
 
 
 def author_payload(author):
@@ -141,7 +142,7 @@ class NexverseWorkDetailView(APIView):
 
 class NexverseChapterContentView(APIView):
     permission_classes = [AllowAny]
-    authentication_classes = []
+    authentication_classes = [FirebaseIdentityAuthentication]
 
     def get(self, request, work_slug, chapter_id):
         chapter = get_object_or_404(
@@ -153,7 +154,7 @@ class NexverseChapterContentView(APIView):
             work__visibility=NexverseWork.Visibility.PUBLIC,
             status=NexverseChapter.Status.PUBLISHED,
         )
-        if not chapter.is_free_preview:
+        if not chapter.is_free_preview and not user_has_chapter_entitlement(request.user, chapter):
             return Response(
                 {
                     "code": "ENTITLEMENT_REQUIRED",
