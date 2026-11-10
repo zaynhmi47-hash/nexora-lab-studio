@@ -12,7 +12,7 @@ pnpm --filter nexverse-mobile start
 pnpm --filter nexverse-mobile typecheck
 ```
 
-Current mobile surfaces include Home, Discover, Library, Profile, story detail, reader and the internal Publisher Studio. Some public-reader surfaces still use local fixtures; Publisher Studio queue and review actions use the protected API.
+Current mobile surfaces include Home, Discover, Library, Profile, story detail, reader and the internal Publisher Studio. Home and Discover load the public catalog from Nexora API; work detail loads the published chapter list; the reader requests chapter content from the API and displays server-denied premium access without exposing paid bodies. Library and profile still need their authenticated reading-progress and account endpoints.
 
 ## Backend boundaries
 
@@ -23,6 +23,14 @@ Current mobile surfaces include Home, Discover, Library, Profile, story detail, 
 - Only works with both published publication status and approved review status appear in public catalog and chapter delivery APIs.
 - Paid chapter bodies remain withheld with `ENTITLEMENT_REQUIRED` until server-side entitlement checks are connected. Never implement paid-content authorization only in the mobile client.
 - Reuse Nexora Core identity, files, notifications and generic payment primitives.
+
+## Public catalog and reader API
+
+- `GET /api/v1/nexverse/works/` supports `q`, `genre`, `language`, `page` and `page_size` filters.
+- `GET /api/v1/nexverse/works/{work_slug}/` returns public work metadata and published chapter metadata.
+- `GET /api/v1/nexverse/works/{work_slug}/chapters/{chapter_id}/` returns free-preview content only; paid chapters respond with `ENTITLEMENT_REQUIRED` and HTTP 403.
+
+The mobile catalog client maps the API DTOs into display models and does not fall back to sample stories when the server is unavailable. Configure `EXPO_PUBLIC_NEXORA_API_URL` in `mobile/.env.example` for the public reader as well as Publisher Studio.
 
 ## Publisher Studio API
 
@@ -38,7 +46,7 @@ The mobile app registers `getNexoraCoreAccessToken` as the moderation API token 
 
 Publisher Studio now has an email/password sign-in screen for pre-provisioned moderator accounts. It does not offer public account registration. Configure Email/Password in Firebase Authentication only if this sign-in method is intended for moderator accounts. The same Firebase project and Nexora identity mapping must be used by the backend.
 
-Configure the variables in `mobile/.env.example`: `EXPO_PUBLIC_NEXORA_API_URL` (API origin without `/api/v1`) and the `EXPO_PUBLIC_FIREBASE_*` client configuration. The minimum required Firebase values are API key, project ID and app ID; other Firebase client fields are optional for this Auth flow.
+Configure the variables in `mobile/.env.example`: `EXPO_PUBLIC_NEXORA_API_URL` (API origin without `/api/v1`) and the `EXPO_PUBLIC_FIREBASE_*` client configuration. If the app must initialize Firebase itself, the minimum required Firebase values are API key, project ID and app ID; other Firebase client fields are optional for this Auth flow. If Nexora Core has already initialized the default Firebase app in the same runtime, the bridge reuses that app and does not require a second Firebase configuration.
 
 This adapter uses the Firebase identity provider; it does not claim that a reusable cross-app Nexora Core auth package or full SSO lifecycle is complete. The server remains authoritative for identity mapping and moderator permissions.
 
