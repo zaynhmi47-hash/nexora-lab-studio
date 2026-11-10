@@ -91,7 +91,7 @@ export default function ReaderScreen() {
   const saveProgress = useCallback(async (offset: number, measuredHeight: number, visibleHeight: number) => {
     if (!workId || !chapter || !measuredHeight || !visibleHeight) return;
     const maxOffset = Math.max(1, measuredHeight - visibleHeight);
-    const ratio = Math.min(1, Math.max(0, offset / maxOffset));
+    const ratio = measuredHeight <= visibleHeight ? 1 : Math.min(1, Math.max(0, offset / maxOffset));
     setSaving(true);
     try {
       await saveReadingProgress(workId, {
