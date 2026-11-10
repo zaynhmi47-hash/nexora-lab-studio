@@ -13,12 +13,14 @@ export default function PublisherDashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accessDenied, setAccessDenied] = useState(false);
+  const [authRequired, setAuthRequired] = useState(false);
 
   const loadQueue = useCallback(async (refresh = false) => {
     if (refresh) setRefreshing(true);
     else setLoading(true);
     setError(null);
     setAccessDenied(false);
+    setAuthRequired(false);
     try {
       const response = await getModerationQueue(1, 50);
       setItems(response.items);
@@ -28,6 +30,7 @@ export default function PublisherDashboardScreen() {
       setTotal(0);
       setError(getModerationErrorMessage(err));
       setAccessDenied(err instanceof ModerationApiError && (err.status === 401 || err.status === 403));
+      setAuthRequired(err instanceof ModerationApiError && err.status === 401);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -58,7 +61,7 @@ export default function PublisherDashboardScreen() {
       <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Antrean naskah</Text><Pressable onPress={() => loadQueue(true)} accessibilityLabel="Muat ulang antrean"><Ionicons name="refresh" size={19} color={palette.green} /></Pressable></View>
       <View style={styles.search}><Ionicons name="search-outline" size={18} color={palette.muted} /><TextInput value={query} onChangeText={setQuery} placeholder="Cari judul atau penulis" placeholderTextColor={palette.muted} style={styles.searchInput} /></View>
       {loading ? <View style={styles.state}><ActivityIndicator color={palette.green} /><Text style={styles.stateText}>Memuat antrean dari server...</Text></View> :
-        error ? <View style={styles.errorCard}><Ionicons name={accessDenied ? 'lock-closed-outline' : 'cloud-offline-outline'} size={25} color="#9A594B" /><Text style={styles.errorTitle}>{accessDenied ? 'Akses moderator diperlukan' : 'Antrean belum dapat dimuat'}</Text><Text style={styles.errorText}>{error}</Text><Pressable onPress={() => loadQueue()} style={styles.retry}><Text style={styles.retryText}>Coba lagi</Text></Pressable></View> :
+        error ? <View style={styles.errorCard}><Ionicons name={accessDenied ? 'lock-closed-outline' : 'cloud-offline-outline'} size={25} color="#9A594B" /><Text style={styles.errorTitle}>{accessDenied ? 'Akses moderator diperlukan' : 'Antrean belum dapat dimuat'}</Text><Text style={styles.errorText}>{error}</Text>{authRequired ? <Pressable onPress={() => router.push('/publisher/login')} style={styles.retry}><Text style={styles.retryText}>Masuk dengan Nexora</Text></Pressable> : <Pressable onPress={() => loadQueue()} style={styles.retry}><Text style={styles.retryText}>Coba lagi</Text></Pressable>}</View> :
         filtered.length ? filtered.map(item => (
           <Pressable key={item.id} onPress={() => router.push({ pathname: '/publisher/works/[id]', params: { id: item.id } })} style={styles.workCard}>
             <View style={styles.workTop}><Text style={styles.genre}>{(item.genre || 'NEXVERSE').toUpperCase()}</Text><View style={styles.status}><Text style={styles.statusText}>Menunggu review</Text></View></View>
