@@ -46,7 +46,6 @@ export function getNexoraFirebaseAuth(): Auth {
     authInstance = initializeAuth(app, {
       // Firebase's React Native conditional entrypoint exports this helper.
       // The TypeScript resolver in this Expo workspace resolves the web declaration.
-      // @ts-expect-error React Native-only export, available in Metro's RN resolver.
       persistence: getReactNativePersistence(AsyncStorage),
     });
   } catch (error) {
