@@ -30,7 +30,7 @@ export default function WorkDetailScreen() {
 
   const openChapter = (chapterId: string) => {
     if (!story) return;
-    router.push({ pathname: '/reader/[slug]', params: { slug: story.slug, chapterId } });
+    router.push({ pathname: '/reader/[slug]', params: { slug: story.slug, chapterId, workId: story.id } });
   };
 
   if (loading) {
