@@ -293,3 +293,38 @@ class NexverseEntitlement(AuditableBaseModel):
 
     def __str__(self) -> str:
         return f"{self.user_id}:{self.chapter_id}:{self.status}"
+
+
+class NexverseRoyaltyEntry(AuditableBaseModel):
+    """Immutable gross author-earning ledger entry; payout policy is handled separately."""
+
+    class EntryType(models.TextChoices):
+        CREDIT = "credit", "Purchase credit"
+        REVERSAL = "reversal", "Refund reversal"
+
+    purchase = models.ForeignKey(
+        NexversePurchase, on_delete=models.PROTECT, related_name="royalty_entries"
+    )
+    author = models.ForeignKey(
+        NexverseAuthor, on_delete=models.PROTECT, related_name="royalty_entries"
+    )
+    entry_type = models.CharField(max_length=12, choices=EntryType.choices)
+    currency = models.CharField(max_length=3)
+    amount_minor = models.PositiveBigIntegerField()
+
+    class Meta:
+        db_table = "nexverse_royalty_entries"
+        constraints = [
+            models.UniqueConstraint(
+                fields=("purchase", "entry_type"), name="nex_royalty_purchase_type_uniq"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(amount_minor__gt=0), name="nex_royalty_amount_positive"
+            ),
+        ]
+        indexes = [
+            models.Index(fields=("author", "currency", "created_at"), name="nex_royalty_author_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.author_id}:{self.purchase_id}:{self.entry_type}"
