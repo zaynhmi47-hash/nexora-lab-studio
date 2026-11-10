@@ -7,7 +7,6 @@ from apps.access.api.permissions import CanReadFinance
 from apps.core.api.response import error_response, success_response
 from apps.core.exceptions import AuthenticationException, NexoraException, PermissionDeniedException
 from apps.finance.api.insights_serializers import (
-    FinanceInsightSerializer,
     FinanceInsightsQuerySerializer,
     FinanceInsightsSerializer,
 )
