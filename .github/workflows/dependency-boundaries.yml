@@ -75,10 +75,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
 
+      # The repository does not yet commit a pnpm lockfile. Keep CI runnable
+      # until the workspace lockfile is generated and checked in.
       - name: Install frontend dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Check frontend/backend boundaries
         run: pnpm check:boundaries
