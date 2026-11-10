@@ -77,7 +77,7 @@ class NexverseCatalogView(APIView):
         genre = request.query_params.get("genre", "").strip()[:64]
         language = request.query_params.get("language", "").strip()[:12]
         if query:
-            queryset = queryset.filter(title__icontains=query)
+            queryset = queryset.filter(Q(title__icontains=query) | Q(author__pen_name__icontains=query))
         if genre:
             queryset = queryset.filter(genre__iexact=genre)
         if language:
