@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.db import transaction
 from django.utils import timezone
 
-from .models import NexverseEntitlement, NexversePurchase
+from .models import NexverseEntitlement, NexversePurchase, NexverseRoyaltyEntry
 
 
 def user_has_chapter_entitlement(user, chapter) -> bool:
@@ -67,6 +67,15 @@ def confirm_verified_purchase(*, purchase_id, provider: str, provider_reference:
             "starts_at": now,
         },
     )
+    NexverseRoyaltyEntry.objects.get_or_create(
+        purchase=purchase,
+        entry_type=NexverseRoyaltyEntry.EntryType.CREDIT,
+        defaults={
+            "author": purchase.chapter.work.author,
+            "currency": purchase.currency,
+            "amount_minor": purchase.amount_minor,
+        },
+    )
     return entitlement
 
 
@@ -82,4 +91,17 @@ def revoke_refunded_purchase(*, purchase_id):
     NexverseEntitlement.objects.filter(
         purchase=purchase, status=NexverseEntitlement.Status.ACTIVE
     ).update(status=NexverseEntitlement.Status.REVOKED, updated_at=timezone.now())
+    credit = NexverseRoyaltyEntry.objects.filter(
+        purchase=purchase, entry_type=NexverseRoyaltyEntry.EntryType.CREDIT
+    ).first()
+    if credit:
+        NexverseRoyaltyEntry.objects.get_or_create(
+            purchase=purchase,
+            entry_type=NexverseRoyaltyEntry.EntryType.REVERSAL,
+            defaults={
+                "author": credit.author,
+                "currency": credit.currency,
+                "amount_minor": credit.amount_minor,
+            },
+        )
     return True
