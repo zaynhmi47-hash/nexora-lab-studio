@@ -47,11 +47,11 @@ class NexverseReadingProgressApiTests(APITestCase):
     def test_reader_can_save_and_resume_progress(self):
         saved = self.client.put(
             self.url,
-            {"chapterId": str(self.preview.id), "positionChars": 125, "progressPercent": 42},
+            {"chapterId": str(self.preview.id), "positionChars": 12, "progressPercent": 42},
             format="json",
         )
         self.assertEqual(saved.status_code, 200)
-        self.assertEqual(saved.data["item"]["positionChars"], 125)
+        self.assertEqual(saved.data["item"]["positionChars"], 12)
         resumed = self.client.get(self.url)
         self.assertEqual(resumed.status_code, 200)
         self.assertEqual(resumed.data["item"]["chapterId"], str(self.preview.id))
