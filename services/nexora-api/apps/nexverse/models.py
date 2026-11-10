@@ -164,3 +164,27 @@ class NexverseReviewEvent(AuditableBaseModel):
 
     def __str__(self) -> str:
         return f"{self.work_id}:{self.decision}"
+
+
+class NexverseReadingProgress(AuditableBaseModel):
+    user = models.ForeignKey(
+        NexoraUser, on_delete=models.CASCADE, related_name="nexverse_reading_progress"
+    )
+    work = models.ForeignKey(
+        NexverseWork, on_delete=models.CASCADE, related_name="reading_progress"
+    )
+    chapter = models.ForeignKey(
+        NexverseChapter, on_delete=models.CASCADE, related_name="reading_progress"
+    )
+    position_chars = models.PositiveIntegerField(default=0)
+    progress_percent = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        db_table = "nexverse_reading_progress"
+        constraints = [
+            models.UniqueConstraint(fields=("user", "work"), name="nex_read_progress_user_work_uniq"),
+        ]
+        indexes = [models.Index(fields=("user", "updated_at"), name="nex_read_progress_user_idx")]
+
+    def __str__(self) -> str:
+        return f"{self.user_id}:{self.work_id}:{self.chapter_id}"
