@@ -11,7 +11,13 @@ export function StoryCard({ story, horizontal = false }: { story: Story; horizon
       onPress={() => router.push({ pathname: '/work/[slug]', params: { slug: story.slug } })}
       style={[styles.card, horizontal && styles.horizontal]}
     >
-      <Image source={{ uri: story.cover }} style={[styles.cover, horizontal && styles.horizontalCover]} />
+      {story.cover ? (
+        <Image source={{ uri: story.cover }} style={[styles.cover, horizontal && styles.horizontalCover]} />
+      ) : (
+        <View style={[styles.cover, styles.coverFallback, horizontal && styles.horizontalCover]}>
+          <Text style={styles.coverFallbackText}>N</Text>
+        </View>
+      )}
       <View style={styles.info}>
         <Text numberOfLines={2} style={styles.title}>{story.title}</Text>
         <Text numberOfLines={1} style={styles.author}>{story.author}</Text>
@@ -29,6 +35,8 @@ const styles = StyleSheet.create({
   horizontal: { width: '100%', flexDirection: 'row', marginRight: 0, marginBottom: 16, alignItems: 'center' },
   cover: { width: 142, height: 190, borderRadius: 14, backgroundColor: palette.mint },
   horizontalCover: { width: 88, height: 116, borderRadius: 12 },
+  coverFallback: { alignItems: 'center', justifyContent: 'center' },
+  coverFallbackText: { color: palette.green, fontSize: 36, fontWeight: '900' },
   info: { paddingTop: 9, flex: 1 },
   title: { color: palette.ink, fontSize: 14, lineHeight: 19, fontWeight: '700' },
   author: { color: palette.muted, fontSize: 12, marginTop: 4 },
