@@ -179,7 +179,7 @@ class NexverseMonetizationApiTests(APITestCase):
             NexversePurchase.Status.PENDING,
         )
 
-    def test_refund_revokes_entitlement_and_locks_content_again):
+    def test_refund_revokes_entitlement_and_locks_content_again(self):
         created = self.create_purchase_intent()
         purchase_id = created.data["item"]["id"]
         confirm_verified_purchase(
