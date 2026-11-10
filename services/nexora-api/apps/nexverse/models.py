@@ -296,7 +296,7 @@ class NexverseEntitlement(AuditableBaseModel):
 
 
 class NexverseRoyaltyEntry(AuditableBaseModel):
-    """Immutable gross author-earning ledger entry; payout policy is handled separately."""
+    """Append-only gross-sales attribution; this is not a payable or withdrawable balance."""
 
     class EntryType(models.TextChoices):
         CREDIT = "credit", "Purchase credit"
