@@ -80,7 +80,7 @@ function apiBaseUrl() {
   return value.endsWith('/api/v1') ? value : value + '/api/v1';
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+export async function nexverseApiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!accessTokenProvider) {
     throw new ModerationApiError('Sesi Nexora belum terhubung. Masuk melalui autentikasi Nexora terlebih dahulu.', 401, 'AUTH_PROVIDER_MISSING');
   }
@@ -122,15 +122,15 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 export function getModerationQueue(page = 1, pageSize = 20) {
   const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
-  return request<ModerationQueueResponse>('/nexverse/moderation/queue/?' + params.toString());
+  return nexverseApiRequest<ModerationQueueResponse>('/nexverse/moderation/queue/?' + params.toString());
 }
 
 export function getModerationWork(workId: string) {
-  return request<ModerationWork>('/nexverse/moderation/works/' + encodeURIComponent(workId) + '/');
+  return nexverseApiRequest<ModerationWork>('/nexverse/moderation/works/' + encodeURIComponent(workId) + '/');
 }
 
 export function submitModerationDecision(workId: string, decision: 'approve' | 'reject', note: string) {
-  return request<ModerationDecisionResponse>(
+  return nexverseApiRequest<ModerationDecisionResponse>(
     '/nexverse/moderation/works/' + encodeURIComponent(workId) + '/decision/',
     { method: 'POST', body: JSON.stringify({ decision, note: note.trim() }) },
   );
