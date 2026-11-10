@@ -34,11 +34,13 @@ The backend verifies Firebase ID tokens through `FirebaseIdentityAuthentication`
 
 ## Firebase Auth bridge
 
-The mobile app registers `getNexoraCoreAccessToken` as the moderation API token provider during root-layout startup. It uses the Firebase JS SDK with React Native AsyncStorage persistence and calls `currentUser.getIdToken()` on demand; ID tokens are not copied into app storage or hardcoded.
+The mobile app registers `getNexoraCoreAccessToken` as the moderation API token provider during root-layout startup. It uses Firebase Auth with React Native AsyncStorage persistence and calls `currentUser.getIdToken()` on demand; ID tokens are not copied into app storage or hardcoded. If Nexora Core has already initialized the default Firebase Auth instance in the same runtime, the adapter reuses it.
 
-Configure the variables in `mobile/.env.example`: `EXPO_PUBLIC_NEXORA_API_URL` (API origin without `/api/v1`) and the `EXPO_PUBLIC_FIREBASE_*` client configuration for the same Nexora identity project used by Nexora Core.
+Publisher Studio now has an email/password sign-in screen for pre-provisioned moderator accounts. It does not offer public account registration. Configure Email/Password in Firebase Authentication only if this sign-in method is intended for moderator accounts. The same Firebase project and Nexora identity mapping must be used by the backend.
 
-The bridge deliberately does not create a second Nexora identity or a standalone login flow. It exposes the Firebase session available to this app. The Nexverse mobile sign-in/onboarding UI and reusable cross-app Nexora Core auth package are still separate work; until an authenticated Firebase user is present, Publisher Studio displays an authentication state. The server remains authoritative for identity mapping and moderator permissions.
+Configure the variables in `mobile/.env.example`: `EXPO_PUBLIC_NEXORA_API_URL` (API origin without `/api/v1`) and the `EXPO_PUBLIC_FIREBASE_*` client configuration. The minimum required Firebase values are API key, project ID and app ID; other Firebase client fields are optional for this Auth flow.
+
+This adapter uses the Firebase identity provider; it does not claim that a reusable cross-app Nexora Core auth package or full SSO lifecycle is complete. The server remains authoritative for identity mapping and moderator permissions.
 
 Never place Firebase Admin service-account credentials in Expo environment variables. Client Firebase configuration values are public identifiers; server credentials belong only in the backend secret environment.
 
