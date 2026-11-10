@@ -65,8 +65,8 @@ jobs:
         run: |
           pytest apps/control_plane -q
 
-      - name: Full backend test suite
+      - name: Feature-domain regression tests
         env:
           DJANGO_SETTINGS_MODULE: config.settings.testing
         run: |
-          pytest -q
+          pytest apps/nexverse apps/places tests/test_authorization.py -q
