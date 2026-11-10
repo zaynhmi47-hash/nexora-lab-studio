@@ -110,6 +110,8 @@ class NexverseMonetizationApiTests(APITestCase):
             purchase_id=purchase_id,
             provider="test-gateway",
             provider_reference="txn-verified-001",
+            verified_amount_minor=12500,
+            verified_currency="IDR",
         )
         replay = confirm_verified_purchase(
             purchase_id=purchase_id,
@@ -122,13 +124,70 @@ class NexverseMonetizationApiTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["content"], "Paid content is protected.")
 
-    def test_refund_revokes_entitlement_and_locks_content_again(self):
+    def test_payment_amount_or_currency_mismatch_cannot_settle_purchase(self):
+        created = self.create_purchase_intent()
+        purchase_id = created.data["item"]["id"]
+        with self.assertRaises(ValueError):
+            confirm_verified_purchase(
+                purchase_id=purchase_id,
+                provider="test-gateway",
+                provider_reference="txn-wrong-amount",
+                verified_amount_minor=1,
+                verified_currency="IDR",
+            )
+        purchase = NexversePurchase.objects.get(pk=purchase_id)
+        self.assertEqual(purchase.status, NexversePurchase.Status.PENDING)
+        self.assertFalse(NexverseEntitlement.objects.exists())
+
+    def test_payment_reference_cannot_settle_two_purchases(self):
+        first = self.create_purchase_intent()
+        second_chapter = NexverseChapter.objects.create(
+            work=self.work,
+            chapter_number=2,
+            slug="second-paid-chapter",
+            title="Second Paid Chapter",
+            content="More paid content.",
+            is_free_preview=False,
+            status=NexverseChapter.Status.PUBLISHED,
+        )
+        NexverseChapterPrice.objects.create(
+            chapter=second_chapter, currency="IDR", amount_minor=15000
+        )
+        second = self.client.post(
+            self.purchase_url,
+            {"chapterId": str(second_chapter.id)},
+            format="json",
+            HTTP_IDEMPOTENCY_KEY="premium-intent-002",
+        )
+        confirm_verified_purchase(
+            purchase_id=first.data["item"]["id"],
+            provider="test-gateway",
+            provider_reference="txn-reused-reference",
+            verified_amount_minor=12500,
+            verified_currency="IDR",
+        )
+        with self.assertRaises(ValueError):
+            confirm_verified_purchase(
+                purchase_id=second.data["item"]["id"],
+                provider="test-gateway",
+                provider_reference="txn-reused-reference",
+                verified_amount_minor=15000,
+                verified_currency="IDR",
+            )
+        self.assertEqual(
+            NexversePurchase.objects.get(pk=second.data["item"]["id"]).status,
+            NexversePurchase.Status.PENDING,
+        )
+
+    def test_refund_revokes_entitlement_and_locks_content_again):
         created = self.create_purchase_intent()
         purchase_id = created.data["item"]["id"]
         confirm_verified_purchase(
             purchase_id=purchase_id,
             provider="test-gateway",
             provider_reference="txn-refund-001",
+            verified_amount_minor=12500,
+            verified_currency="IDR",
         )
         self.assertTrue(revoke_refunded_purchase(purchase_id=purchase_id))
         self.assertFalse(revoke_refunded_purchase(purchase_id=purchase_id))
@@ -153,6 +212,8 @@ class NexverseMonetizationApiTests(APITestCase):
             purchase_id=purchase_id,
             provider="test-gateway",
             provider_reference="txn-earnings-001",
+            verified_amount_minor=12500,
+            verified_currency="IDR",
         )
         self.client.force_authenticate(user=self.author_user)
         earnings = self.client.get("/api/v1/nexverse/creator/earnings/")
