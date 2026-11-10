@@ -54,6 +54,11 @@ class NexversePublicApiTests(APITestCase):
         self.assertEqual(len(response.data["items"]), 1)
         self.assertEqual(response.data["items"][0]["slug"], "test-work")
 
+    def test_catalog_search_matches_author_pen_name(self):
+        response = self.client.get("/api/v1/nexverse/works/?q=Writer")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([item["slug"] for item in response.data["items"]], ["test-work"])
+
     def test_work_detail_lists_chapter_metadata(self):
         response = self.client.get("/api/v1/nexverse/works/test-work/")
         self.assertEqual(response.status_code, 200)
