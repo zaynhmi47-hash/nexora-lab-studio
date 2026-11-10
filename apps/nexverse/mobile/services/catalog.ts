@@ -79,7 +79,7 @@ type ApiCatalogResponse = {
 };
 
 function apiBaseUrl() {
-  const value = process.env.EXPO_PUBLIC_NEXORA_API_URL?.trim().replace(/\\/+$/, '');
+  const value = process.env.EXPO_PUBLIC_NEXORA_API_URL?.trim().replace(/\/+$/, '');
   if (!value) {
     throw new NexverseApiError(
       'Nexora API belum dikonfigurasi. Isi EXPO_PUBLIC_NEXORA_API_URL.',
