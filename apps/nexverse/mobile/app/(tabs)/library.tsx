@@ -57,7 +57,7 @@ export default function LibraryScreen() {
           <View style={styles.itemBody}>
             <Text style={styles.workTitle} numberOfLines={1}>{item.workTitle}</Text>
             <Text style={styles.chapter}>Bab {item.chapterNumber} · {item.chapterTitle}</Text>
-            <View style={styles.track}><View style={[styles.fill, { width: item.progressPercent + '%' }]} /></View>
+            <View style={styles.track}><View style={[styles.fill, { width: `${item.progressPercent}%` as `${number}%` }]} /></View>
             <Text style={styles.percent}>{item.progressPercent}% tersimpan</Text>
           </View>
           <Pressable
