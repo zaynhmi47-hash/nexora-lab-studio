@@ -7,6 +7,7 @@ from .moderation_api import (
     NexverseModerationWorkDetailView,
 )
 from .reader_api import NexverseBookmarkDetailView, NexverseBookmarkListView, NexverseReadingProgressDetailView, NexverseReadingProgressListView
+from .monetization_api import NexverseChapterOffersView, NexverseEntitlementListView, NexversePurchaseListCreateView
 from .creator_api import (
     NexverseCreatorChapterDetailView,
     NexverseCreatorChapterListView,
@@ -18,6 +19,9 @@ from .creator_api import (
 
 urlpatterns = [
     path("works/", NexverseCatalogView.as_view(), name="nexverse-catalog"),
+    path("reader/offers/", NexverseChapterOffersView.as_view(), name="nexverse-reader-offers"),
+    path("reader/purchases/", NexversePurchaseListCreateView.as_view(), name="nexverse-reader-purchases"),
+    path("reader/entitlements/", NexverseEntitlementListView.as_view(), name="nexverse-reader-entitlements"),
     path("reader/bookmarks/", NexverseBookmarkListView.as_view(), name="nexverse-reader-bookmark-list"),
     path("reader/bookmarks/<uuid:work_id>/", NexverseBookmarkDetailView.as_view(), name="nexverse-reader-bookmark-detail"),
     path("reader/progress/", NexverseReadingProgressListView.as_view(), name="nexverse-reader-progress-list"),
