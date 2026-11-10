@@ -26,4 +26,4 @@ class Migration(migrations.Migration):
             model_name="duafavorite",
             index=models.Index(fields=("user", "-created_at"), name="dua_favorite_user_date_idx"),
         ),
-    ],
+    ]
