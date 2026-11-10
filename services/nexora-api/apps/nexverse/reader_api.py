@@ -40,7 +40,7 @@ class NexverseReadingProgressListView(APIView):
 
     def get(self, request):
         progress_items = (
-            NexverseReadingProgress.objects.filter(user=request.user, work__in=_readable_work_queryset())
+            NexverseReadingProgress.objects.filter(\n                user=request.user,\n                work__in=_readable_work_queryset(),\n                chapter__status=NexverseChapter.Status.PUBLISHED,\n                chapter__is_free_preview=True,\n            )
             .select_related("work", "chapter")
             .order_by("-updated_at")[:100]
         )
@@ -54,7 +54,7 @@ class NexverseReadingProgressDetailView(APIView):
     def get(self, request, work_id):
         work = get_object_or_404(_readable_work_queryset(), pk=work_id)
         progress = (
-            NexverseReadingProgress.objects.filter(user=request.user, work=work)
+            NexverseReadingProgress.objects.filter(\n                user=request.user,\n                work=work,\n                chapter__status=NexverseChapter.Status.PUBLISHED,\n                chapter__is_free_preview=True,\n            )
             .select_related("work", "chapter")
             .first()
         )
