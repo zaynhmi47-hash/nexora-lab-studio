@@ -78,6 +78,13 @@ export default function ReaderScreen() {
   useEffect(() => { void loadChapter(); }, [loadChapter]);
 
   useEffect(() => {
+    if (resumeRatio !== null && contentHeight > 0 && viewportHeight > 0) {
+      scrollRef.current?.scrollTo({ y: Math.max(0, (contentHeight - viewportHeight) * resumeRatio), animated: false });
+      setResumeRatio(null);
+    }
+  }, [resumeRatio, contentHeight, viewportHeight]);
+
+  useEffect(() => {
     if (preferencesReady) void saveReaderPreferences(preferences).catch(() => undefined);
   }, [preferences, preferencesReady]);
 
@@ -133,13 +140,7 @@ export default function ReaderScreen() {
             contentContainerStyle={styles.reading}
             showsVerticalScrollIndicator={false}
             onLayout={event => setViewportHeight(event.nativeEvent.layout.height)}
-            onContentSizeChange={(_, height) => {
-              setContentHeight(height);
-              if (resumeRatio !== null) {
-                scrollRef.current?.scrollTo({ y: Math.max(0, (height - viewportHeight) * resumeRatio), animated: false });
-                setResumeRatio(null);
-              }
-            }}
+            onContentSizeChange={(_, height) => setContentHeight(height)}
             onScroll={event => setScrollY(event.nativeEvent.contentOffset.y)}
             scrollEventThrottle={100}
             onScrollEndDrag={event => void saveProgress(event.nativeEvent.contentOffset.y, contentHeight, viewportHeight)}
