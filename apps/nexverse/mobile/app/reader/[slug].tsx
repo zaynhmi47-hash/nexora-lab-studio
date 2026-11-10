@@ -157,7 +157,7 @@ export default function ReaderScreen() {
           </ScrollView>
           <View style={[styles.bottom, { backgroundColor: theme.surface, borderTopColor: theme.muted + '44' }]}>
             <Text style={[styles.progress, { color: theme.muted }]}>{saving ? 'Menyimpan progres…' : resumeMessage || 'Posisi bacaan tersimpan saat berhenti menggulir'}</Text>
-            <View style={[styles.progressTrack, { backgroundColor: theme.muted + '44' }]}><View style={[styles.progressFill, { width: (contentHeight > viewportHeight ? Math.min(100, Math.round(scrollY / (contentHeight - viewportHeight) * 100)) : 100) + '%' }]} /></View>
+            <View style={[styles.progressTrack, { backgroundColor: theme.muted + '44' }]}><View style={[styles.progressFill, { width: `${contentHeight > viewportHeight ? Math.min(100, Math.round(scrollY / (contentHeight - viewportHeight) * 100)) : 100}%` as `${number}%` }]} /></View>
             <View style={styles.controls}>
               <Text style={[styles.pageNumber, { color: theme.muted }]}>{preferences.fontSize}px · {preferences.theme}</Text>
               <Pressable onPress={() => router.back()} style={styles.nextButton}><Text style={styles.nextText}>Daftar bab</Text><Ionicons name="list-outline" size={17} color="#FFFFFF" /></Pressable>
