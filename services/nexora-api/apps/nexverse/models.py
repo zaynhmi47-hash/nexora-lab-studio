@@ -207,3 +207,89 @@ class NexverseBookmark(AuditableBaseModel):
 
     def __str__(self) -> str:
         return f"{self.user_id}:{self.work_id}"
+
+
+class NexverseChapterPrice(AuditableBaseModel):
+    chapter = models.OneToOneField(
+        NexverseChapter, on_delete=models.PROTECT, related_name="price"
+    )
+    currency = models.CharField(max_length=3, default="IDR")
+    amount_minor = models.PositiveBigIntegerField()
+    is_active = models.BooleanField(default=True, db_index=True)
+
+    class Meta:
+        db_table = "nexverse_chapter_prices"
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount_minor__gt=0), name="nex_chapter_price_positive"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.chapter_id}:{self.currency}:{self.amount_minor}"
+
+
+class NexversePurchase(AuditableBaseModel):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        PAID = "paid", "Paid"
+        FAILED = "failed", "Failed"
+        REFUNDED = "refunded", "Refunded"
+        CANCELLED = "cancelled", "Cancelled"
+
+    user = models.ForeignKey(
+        NexoraUser, on_delete=models.PROTECT, related_name="nexverse_purchases"
+    )
+    chapter = models.ForeignKey(
+        NexverseChapter, on_delete=models.PROTECT, related_name="purchases"
+    )
+    price = models.ForeignKey(
+        NexverseChapterPrice, on_delete=models.PROTECT, related_name="purchases"
+    )
+    idempotency_key = models.CharField(max_length=128)
+    currency = models.CharField(max_length=3)
+    amount_minor = models.PositiveBigIntegerField()
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING, db_index=True)
+    payment_provider = models.CharField(max_length=40, blank=True)
+    provider_reference = models.CharField(max_length=160, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "nexverse_purchases"
+        constraints = [
+            models.UniqueConstraint(fields=("user", "idempotency_key"), name="nex_purchase_user_idem_uniq"),
+            models.CheckConstraint(condition=models.Q(amount_minor__gt=0), name="nex_purchase_amount_positive"),
+        ]
+        indexes = [models.Index(fields=("user", "status", "created_at"), name="nex_purchase_user_idx")]
+
+    def __str__(self) -> str:
+        return f"{self.user_id}:{self.chapter_id}:{self.status}"
+
+
+class NexverseEntitlement(AuditableBaseModel):
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        REVOKED = "revoked", "Revoked"
+
+    purchase = models.OneToOneField(
+        NexversePurchase, on_delete=models.PROTECT, related_name="entitlement"
+    )
+    user = models.ForeignKey(
+        NexoraUser, on_delete=models.PROTECT, related_name="nexverse_entitlements"
+    )
+    work = models.ForeignKey(
+        NexverseWork, on_delete=models.PROTECT, related_name="entitlements"
+    )
+    chapter = models.ForeignKey(
+        NexverseChapter, on_delete=models.PROTECT, related_name="entitlements"
+    )
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.ACTIVE, db_index=True)
+    starts_at = models.DateTimeField()
+    expires_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "nexverse_entitlements"
+        indexes = [
+            models.Index(fields=("user", "work", "chapter", "status"), name="nex_entitlement_lookup_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user_id}:{self.chapter_id}:{self.status}"
