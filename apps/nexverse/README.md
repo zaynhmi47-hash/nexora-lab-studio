@@ -70,3 +70,12 @@ NexverseModerator.objects.update_or_create(
 ## Validation notes
 
 Run the commands above after installing workspace dependencies. A successful GitHub write is not evidence that the app type-checks or that a live Firebase/API environment is configured; those checks must be run in the repository environment with the required environment variables.
+
+
+### Nexverse identity session
+
+- Publisher Studio login uses the Nexora Firebase Authentication project with Email/Password.
+- Firebase Auth persistence uses React Native AsyncStorage. The signed-in user session is observed in the Profile tab and can be signed out there.
+- The mobile client requests a fresh Firebase ID token for every moderation API request; the API verifies the token and resolves the internal Nexora identity.
+- Enable Email/Password in Firebase Authentication and configure the public Expo Firebase client values from `.env.example`. Never put Firebase service-account JSON or private server credentials in the mobile app.
+- Provision a moderator separately through the Django admin/shell. A Firebase login alone does not grant moderation privileges.
