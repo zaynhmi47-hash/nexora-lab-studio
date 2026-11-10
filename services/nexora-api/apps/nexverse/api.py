@@ -170,5 +170,5 @@ class NexverseChapterContentView(APIView):
             "number": chapter.chapter_number,
             "title": chapter.title,
             "content": chapter.content,
-            "freePreview": True,
+            "freePreview": chapter.is_free_preview,
         })
