@@ -257,6 +257,11 @@ class NexversePurchase(AuditableBaseModel):
         constraints = [
             models.UniqueConstraint(fields=("user", "idempotency_key"), name="nex_purchase_user_idem_uniq"),
             models.CheckConstraint(condition=models.Q(amount_minor__gt=0), name="nex_purchase_amount_positive"),
+            models.UniqueConstraint(
+                fields=("payment_provider", "provider_reference"),
+                condition=~models.Q(provider_reference=""),
+                name="nex_purchase_provider_ref_uniq",
+            ),
         ]
         indexes = [models.Index(fields=("user", "status", "created_at"), name="nex_purchase_user_idx")]
 
