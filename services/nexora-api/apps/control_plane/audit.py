@@ -90,7 +90,7 @@ def _validate_audit_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
                 walk(child, depth + 1)
         elif isinstance(value, str) and len(value) > MAX_AUDIT_METADATA_STRING:
             raise ValueError("Audit metadata strings are too long.")
-        elif value is not None and not isinstance(value, (bool, int, float)):
+        elif value is not None and not isinstance(value, (str, bool, int, float)):
             raise TypeError("Audit metadata contains an unsupported value type.")
 
     walk(metadata)
