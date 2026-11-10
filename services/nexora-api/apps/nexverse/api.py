@@ -68,7 +68,7 @@ class NexverseCatalogView(APIView):
             status__in=(NexverseWork.Status.PUBLISHED, NexverseWork.Status.COMPLETED),
             review_status=NexverseWork.ReviewStatus.APPROVED,
             visibility=NexverseWork.Visibility.PUBLIC,
-        ).select_related("author").annotate(
+        ).select_related("author").order_by("-published_at", "-created_at", "id").annotate(
             published_chapter_count=Count(
                 "chapters", filter=Q(chapters__status=NexverseChapter.Status.PUBLISHED)
             )
