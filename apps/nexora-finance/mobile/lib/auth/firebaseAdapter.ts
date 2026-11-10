@@ -1,5 +1,7 @@
 import { GoogleAuthProvider, createUserWithEmailAndPassword, onIdTokenChanged, signInWithEmailAndPassword, signInWithPopup, signOut, type User } from 'firebase/auth';
-import { getFirebaseAuth } from './firebase';
+import { getFirebaseAuth, isFirebaseConfigured } from './firebase';
+
+export { isFirebaseConfigured };
 
 export interface FirebaseAuthSession { user: User; accessToken: string; }
 
