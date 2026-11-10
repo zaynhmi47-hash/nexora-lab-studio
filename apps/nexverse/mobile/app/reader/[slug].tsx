@@ -32,6 +32,7 @@ export default function ReaderScreen() {
   const [viewportHeight, setViewportHeight] = useState(0);
   const [scrollY, setScrollY] = useState(0);
   const [resumeMessage, setResumeMessage] = useState<string | null>(null);
+  const [resumeRatio, setResumeRatio] = useState<number | null>(null);
   const theme = readerThemes[preferences.theme];
 
   const loadChapter = useCallback(async () => {
@@ -56,7 +57,7 @@ export default function ReaderScreen() {
           if (item?.chapterId === chapterId && item.positionChars > 0 && content.content.length > 0) {
             const ratio = Math.min(1, item.positionChars / content.content.length);
             setResumeMessage('Posisi bacaan terakhir dipulihkan · ' + item.progressPercent + '%');
-            requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: Math.max(0, contentHeight * ratio), animated: false }));
+            setResumeRatio(ratio);
           } else {
             setResumeMessage(null);
           }
@@ -71,7 +72,7 @@ export default function ReaderScreen() {
     } finally {
       setLoading(false);
     }
-  }, [chapterId, slug, workId, contentHeight]);
+  }, [chapterId, slug, workId]);
 
   useEffect(() => { void loadChapter(); }, [loadChapter]);
 
@@ -131,10 +132,16 @@ export default function ReaderScreen() {
             contentContainerStyle={styles.reading}
             showsVerticalScrollIndicator={false}
             onLayout={event => setViewportHeight(event.nativeEvent.layout.height)}
-            onContentSizeChange={(_, height) => setContentHeight(height)}
+            onContentSizeChange={(_, height) => {
+              setContentHeight(height);
+              if (resumeRatio !== null) {
+                scrollRef.current?.scrollTo({ y: Math.max(0, (height - viewportHeight) * resumeRatio), animated: false });
+                setResumeRatio(null);
+              }
+            }}
             onScroll={event => setScrollY(event.nativeEvent.contentOffset.y)}
             scrollEventThrottle={100}
-            onScrollEndDrag={() => void saveProgress(scrollY, contentHeight, viewportHeight)}
+            onScrollEndDrag={event => void saveProgress(event.nativeEvent.contentOffset.y, contentHeight, viewportHeight)}
             onMomentumScrollEnd={event => void saveProgress(event.nativeEvent.contentOffset.y, contentHeight, viewportHeight)}
           >
             <Text style={[styles.chapterKicker, { color: palette.green }]}>NEXVERSE · PRATINJAU GRATIS</Text>
