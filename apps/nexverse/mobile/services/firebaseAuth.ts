@@ -25,22 +25,25 @@ let authInstance: Auth | null = null;
 export function getNexoraFirebaseAuth(): Auth {
   if (authInstance) return authInstance;
 
-  if (!firebaseConfig.apiKey || !firebaseConfig.projectId || !firebaseConfig.appId) {
-    throw new Error(
-      'Konfigurasi Firebase belum lengkap. Isi EXPO_PUBLIC_FIREBASE_API_KEY, PROJECT_ID, dan APP_ID.',
-    );
-  }
-
+  // Prefer the Firebase app already initialized by Nexora Core. This lets
+  // connected apps share the same identity session without duplicate config.
   const app = getApps().length > 0
     ? getApp()
-    : initializeApp({
-        apiKey: firebaseConfig.apiKey,
-        projectId: firebaseConfig.projectId,
-        appId: firebaseConfig.appId,
-        ...(firebaseConfig.authDomain ? { authDomain: firebaseConfig.authDomain } : {}),
-        ...(firebaseConfig.storageBucket ? { storageBucket: firebaseConfig.storageBucket } : {}),
-        ...(firebaseConfig.messagingSenderId ? { messagingSenderId: firebaseConfig.messagingSenderId } : {}),
-      });
+    : (() => {
+        if (!firebaseConfig.apiKey || !firebaseConfig.projectId || !firebaseConfig.appId) {
+          throw new Error(
+            'Konfigurasi Firebase belum lengkap. Isi EXPO_PUBLIC_FIREBASE_API_KEY, PROJECT_ID, dan APP_ID.',
+          );
+        }
+        return initializeApp({
+          apiKey: firebaseConfig.apiKey,
+          projectId: firebaseConfig.projectId,
+          appId: firebaseConfig.appId,
+          ...(firebaseConfig.authDomain ? { authDomain: firebaseConfig.authDomain } : {}),
+          ...(firebaseConfig.storageBucket ? { storageBucket: firebaseConfig.storageBucket } : {}),
+          ...(firebaseConfig.messagingSenderId ? { messagingSenderId: firebaseConfig.messagingSenderId } : {}),
+        });
+      })();
 
   try {
     authInstance = initializeAuth(app, {
