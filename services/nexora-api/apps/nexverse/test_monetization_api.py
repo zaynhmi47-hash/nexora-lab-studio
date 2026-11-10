@@ -157,6 +157,7 @@ class NexverseMonetizationApiTests(APITestCase):
         self.client.force_authenticate(user=self.author_user)
         earnings = self.client.get("/api/v1/nexverse/creator/earnings/")
         self.assertEqual(earnings.status_code, 200)
+        self.assertEqual(earnings.data["ledgerBasis"], "gross_sales_before_fees_and_tax")
         self.assertEqual(earnings.data["totals"][0]["creditedMinor"], 12500)
         self.assertEqual(earnings.data["totals"][0]["reversedMinor"], 0)
         self.assertEqual(len(earnings.data["items"]), 1)
