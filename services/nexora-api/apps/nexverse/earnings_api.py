@@ -59,4 +59,9 @@ class NexverseCreatorEarningsView(APIView):
             }
             for value in totals_by_currency.values()
         ]
-        return Response({"isCreator": True, "items": items, "totals": totals})
+        return Response({
+            "isCreator": True,
+            "ledgerBasis": "gross_sales_before_fees_and_tax",
+            "items": items,
+            "totals": totals,
+        })
