@@ -64,3 +64,32 @@ export function saveReadingProgress(
     { method: 'PUT', body: JSON.stringify(input) },
   );
 }
+
+
+export type BookmarkedWork = {
+  workId: string;
+  workSlug: string;
+  title: string;
+  author: string;
+  coverImageUrl: string;
+  genre: string;
+  bookmarkedAt: string;
+};
+
+export function listBookmarkedWorks() {
+  return nexverseApiRequest<{ items: BookmarkedWork[] }>('/nexverse/reader/bookmarks/');
+}
+
+export function addBookmark(workId: string) {
+  return nexverseApiRequest<{ bookmarked: boolean; workId: string }>(
+    '/nexverse/reader/bookmarks/' + encodeURIComponent(workId) + '/',
+    { method: 'POST', body: '{}' },
+  );
+}
+
+export function removeBookmark(workId: string) {
+  return nexverseApiRequest<{ bookmarked: boolean; workId: string }>(
+    '/nexverse/reader/bookmarks/' + encodeURIComponent(workId) + '/',
+    { method: 'DELETE' },
+  );
+}
