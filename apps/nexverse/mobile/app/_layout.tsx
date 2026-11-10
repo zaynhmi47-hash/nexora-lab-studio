@@ -17,6 +17,9 @@ export default function RootLayout() {
         animation: 'slide_from_right'
       }}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="creator/index" options={{ title: "Creator Studio" }} />
+        <Stack.Screen name="creator/works/new" options={{ title: "Karya Baru" }} />
+        <Stack.Screen name="creator/works/[id]" options={{ title: "Editor Karya" }} />
         <Stack.Screen name="publisher/index" options={{ title: 'Publisher Studio' }} />
         <Stack.Screen name="publisher/login" options={{ title: 'Masuk Publisher Studio' }} />
         <Stack.Screen name="publisher/works/[id]" options={{ title: 'Review Naskah' }} />
