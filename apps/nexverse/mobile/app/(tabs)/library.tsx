@@ -3,10 +3,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { palette } from '@/constants/theme';
-import { listReadingProgress, type ReadingProgress } from '@/services/reading';
+import { listBookmarkedWorks, listReadingProgress, type BookmarkedWork, type ReadingProgress } from '@/services/reading';
 
 export default function LibraryScreen() {
   const [items, setItems] = useState<ReadingProgress[]>([]);
+  const [bookmarks, setBookmarks] = useState<BookmarkedWork[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -14,8 +15,9 @@ export default function LibraryScreen() {
     setLoading(true);
     setError(null);
     try {
-      const response = await listReadingProgress();
+      const [response, saved] = await Promise.all([listReadingProgress(), listBookmarkedWorks()]);
       setItems(response.items);
+      setBookmarks(saved.items);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Progres bacaan belum dapat dimuat.');
     } finally {
@@ -67,6 +69,19 @@ export default function LibraryScreen() {
           </Pressable>
         </View>
       ))}
+      <Text style={styles.savedHeading}>Koleksi tersimpan</Text>
+      {loading ? null : bookmarks.length === 0 ? (
+        <Text style={styles.empty}>Belum ada cerita yang disimpan.</Text>
+      ) : bookmarks.map(item => (
+        <Pressable key={item.workId} onPress={() => router.push({ pathname: '/work/[slug]', params: { slug: item.workSlug } })} style={styles.savedItem}>
+          <View style={styles.savedIcon}><Ionicons name="bookmark" size={19} color={palette.green} /></View>
+          <View style={styles.itemBody}>
+            <Text style={styles.workTitle} numberOfLines={1}>{item.title}</Text>
+            <Text style={styles.chapter}>{item.author} · {item.genre || 'Umum'}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={17} color={palette.muted} />
+        </Pressable>
+      ))}
     </ScrollView>
   );
 }
@@ -82,6 +97,7 @@ const styles = StyleSheet.create({
   stateBody: { color: palette.muted, fontSize: 11, lineHeight: 17, textAlign: 'center' },
   button: { marginTop: 5, backgroundColor: palette.green, borderRadius: 10, paddingHorizontal: 18, paddingVertical: 11 },
   buttonText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
+  savedHeading: { color: palette.ink, fontSize: 17, fontWeight: '800', marginTop: 25, marginBottom: 12 }, empty: { color: palette.muted, fontSize: 11, marginBottom: 10 }, savedItem: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 13, borderRadius: 14, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.surface, marginBottom: 9 }, savedIcon: { width: 38, height: 42, borderRadius: 10, backgroundColor: palette.mint, alignItems: 'center', justifyContent: 'center' },
   item: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 15, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.surface, marginBottom: 10 },
   itemIcon: { width: 42, height: 48, borderRadius: 10, backgroundColor: palette.mint, alignItems: 'center', justifyContent: 'center' },
   itemBody: { flex: 1 }, workTitle: { color: palette.ink, fontSize: 13, fontWeight: '800' }, chapter: { color: palette.muted, fontSize: 10, marginTop: 4 },
