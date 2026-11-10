@@ -86,3 +86,12 @@ class NexverseReadingProgressApiTests(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, 400)
+
+    def test_position_cannot_exceed_chapter_content_length(self):
+        response = self.client.put(
+            self.url,
+            {"chapterId": str(self.preview.id), "positionChars": 1000, "progressPercent": 90},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(NexverseReadingProgress.objects.count(), 0)
