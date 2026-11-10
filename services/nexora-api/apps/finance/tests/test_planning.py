@@ -40,7 +40,7 @@ def test_planning_summary_combines_actuals_budget_and_goal_pace(organization):
         start_date=date(2026, 9, 1),
         end_date=date(2026, 9, 30),
     )
-    goal = FinanceGoal.objects.create(
+    FinanceGoal.objects.create(
         organization=organization,
         name="Emergency fund",
         target_amount_minor=3_000_000,
