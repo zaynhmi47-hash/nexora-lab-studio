@@ -2,7 +2,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import {
   getAuth,
-  getReactNativePersistence,
   initializeAuth,
   signInWithEmailAndPassword,
   signOut,
@@ -43,6 +42,9 @@ export function getNexoraFirebaseAuth(): Auth {
 
   try {
     authInstance = initializeAuth(app, {
+      // Firebase's React Native conditional entrypoint exports this helper.
+      // The TypeScript resolver in this Expo workspace resolves the web declaration.
+      // @ts-expect-error React Native-only export, available in Metro's RN resolver.
       persistence: getReactNativePersistence(AsyncStorage),
     });
   } catch (error) {
