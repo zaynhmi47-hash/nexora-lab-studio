@@ -24,6 +24,7 @@ export default function ReaderScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const [chapter, setChapter] = useState<ChapterContent | null>(null);
   const [preferences, setPreferences] = useState<ReaderPreferences>(DEFAULT_READER_PREFERENCES);
+  const [preferencesReady, setPreferencesReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +48,7 @@ export default function ReaderScreen() {
     try {
       const [content] = await Promise.all([
         getChapterContent(slug, chapterId),
-        loadReaderPreferences().then(setPreferences),
+        loadReaderPreferences().then(value => { setPreferences(value); setPreferencesReady(true); }),
       ]);
       setChapter(content);
       if (workId) {
@@ -77,8 +78,8 @@ export default function ReaderScreen() {
   useEffect(() => { void loadChapter(); }, [loadChapter]);
 
   useEffect(() => {
-    void saveReaderPreferences(preferences).catch(() => undefined);
-  }, [preferences]);
+    if (preferencesReady) void saveReaderPreferences(preferences).catch(() => undefined);
+  }, [preferences, preferencesReady]);
 
   const saveProgress = useCallback(async (offset: number, measuredHeight: number, visibleHeight: number) => {
     if (!workId || !chapter || !measuredHeight || !visibleHeight) return;
