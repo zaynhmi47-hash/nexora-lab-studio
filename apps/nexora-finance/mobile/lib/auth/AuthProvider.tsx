@@ -36,6 +36,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const value = useMemo<AuthContextValue>(() => ({
     ...state,
+    initializing: state.status === 'unknown' || state.status === 'authenticating',
     firebaseConfigured,
     async signInWithEmail(email, password) { setState(current => ({ ...current, status: 'authenticating' })); try { await signInWithEmail(email, password); } catch (error) { setState({ status: mapFirebaseError(error), user: null }); throw error; } },
     async registerWithEmail(email, password) { setState(current => ({ ...current, status: 'authenticating' })); try { await registerWithEmail(email, password); } catch (error) { setState({ status: mapFirebaseError(error), user: null }); throw error; } },
