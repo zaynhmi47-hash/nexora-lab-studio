@@ -188,3 +188,22 @@ class NexverseReadingProgress(AuditableBaseModel):
 
     def __str__(self) -> str:
         return f"{self.user_id}:{self.work_id}:{self.chapter_id}"
+
+
+class NexverseBookmark(AuditableBaseModel):
+    user = models.ForeignKey(
+        NexoraUser, on_delete=models.CASCADE, related_name="nexverse_bookmarks"
+    )
+    work = models.ForeignKey(
+        NexverseWork, on_delete=models.CASCADE, related_name="bookmarks"
+    )
+
+    class Meta:
+        db_table = "nexverse_bookmarks"
+        constraints = [
+            models.UniqueConstraint(fields=("user", "work"), name="nex_bookmark_user_work_uniq"),
+        ]
+        indexes = [models.Index(fields=("user", "created_at"), name="nex_bookmark_user_idx")]
+
+    def __str__(self) -> str:
+        return f"{self.user_id}:{self.work_id}"
