@@ -99,22 +99,22 @@ class NexversePurchaseListCreateView(APIView):
             )
 
         chapter = get_object_or_404(_eligible_paid_chapters(), pk=chapter_id)
-        price = NexverseChapterPrice.objects.filter(
-            chapter=chapter, is_active=True, deleted_at__isnull=True
-        ).first()
-        if price is None:
-            return Response({"detail": "This chapter is not currently available for purchase."}, status=404)
-
         existing = NexversePurchase.objects.filter(
             user=request.user, idempotency_key=idempotency_key
         ).select_related("chapter").first()
         if existing:
-            if existing.chapter_id != chapter.id or existing.amount_minor != price.amount_minor or existing.currency != price.currency:
+            if existing.chapter_id != chapter.id:
                 return Response(
                     {"detail": "Idempotency-Key was already used for a different purchase intent."},
                     status=409,
                 )
             return Response({"item": _purchase_payload(existing)}, status=200)
+
+        price = NexverseChapterPrice.objects.filter(
+            chapter=chapter, is_active=True, deleted_at__isnull=True
+        ).first()
+        if price is None:
+            return Response({"detail": "This chapter is not currently available for purchase."}, status=404)
 
         try:
             with transaction.atomic():
