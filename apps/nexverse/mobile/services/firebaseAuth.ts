@@ -7,7 +7,9 @@ import {
   initializeAuth,
   signInWithEmailAndPassword,
   signOut,
+  onAuthStateChanged,
   type Auth,
+  type User,
   type UserCredential,
 } from 'firebase/auth';
 
@@ -65,6 +67,10 @@ export function getNexoraFirebaseAuth(): Auth {
     }
   }
   return authInstance;
+}
+
+export function subscribeToNexoraAuth(listener: (user: User | null) => void) {
+  return onAuthStateChanged(getNexoraFirebaseAuth(), listener);
 }
 
 export async function signInNexoraWithEmailPassword(
