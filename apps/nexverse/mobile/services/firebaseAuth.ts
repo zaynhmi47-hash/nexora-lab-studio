@@ -4,53 +4,49 @@ import {
   getAuth,
   getReactNativePersistence,
   initializeAuth,
+  signInWithEmailAndPassword,
+  signOut,
   type Auth,
+  type UserCredential,
 } from 'firebase/auth';
 
-const required = (name: string, value: string | undefined) => {
-  if (!value?.trim()) {
-    throw new Error(`Missing Firebase configuration: ${name}`);
-  }
-  return value.trim();
-};
-
 const firebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY?.trim(),
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN?.trim(),
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID?.trim(),
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET?.trim(),
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID?.trim(),
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID?.trim(),
 };
 
 let authInstance: Auth | null = null;
 
-/**
- * Firebase is the external identity provider; Nexora Core remains the
- * canonical identity authority. This module only exposes Firebase ID tokens.
- */
 export function getNexoraFirebaseAuth(): Auth {
   if (authInstance) return authInstance;
 
-  const config = {
-    apiKey: required('EXPO_PUBLIC_FIREBASE_API_KEY', firebaseConfig.apiKey),
-    authDomain: required('EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN', firebaseConfig.authDomain),
-    projectId: required('EXPO_PUBLIC_FIREBASE_PROJECT_ID', firebaseConfig.projectId),
-    storageBucket: required('EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET', firebaseConfig.storageBucket),
-    messagingSenderId: required(
-      'EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID',
-      firebaseConfig.messagingSenderId,
-    ),
-    appId: required('EXPO_PUBLIC_FIREBASE_APP_ID', firebaseConfig.appId),
-  };
+  if (!firebaseConfig.apiKey || !firebaseConfig.projectId || !firebaseConfig.appId) {
+    throw new Error(
+      'Konfigurasi Firebase belum lengkap. Isi EXPO_PUBLIC_FIREBASE_API_KEY, PROJECT_ID, dan APP_ID.',
+    );
+  }
 
-  const app = getApps().length > 0 ? getApp() : initializeApp(config);
+  const app = getApps().length > 0
+    ? getApp()
+    : initializeApp({
+        apiKey: firebaseConfig.apiKey,
+        projectId: firebaseConfig.projectId,
+        appId: firebaseConfig.appId,
+        ...(firebaseConfig.authDomain ? { authDomain: firebaseConfig.authDomain } : {}),
+        ...(firebaseConfig.storageBucket ? { storageBucket: firebaseConfig.storageBucket } : {}),
+        ...(firebaseConfig.messagingSenderId ? { messagingSenderId: firebaseConfig.messagingSenderId } : {}),
+      });
+
   try {
     authInstance = initializeAuth(app, {
       persistence: getReactNativePersistence(AsyncStorage),
     });
   } catch (error) {
-    // Another Nexora module may have initialized the default Firebase Auth.
+    // Reuse the default Auth instance if Nexora Core initialized it first.
     if (
       typeof error === 'object' &&
       error !== null &&
@@ -63,6 +59,17 @@ export function getNexoraFirebaseAuth(): Auth {
     }
   }
   return authInstance;
+}
+
+export async function signInNexoraWithEmailPassword(
+  email: string,
+  password: string,
+): Promise<UserCredential> {
+  return signInWithEmailAndPassword(getNexoraFirebaseAuth(), email.trim(), password);
+}
+
+export async function signOutNexora(): Promise<void> {
+  await signOut(getNexoraFirebaseAuth());
 }
 
 export async function getNexoraCoreAccessToken(): Promise<string | null> {
