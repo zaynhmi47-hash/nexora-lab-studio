@@ -4,10 +4,10 @@ import { palette } from '@/constants/theme';
 import { getNexoraCoreAccessToken } from '@/services/firebaseAuth';
 import { configureNexverseAccessTokenProvider } from '@/services/moderation';
 
-export default function RootLayout() {
-  // Register the shared Firebase identity-token bridge before protected screens load.
-  configureNexverseAccessTokenProvider(getNexoraCoreAccessToken);
+// Register once at module initialization; the provider reads the live Firebase session.
+configureNexverseAccessTokenProvider(getNexoraCoreAccessToken);
 
+export default function RootLayout() {
   return (
     <>
       <StatusBar style="dark" />
