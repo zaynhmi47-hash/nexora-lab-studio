@@ -66,6 +66,12 @@ export default function ProfileScreen() {
         </Pressable>
       )}
       {authError ? <Text style={styles.error}>{authError}</Text> : null}
+      <Pressable onPress={() => router.push('/creator')} style={styles.signIn}>
+        <Ionicons name="create-outline" size={17} color={palette.green} /><Text style={styles.signInText}>Creator Studio</Text>
+      </Pressable>
+      <Pressable onPress={() => router.push('/publisher')} style={styles.signIn}>
+        <Ionicons name="shield-checkmark-outline" size={17} color={palette.green} /><Text style={styles.signInText}>Publisher Studio</Text>
+      </Pressable>
       <View style={styles.card}>{items.map((item, index) => <View key={item.title} style={[styles.item, index > 0 && styles.divider]}><Ionicons name={item.icon} size={20} color={palette.green} /><View style={styles.itemText}><Text style={styles.itemTitle}>{item.title}</Text><Text style={styles.detail}>{item.detail}</Text></View><Ionicons name="chevron-forward" size={17} color={palette.muted} /></View>)}</View>
       <Text style={styles.disclaimer}>Identitas menggunakan Firebase Nexora. Akses ke fitur internal tetap ditentukan oleh izin pada Nexora API.</Text>
     </ScrollView>
