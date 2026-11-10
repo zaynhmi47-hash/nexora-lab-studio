@@ -81,6 +81,9 @@ class NexverseReadingProgressDetailView(APIView):
             ),
             pk=chapter_id,
         )
+        if position_chars > len(chapter.content):
+            return Response({"detail": "positionChars cannot exceed the chapter content length."}, status=400)
+
         with transaction.atomic():
             progress, _ = NexverseReadingProgress.objects.update_or_create(
                 user=request.user,
