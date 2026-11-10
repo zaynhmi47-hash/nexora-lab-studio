@@ -1,7 +1,7 @@
 from rest_framework.test import APITestCase
 
 from apps.identity.models import NexoraUser
-from .models import NexverseAuthor, NexverseChapter, NexverseReadingProgress, NexverseWork
+from .models import NexverseAuthor, NexverseBookmark, NexverseChapter, NexverseReadingProgress, NexverseWork
 
 
 class NexverseReadingProgressApiTests(APITestCase):
@@ -95,3 +95,29 @@ class NexverseReadingProgressApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertEqual(NexverseReadingProgress.objects.count(), 0)
+
+
+class NexverseBookmarkApiTests(NexverseReadingProgressApiTests):
+    def test_reader_can_add_list_and_remove_bookmark(self):
+        bookmark_url = f"/api/v1/nexverse/reader/bookmarks/{self.work.id}/"
+        created = self.client.post(bookmark_url, {}, format="json")
+        self.assertEqual(created.status_code, 201)
+        self.assertTrue(created.data["bookmarked"])
+        listed = self.client.get("/api/v1/nexverse/reader/bookmarks/")
+        self.assertEqual(listed.status_code, 200)
+        self.assertEqual([item["workId"] for item in listed.data["items"]], [str(self.work.id)])
+        removed = self.client.delete(bookmark_url)
+        self.assertEqual(removed.status_code, 200)
+        self.assertFalse(removed.data["bookmarked"])
+        self.assertEqual(NexverseBookmark.objects.count(), 0)
+
+    def test_bookmarks_are_scoped_to_authenticated_user(self):
+        bookmark_url = f"/api/v1/nexverse/reader/bookmarks/{self.work.id}/"
+        self.client.post(bookmark_url, {}, format="json")
+        other = NexoraUser.objects.create(
+            email="bookmark-other@example.test", status=NexoraUser.Status.ACTIVE
+        )
+        self.client.force_authenticate(user=other)
+        listed = self.client.get("/api/v1/nexverse/reader/bookmarks/")
+        self.assertEqual(listed.status_code, 200)
+        self.assertEqual(listed.data["items"], [])
