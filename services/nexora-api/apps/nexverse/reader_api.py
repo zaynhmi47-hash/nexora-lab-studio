@@ -9,7 +9,12 @@ from rest_framework.views import APIView
 
 from apps.identity.authentication import FirebaseIdentityAuthentication
 
-from .models import NexverseChapter, NexverseReadingProgress, NexverseWork
+from .models import (
+    NexverseBookmark,
+    NexverseChapter,
+    NexverseReadingProgress,
+    NexverseWork,
+)
 
 
 def _readable_work_queryset():
@@ -17,6 +22,14 @@ def _readable_work_queryset():
         status__in=(NexverseWork.Status.PUBLISHED, NexverseWork.Status.COMPLETED),
         review_status=NexverseWork.ReviewStatus.APPROVED,
         visibility=NexverseWork.Visibility.PUBLIC,
+    )
+
+
+def _readable_progress_queryset():
+    return NexverseReadingProgress.objects.filter(
+        chapter__status=NexverseChapter.Status.PUBLISHED,
+        chapter__is_free_preview=True,
+        work__in=_readable_work_queryset(),
     )
 
 
@@ -40,7 +53,8 @@ class NexverseReadingProgressListView(APIView):
 
     def get(self, request):
         progress_items = (
-            NexverseReadingProgress.objects.filter(\n                user=request.user,\n                work__in=_readable_work_queryset(),\n                chapter__status=NexverseChapter.Status.PUBLISHED,\n                chapter__is_free_preview=True,\n            )
+            _readable_progress_queryset()
+            .filter(user=request.user)
             .select_related("work", "chapter")
             .order_by("-updated_at")[:100]
         )
@@ -54,7 +68,8 @@ class NexverseReadingProgressDetailView(APIView):
     def get(self, request, work_id):
         work = get_object_or_404(_readable_work_queryset(), pk=work_id)
         progress = (
-            NexverseReadingProgress.objects.filter(\n                user=request.user,\n                work=work,\n                chapter__status=NexverseChapter.Status.PUBLISHED,\n                chapter__is_free_preview=True,\n            )
+            _readable_progress_queryset()
+            .filter(user=request.user, work=work)
             .select_related("work", "chapter")
             .first()
         )
@@ -69,9 +84,15 @@ class NexverseReadingProgressDetailView(APIView):
             position_chars = int(request.data.get("positionChars", 0))
             progress_percent = int(request.data.get("progressPercent", 0))
         except (TypeError, ValueError):
-            return Response({"detail": "positionChars and progressPercent must be integers."}, status=400)
+            return Response(
+                {"detail": "positionChars and progressPercent must be integers."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         if position_chars < 0 or not 0 <= progress_percent <= 100:
-            return Response({"detail": "Reading position must be non-negative and progress must be between 0 and 100."}, status=400)
+            return Response(
+                {"detail": "Reading position must be non-negative and progress must be between 0 and 100."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         chapter = get_object_or_404(
             NexverseChapter.objects.filter(
@@ -82,7 +103,10 @@ class NexverseReadingProgressDetailView(APIView):
             pk=chapter_id,
         )
         if position_chars > len(chapter.content):
-            return Response({"detail": "positionChars cannot exceed the chapter content length."}, status=400)
+            return Response(
+                {"detail": "positionChars cannot exceed the chapter content length."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         with transaction.atomic():
             progress, _ = NexverseReadingProgress.objects.update_or_create(
@@ -94,8 +118,10 @@ class NexverseReadingProgressDetailView(APIView):
                     "progress_percent": progress_percent,
                 },
             )
-        progress = NexverseReadingProgress.objects.select_related("work", "chapter").get(pk=progress.pk)
-        return Response({"item": _progress_payload(progress)}, status=status.HTTP_200_OK)
+        progress = NexverseReadingProgress.objects.select_related("work", "chapter").get(
+            pk=progress.pk
+        )
+        return Response({"item": _progress_payload(progress)})
 
 
 class NexverseBookmarkListView(APIView):
@@ -103,27 +129,30 @@ class NexverseBookmarkListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from .models import NexverseBookmark
-
         bookmarks = (
-            NexverseBookmark.objects.filter(user=request.user, work__in=_readable_work_queryset())
+            NexverseBookmark.objects.filter(
+                user=request.user,
+                work__in=_readable_work_queryset(),
+            )
             .select_related("work", "work__author")
             .order_by("-created_at")[:200]
         )
-        return Response({
-            "items": [
-                {
-                    "workId": str(item.work_id),
-                    "workSlug": item.work.slug,
-                    "title": item.work.title,
-                    "author": item.work.author.pen_name,
-                    "coverImageUrl": item.work.cover_image_url,
-                    "genre": item.work.genre,
-                    "bookmarkedAt": item.created_at.isoformat(),
-                }
-                for item in bookmarks
-            ]
-        })
+        return Response(
+            {
+                "items": [
+                    {
+                        "workId": str(item.work_id),
+                        "workSlug": item.work.slug,
+                        "title": item.work.title,
+                        "author": item.work.author.pen_name,
+                        "coverImageUrl": item.work.cover_image_url,
+                        "genre": item.work.genre,
+                        "bookmarkedAt": item.created_at.isoformat(),
+                    }
+                    for item in bookmarks
+                ]
+            }
+        )
 
 
 class NexverseBookmarkDetailView(APIView):
@@ -131,18 +160,16 @@ class NexverseBookmarkDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, work_id):
-        from .models import NexverseBookmark
-
         work = get_object_or_404(_readable_work_queryset(), pk=work_id)
-        bookmark, created = NexverseBookmark.objects.get_or_create(user=request.user, work=work)
+        _, created = NexverseBookmark.objects.get_or_create(user=request.user, work=work)
         return Response(
             {"bookmarked": True, "created": created, "workId": str(work.id)},
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
 
     def delete(self, request, work_id):
-        from .models import NexverseBookmark
-
         work = get_object_or_404(_readable_work_queryset(), pk=work_id)
         deleted, _ = NexverseBookmark.objects.filter(user=request.user, work=work).delete()
-        return Response({"bookmarked": False, "deleted": bool(deleted), "workId": str(work.id)})
+        return Response(
+            {"bookmarked": False, "deleted": bool(deleted), "workId": str(work.id)}
+        )
