@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getApp, getApps, initializeApp } from 'firebase/app';
+// @ts-ignore Firebase's React Native entrypoint exports this; Expo's TypeScript resolver selects web declarations.
+import { getReactNativePersistence } from 'firebase/auth';
 import {
   getAuth,
   initializeAuth,
