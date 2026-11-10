@@ -6,6 +6,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.identity.authentication import FirebaseIdentityAuthentication
+
 from .models import NexverseChapter, NexverseWork
 from .monetization import user_has_chapter_entitlement
 
