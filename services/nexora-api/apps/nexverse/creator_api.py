@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from uuid import uuid4
 import re
+from uuid import uuid4
 
 from django.db import IntegrityError, transaction
 from django.utils import timezone
