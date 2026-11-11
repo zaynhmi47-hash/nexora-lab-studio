@@ -9,3 +9,29 @@ export const createCreatorWork=(input:{title:string;synopsis:string;genre:string
 export const getCreatorWork=(id:string)=>nexverseApiRequest<CreatorWork>('/nexverse/creator/works/'+encodeURIComponent(id)+'/');
 export const addCreatorChapter=(id:string,input:{number:number;title:string;content:string;summary:string;freePreview:boolean})=>nexverseApiRequest<CreatorChapter>('/nexverse/creator/works/'+encodeURIComponent(id)+'/chapters/',{method:'POST',body:JSON.stringify(input)});
 export const submitCreatorWork=(id:string)=>nexverseApiRequest<CreatorWork>('/nexverse/creator/works/'+encodeURIComponent(id)+'/submit/',{method:'POST',body:'{}'});
+
+export type CreatorChapterPrice = {
+  isPriced: boolean;
+  price: { currency: string; amountMinor: number; isActive: boolean } | null;
+};
+export const getCreatorChapterPrice = (workId: string, chapterId: string) =>
+  nexverseApiRequest<CreatorChapterPrice>(
+    '/nexverse/creator/works/' + encodeURIComponent(workId) + '/chapters/' +
+    encodeURIComponent(chapterId) + '/price/',
+  );
+export const setCreatorChapterPrice = (
+  workId: string,
+  chapterId: string,
+  input: { amountMinor: number; currency: string },
+) =>
+  nexverseApiRequest<CreatorChapterPrice>(
+    '/nexverse/creator/works/' + encodeURIComponent(workId) + '/chapters/' +
+    encodeURIComponent(chapterId) + '/price/',
+    { method: 'PUT', body: JSON.stringify(input) },
+  );
+export const deactivateCreatorChapterPrice = (workId: string, chapterId: string) =>
+  nexverseApiRequest<{ isPriced: boolean; deactivated: boolean }>(
+    '/nexverse/creator/works/' + encodeURIComponent(workId) + '/chapters/' +
+    encodeURIComponent(chapterId) + '/price/',
+    { method: 'DELETE' },
+  );
