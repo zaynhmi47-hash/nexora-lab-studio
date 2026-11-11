@@ -117,6 +117,8 @@ class NexverseMonetizationApiTests(APITestCase):
             purchase_id=purchase_id,
             provider="test-gateway",
             provider_reference="txn-verified-001",
+            verified_amount_minor=12500,
+            verified_currency="IDR",
         )
         self.assertEqual(entitlement.id, replay.id)
         self.assertEqual(NexverseEntitlement.objects.count(), 1)
