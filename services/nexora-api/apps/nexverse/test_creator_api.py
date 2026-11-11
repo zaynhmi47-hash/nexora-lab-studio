@@ -1,7 +1,7 @@
 from rest_framework.test import APITestCase
 
 from apps.identity.models import NexoraUser
-from .models import NexverseAuthor, NexverseWork
+from .models import NexverseAuthor, NexverseChapter, NexverseChapterPrice, NexverseWork
 
 
 class NexverseCreatorApiTests(APITestCase):
@@ -106,7 +106,6 @@ class NexverseCreatorApiTests(APITestCase):
         work = NexverseWork.objects.create(
             author=author, slug=f"pricing-work-{owner.id}", title="Pricing Work"
         )
-        from .models import NexverseChapter
         chapter = NexverseChapter.objects.create(
             work=work,
             chapter_number=1,
