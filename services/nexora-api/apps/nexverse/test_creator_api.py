@@ -117,7 +117,6 @@ class NexverseCreatorApiTests(APITestCase):
         return work, chapter
 
     def test_creator_can_set_update_and_deactivate_chapter_price(self):
-        from .models import NexverseChapterPrice
         work, chapter = self._create_pricing_chapter()
         url = f"/api/v1/nexverse/creator/works/{work.id}/chapters/{chapter.id}/price/"
 
