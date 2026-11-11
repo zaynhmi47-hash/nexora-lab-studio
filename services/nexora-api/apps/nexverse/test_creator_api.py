@@ -95,3 +95,77 @@ class NexverseCreatorApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, 202)
         self.assertEqual(response.data["reviewStatus"], "submitted")
+
+
+    def _create_pricing_chapter(self, *, free_preview=False, user=None):
+        owner = user or self.writer
+        author, _ = NexverseAuthor.objects.get_or_create(
+            user=owner,
+            defaults={"slug": f"author-{owner.id}", "pen_name": "Pricing Author"},
+        )
+        work = NexverseWork.objects.create(
+            author=author, slug=f"pricing-work-{owner.id}", title="Pricing Work"
+        )
+        from .models import NexverseChapter
+        chapter = NexverseChapter.objects.create(
+            work=work,
+            chapter_number=1,
+            slug="pricing-chapter",
+            title="Pricing Chapter",
+            content="Chapter content",
+            is_free_preview=free_preview,
+        )
+        return work, chapter
+
+    def test_creator_can_set_update_and_deactivate_chapter_price(self):
+        from .models import NexverseChapterPrice
+        work, chapter = self._create_pricing_chapter()
+        url = f"/api/v1/nexverse/creator/works/{work.id}/chapters/{chapter.id}/price/"
+
+        created = self.client.put(
+            url, {"amountMinor": 12500, "currency": "IDR"}, format="json"
+        )
+        self.assertEqual(created.status_code, 200)
+        self.assertEqual(created.data["price"]["amountMinor"], 12500)
+        self.assertEqual(NexverseChapterPrice.objects.filter(chapter=chapter).count(), 1)
+
+        updated = self.client.put(
+            url, {"amountMinor": 15000, "currency": "IDR"}, format="json"
+        )
+        self.assertEqual(updated.status_code, 200)
+        self.assertEqual(updated.data["price"]["amountMinor"], 15000)
+        self.assertEqual(NexverseChapterPrice.objects.filter(chapter=chapter).count(), 1)
+
+        removed = self.client.delete(url)
+        self.assertEqual(removed.status_code, 200)
+        self.assertFalse(NexverseChapterPrice.objects.get(chapter=chapter).is_active)
+
+    def test_creator_cannot_price_free_preview_chapter(self):
+        work, chapter = self._create_pricing_chapter(free_preview=True)
+        response = self.client.put(
+            f"/api/v1/nexverse/creator/works/{work.id}/chapters/{chapter.id}/price/",
+            {"amountMinor": 10000, "currency": "IDR"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 409)
+
+    def test_creator_cannot_manage_another_authors_chapter_price(self):
+        work, chapter = self._create_pricing_chapter(user=self.other_user)
+        response = self.client.put(
+            f"/api/v1/nexverse/creator/works/{work.id}/chapters/{chapter.id}/price/",
+            {"amountMinor": 10000, "currency": "IDR"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_creator_price_rejects_invalid_amount_and_currency(self):
+        work, chapter = self._create_pricing_chapter()
+        url = f"/api/v1/nexverse/creator/works/{work.id}/chapters/{chapter.id}/price/"
+        for payload in (
+            {"amountMinor": 0, "currency": "IDR"},
+            {"amountMinor": -1, "currency": "IDR"},
+            {"amountMinor": True, "currency": "IDR"},
+            {"amountMinor": 10000, "currency": "ID"},
+        ):
+            response = self.client.put(url, payload, format="json")
+            self.assertEqual(response.status_code, 400)
