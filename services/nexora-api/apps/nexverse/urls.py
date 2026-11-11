@@ -12,6 +12,7 @@ from .earnings_api import NexverseCreatorEarningsView
 from .creator_api import (
     NexverseCreatorChapterDetailView,
     NexverseCreatorChapterListView,
+    NexverseCreatorChapterPriceView,
     NexverseCreatorProfileView,
     NexverseCreatorWorkDetailView,
     NexverseCreatorWorkListView,
@@ -38,6 +39,7 @@ urlpatterns = [
     path("creator/works/", NexverseCreatorWorkListView.as_view(), name="nexverse-creator-work-list"),
     path("creator/works/<uuid:work_id>/", NexverseCreatorWorkDetailView.as_view(), name="nexverse-creator-work-detail"),
     path("creator/works/<uuid:work_id>/chapters/", NexverseCreatorChapterListView.as_view(), name="nexverse-creator-chapter-list"),
+    path("creator/works/<uuid:work_id>/chapters/<uuid:chapter_id>/price/", NexverseCreatorChapterPriceView.as_view(), name="nexverse-creator-chapter-price"),
     path("creator/works/<uuid:work_id>/chapters/<uuid:chapter_id>/", NexverseCreatorChapterDetailView.as_view(), name="nexverse-creator-chapter-detail"),
     path("creator/works/<uuid:work_id>/submit/", NexverseSubmitWorkView.as_view(), name="nexverse-creator-submit-work"),
     path("moderation/queue/", NexverseModerationQueueView.as_view(), name="nexverse-moderation-queue"),
