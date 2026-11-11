@@ -53,7 +53,6 @@ export function AdaptiveNavigation() {
       </Tabs>
       {!isMobile && (
         <View
-          accessibilityRole="navigation"
           style={{
             position: 'absolute',
             left: 0,

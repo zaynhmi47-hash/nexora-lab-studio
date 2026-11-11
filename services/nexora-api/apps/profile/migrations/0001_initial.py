@@ -1,5 +1,6 @@
 from django.db import migrations, models
-import uuid\nimport django.db.models.deletion
+import uuid
+import django.db.models.deletion
 
 
 class Migration(migrations.Migration):

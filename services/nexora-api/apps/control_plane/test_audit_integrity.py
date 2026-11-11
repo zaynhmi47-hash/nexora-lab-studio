@@ -1,5 +1,5 @@
 import pytest
-from django.db import DatabaseError, IntegrityError
+from django.db import DatabaseError, IntegrityError, transaction
 
 from apps.control_plane.audit import ControlPlaneAuditEvent, ControlPlaneAuditEventType, audit_retention_cutoff, record_control_plane_audit
 from apps.identity.models import NexoraUser
@@ -24,7 +24,8 @@ def test_audit_event_cannot_be_deleted_through_model_api():
 def test_audit_event_database_guard_blocks_queryset_update():
     event = record_control_plane_audit(event_type=ControlPlaneAuditEventType.LOGIN)
     with pytest.raises(DatabaseError):
-        ControlPlaneAuditEvent.objects.filter(pk=event.pk).update(success=False)
+        with transaction.atomic():
+            ControlPlaneAuditEvent.objects.filter(pk=event.pk).update(success=False)
     assert ControlPlaneAuditEvent.objects.get(pk=event.pk).success is True
 
 
@@ -32,7 +33,8 @@ def test_audit_event_database_guard_blocks_queryset_update():
 def test_audit_event_database_guard_blocks_queryset_delete():
     event = record_control_plane_audit(event_type=ControlPlaneAuditEventType.LOGIN)
     with pytest.raises(DatabaseError):
-        ControlPlaneAuditEvent.objects.filter(pk=event.pk).delete()
+        with transaction.atomic():
+            ControlPlaneAuditEvent.objects.filter(pk=event.pk).delete()
     assert ControlPlaneAuditEvent.objects.filter(pk=event.pk).exists()
 
 
@@ -63,7 +65,10 @@ def test_audit_metadata_rejects_sensitive_key_patterns():
 @pytest.mark.django_db
 def test_audit_metadata_is_size_and_depth_bounded():
     with pytest.raises(ValueError, match="maximum size"):
-        record_control_plane_audit(event_type=ControlPlaneAuditEventType.LOGIN, metadata={"note": "x" * 9000})
+        record_control_plane_audit(
+            event_type=ControlPlaneAuditEventType.LOGIN,
+            metadata={"notes": ["x" * 2000 for _ in range(5)]},
+        )
     nested = value = {}
     for _ in range(10):
         value["next"] = {}
@@ -72,6 +77,7 @@ def test_audit_metadata_is_size_and_depth_bounded():
         record_control_plane_audit(event_type=ControlPlaneAuditEventType.LOGIN, metadata=nested)
 
 
+@pytest.mark.django_db
 def test_audit_correlation_id_is_normalized_and_bounded():
     event = record_control_plane_audit(event_type=ControlPlaneAuditEventType.LOGIN, correlation_id="  req-123  ")
     assert event.correlation_id == "req-123"

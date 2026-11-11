@@ -80,7 +80,7 @@ def test_planning_summary_combines_actuals_budget_and_goal_pace(organization):
 
 @pytest.mark.django_db
 def test_planning_summary_includes_overdue_goal(organization):
-    goal = FinanceGoal.objects.create(
+    FinanceGoal.objects.create(
         organization=organization,
         name="Overdue fund",
         target_amount_minor=5_000_000,

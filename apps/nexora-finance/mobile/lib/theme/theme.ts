@@ -1,6 +1,6 @@
-import { theme } from './tokens';
+import { theme, type NexoraTheme } from './tokens';
 
-export const darkTheme: typeof theme = {
+export const darkTheme: NexoraTheme = {
   ...theme,
   colors: {
     ...theme.colors,

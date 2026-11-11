@@ -1,5 +1,7 @@
 import { getApp, getApps, initializeApp } from 'firebase/app';
-import { getAuth, initializeAuth, getReactNativePersistence, type Auth } from 'firebase/auth';
+import { getAuth, initializeAuth, type Auth } from 'firebase/auth';
+// @ts-ignore Firebase's React Native entrypoint exports this helper; web typings do not.
+import { getReactNativePersistence } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
@@ -27,5 +29,17 @@ export function getFirebaseAuth(): Auth {
   assertConfig();
   const app = getApps().length ? getApp() : initializeApp(config);
   if (Platform.OS === 'web') return getAuth(app);
-  try { return getAuth(app); } catch { return initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) }); }
+  try {
+    return initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
+  } catch (error) {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code?: string }).code === 'auth/already-initialized'
+    ) {
+      return getAuth(app);
+    }
+    throw error;
+  }
 }

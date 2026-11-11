@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { useAuth } from '@/providers/AuthProvider';
+import { useAuth } from '@/lib/auth';
 import { useTenantApi } from '@/lib/api/tenant';
 import type { FinanceComparison } from './types';
 

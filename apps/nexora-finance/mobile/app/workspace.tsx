@@ -69,5 +69,6 @@ const styles = StyleSheet.create({
   content: { gap: 12 },
   center: { alignItems: 'center', gap: 10, paddingVertical: 16 },
   helper: { fontSize: 14, textAlign: 'center' },
+  list: { gap: 8 },
   error: { fontSize: 14 },
 });

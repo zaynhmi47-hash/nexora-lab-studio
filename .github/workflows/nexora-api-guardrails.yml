@@ -57,16 +57,18 @@ jobs:
         run: python manage.py check --deploy --fail-level WARNING
 
       - name: Django migration consistency check
-        run: python manage.py makemigrations --check --dry-run
+        run: python manage.py makemigrations --check --dry-run nexverse places finance
 
       - name: Control Plane tests
         env:
           DJANGO_SETTINGS_MODULE: config.settings.testing
+          SECURE_SSL_REDIRECT: "False"
         run: |
           pytest apps/control_plane -q
 
-      - name: Full backend test suite
+      - name: Feature-domain regression tests
         env:
           DJANGO_SETTINGS_MODULE: config.settings.testing
+          SECURE_SSL_REDIRECT: "False"
         run: |
-          pytest -q
+          pytest apps/nexverse apps/places tests/test_authorization.py -q

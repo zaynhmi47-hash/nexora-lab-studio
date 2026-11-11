@@ -23,4 +23,6 @@ export const theme = {
   borderWidth: { hairline: 1, strong: 2 },
 } as const;
 
-export type NexoraTheme = typeof theme;
+export type NexoraTheme = Omit<typeof theme, 'colors'> & {
+  colors: { [Key in keyof typeof theme.colors]: string };
+};

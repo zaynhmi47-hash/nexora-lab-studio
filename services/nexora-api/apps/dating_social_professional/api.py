@@ -75,7 +75,8 @@ class DatingProfileSerializer(serializers.ModelSerializer):
 
     def get_profile_completion(self, obj):
         active_media = getattr(obj, "_active_media", None)
-        has_photo = bool(obj.photo_url.strip()) or (active_media is not None and bool(active_media)) or (active_media is None and DatingProfileMedia.objects.filter(profile=obj, active=True).exists())\n        checks = [bool(obj.display_name.strip()), bool(obj.birth_date), bool(obj.bio.strip()), has_photo, bool(obj.relationship_intent), bool(obj.interests), bool(obj.education.strip()), bool(obj.occupation.strip()), bool(obj.location_city.strip())]
+        has_photo = bool(obj.photo_url.strip()) or (active_media is not None and bool(active_media)) or (active_media is None and DatingProfileMedia.objects.filter(profile=obj, active=True).exists())
+        checks = [bool(obj.display_name.strip()), bool(obj.birth_date), bool(obj.bio.strip()), has_photo, bool(obj.relationship_intent), bool(obj.interests), bool(obj.education.strip()), bool(obj.occupation.strip()), bool(obj.location_city.strip())]
         return round(sum(checks) / len(checks) * 100)
 
     def get_age(self, obj):

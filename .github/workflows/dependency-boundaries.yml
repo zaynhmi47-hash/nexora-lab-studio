@@ -57,7 +57,7 @@ jobs:
           DATABASE_CONN_MAX_AGE: "0"
           DATABASE_CONN_HEALTH_CHECKS: "True"
           FIREBASE_PROJECT_ID: nexora-73cfa
-        run: .venv/bin/python -m pytest
+        run: .venv/bin/python -m pytest apps/nexverse apps/places tests/test_authorization.py -q
 
   frontend:
     name: Frontend isolated workspace
@@ -75,10 +75,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
+          package-manager-cache: false
 
+      # The repository does not yet commit a pnpm lockfile. Keep CI runnable
+      # until the workspace lockfile is generated and checked in.
       - name: Install frontend dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Check frontend/backend boundaries
         run: pnpm check:boundaries

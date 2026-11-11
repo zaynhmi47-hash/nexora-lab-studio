@@ -40,6 +40,34 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: 22
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+  nexverse-mobile-typecheck:
+    name: Nexverse mobile typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/nexverse/mobile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          package-manager-cache: false
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile

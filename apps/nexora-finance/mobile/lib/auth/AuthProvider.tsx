@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type PropsWith
 import { firebaseSignOut, isFirebaseConfigured, registerWithEmail, signInWithEmail, signInWithGoogle, subscribeToFirebaseAuth, type FirebaseAuthSession } from './firebaseAdapter';
 import type { AuthActions, AuthState, AuthUser } from './types';
 
-interface AuthContextValue extends AuthState, AuthActions { firebaseConfigured: boolean; }
+interface AuthContextValue extends AuthState, AuthActions { firebaseConfigured: boolean; initializing: boolean; }
 const initialState: AuthState = { status: 'unknown', user: null };
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -36,6 +36,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const value = useMemo<AuthContextValue>(() => ({
     ...state,
+    initializing: state.status === 'unknown' || state.status === 'authenticating',
     firebaseConfigured,
     async signInWithEmail(email, password) { setState(current => ({ ...current, status: 'authenticating' })); try { await signInWithEmail(email, password); } catch (error) { setState({ status: mapFirebaseError(error), user: null }); throw error; } },
     async registerWithEmail(email, password) { setState(current => ({ ...current, status: 'authenticating' })); try { await registerWithEmail(email, password); } catch (error) { setState({ status: mapFirebaseError(error), user: null }); throw error; } },
