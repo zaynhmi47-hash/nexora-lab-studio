@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from uuid import uuid4
+import re
 
 from django.db import IntegrityError, transaction
 from django.utils import timezone
@@ -12,7 +13,7 @@ from rest_framework.views import APIView
 
 from apps.identity.authentication import FirebaseIdentityAuthentication
 
-from .models import NexverseAuthor, NexverseChapter, NexverseWork
+from .models import NexverseAuthor, NexverseChapter, NexverseChapterPrice, NexverseWork
 
 
 def _author_for(user):
@@ -291,3 +292,80 @@ class NexverseSubmitWorkView(APIView):
         work.review_note = ""
         work.save(update_fields=("review_status", "submitted_at", "reviewed_at", "review_note", "updated_at"))
         return Response(_work_payload(work), status=202)
+
+
+
+class NexverseCreatorChapterPriceView(APIView):
+    """Creator-managed chapter price; purchase intents retain immutable price snapshots."""
+
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def _chapter(self, request, work_id, chapter_id):
+        return (
+            NexverseChapter.objects.select_related("work", "work__author")
+            .filter(pk=chapter_id, work_id=work_id, work__author__user=request.user)
+            .first()
+        )
+
+    def get(self, request, work_id, chapter_id):
+        chapter = self._chapter(request, work_id, chapter_id)
+        if chapter is None:
+            return Response({"detail": "Chapter not found."}, status=404)
+        price = NexverseChapterPrice.objects.filter(
+            chapter=chapter, deleted_at__isnull=True
+        ).first()
+        if price is None:
+            return Response({"isPriced": False, "price": None})
+        return Response({
+            "isPriced": price.is_active,
+            "price": {
+                "currency": price.currency,
+                "amountMinor": price.amount_minor,
+                "isActive": price.is_active,
+            },
+        })
+
+    def put(self, request, work_id, chapter_id):
+        chapter = self._chapter(request, work_id, chapter_id)
+        if chapter is None:
+            return Response({"detail": "Chapter not found."}, status=404)
+        if chapter.is_free_preview:
+            return Response({"detail": "Free-preview chapters cannot have a paid price."}, status=409)
+
+        amount = request.data.get("amountMinor")
+        currency = str(request.data.get("currency", "IDR")).strip().upper()
+        if isinstance(amount, bool) or not isinstance(amount, int) or amount <= 0 or amount > 10_000_000_000:
+            return Response({"detail": "amountMinor must be a positive integer within the supported limit."}, status=400)
+        if not re.fullmatch(r"[A-Z]{3}", currency):
+            return Response({"detail": "currency must be a three-letter uppercase currency code."}, status=400)
+
+        with transaction.atomic():
+            chapter = NexverseChapter.objects.select_for_update().get(pk=chapter.pk)
+            price, _ = NexverseChapterPrice.objects.select_for_update().get_or_create(
+                chapter=chapter,
+                defaults={"currency": currency, "amount_minor": amount, "is_active": True},
+            )
+            price.currency = currency
+            price.amount_minor = amount
+            price.is_active = True
+            price.deleted_at = None
+            price.save(update_fields=("currency", "amount_minor", "is_active", "deleted_at", "updated_at"))
+
+        return Response({
+            "isPriced": True,
+            "price": {
+                "currency": price.currency,
+                "amountMinor": price.amount_minor,
+                "isActive": price.is_active,
+            },
+        })
+
+    def delete(self, request, work_id, chapter_id):
+        chapter = self._chapter(request, work_id, chapter_id)
+        if chapter is None:
+            return Response({"detail": "Chapter not found."}, status=404)
+        updated = NexverseChapterPrice.objects.filter(
+            chapter=chapter, deleted_at__isnull=True, is_active=True
+        ).update(is_active=False, updated_at=timezone.now())
+        return Response({"isPriced": False, "deactivated": bool(updated)})
