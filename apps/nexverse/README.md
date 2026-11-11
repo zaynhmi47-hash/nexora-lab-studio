@@ -97,3 +97,12 @@ A purchase intent starts as `pending` and does not grant access. `confirm_verifi
 - Verified paid purchases create a credit entry; refunds append a reversal entry instead of rewriting the original credit.
 - The ledger currently reports gross sales attribution before platform fees, tax, withholding, payout reserves or other commercial policy. It is not a withdrawable balance and does not trigger payouts.
 - Payment provider verification, creator revenue-share policy, tax treatment, payout onboarding and actual transfers require separate implementation and operational approval.
+
+
+## Creator chapter pricing
+
+- `GET /api/v1/nexverse/creator/works/{work_id}/chapters/{chapter_id}/price/` reads the authenticated author's price configuration.
+- `PUT` on the same endpoint sets or updates `amountMinor` and a three-letter currency code. The server validates the amount and ownership; client-supplied prices are never used to create a reader purchase.
+- `DELETE` deactivates the current price so it no longer appears in public offers. Existing purchase records retain their amount and currency snapshots.
+- Free-preview chapters cannot be priced. A creator cannot inspect or modify another author's chapter price.
+- The current price model is a single active configuration per chapter. Full price-version history and creator revenue-share policy remain separate follow-up work.
