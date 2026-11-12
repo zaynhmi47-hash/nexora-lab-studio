@@ -97,6 +97,50 @@ class NexverseCreatorApiTests(APITestCase):
         self.assertEqual(response.data["reviewStatus"], "submitted")
 
 
+    def test_preview_flag_rejects_string_values(self):
+        self.client.post(
+            "/api/v1/nexverse/creator/profile/",
+            {"penName": "Boolean Author"},
+            format="json",
+        )
+        work = self.client.post(
+            "/api/v1/nexverse/creator/works/",
+            {"title": "Boolean Work", "synopsis": "Synopsis"},
+            format="json",
+        )
+        work_id = work.data["id"]
+        invalid_create = self.client.post(
+            f"/api/v1/nexverse/creator/works/{work_id}/chapters/",
+            {
+                "number": 1,
+                "title": "Invalid Preview Flag",
+                "content": "Chapter body",
+                "freePreview": "false",
+            },
+            format="json",
+        )
+        self.assertEqual(invalid_create.status_code, 400)
+        self.assertEqual(NexverseChapter.objects.filter(work_id=work_id).count(), 0)
+
+        chapter = self.client.post(
+            f"/api/v1/nexverse/creator/works/{work_id}/chapters/",
+            {
+                "number": 1,
+                "title": "Valid Premium Chapter",
+                "content": "Chapter body",
+                "freePreview": False,
+            },
+            format="json",
+        )
+        self.assertEqual(chapter.status_code, 201)
+        invalid_update = self.client.patch(
+            f"/api/v1/nexverse/creator/works/{work_id}/chapters/{chapter.data['id']}/",
+            {"freePreview": "false"},
+            format="json",
+        )
+        self.assertEqual(invalid_update.status_code, 400)
+        self.assertFalse(NexverseChapter.objects.get(pk=chapter.data["id"]).is_free_preview)
+
     def _create_pricing_chapter(self, *, free_preview=False, user=None):
         owner = user or self.writer
         author, _ = NexverseAuthor.objects.get_or_create(
