@@ -1,8 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { getApp, getApps, initializeApp } from 'firebase/app';
-// @ts-ignore Firebase's React Native entrypoint exports this; Expo's TypeScript resolver selects web declarations.
-import { getReactNativePersistence } from 'firebase/auth';
+import * as firebaseAuthSdk from 'firebase/auth';
 import {
   getAuth,
   initializeAuth,
@@ -13,6 +12,14 @@ import {
   type User,
   type UserCredential,
 } from 'firebase/auth';
+
+// Access this conditional Firebase export through the module namespace so the
+// web bundle does not require a named React Native-only export at module load.
+const getReactNativePersistence = (
+  firebaseAuthSdk as typeof firebaseAuthSdk & {
+    getReactNativePersistence: (storage: typeof AsyncStorage) => never;
+  }
+).getReactNativePersistence;
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY?.trim(),
