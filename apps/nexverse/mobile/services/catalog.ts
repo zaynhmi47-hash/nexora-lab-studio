@@ -187,7 +187,22 @@ export async function getWorkDetail(slug: string): Promise<WorkDetail> {
 export async function getChapterContent(slug: string, chapterId: string): Promise<ChapterContent> {
   // Free previews remain available anonymously; signed-in readers send the
   // current Firebase ID token so the API can verify paid chapter entitlements.
-  const accessToken = await getNexoraCoreAccessToken().catch(() => null);
+  let accessToken: string | null;
+  try {
+    accessToken = await getNexoraCoreAccessToken();
+  } catch (error) {
+    // A missing Firebase configuration must not block public free previews.
+    // Token refresh/session failures for configured accounts must remain visible
+    // instead of silently downgrading a premium reader to anonymous access.
+    if (
+      error instanceof Error &&
+      error.message.includes('Konfigurasi Firebase belum lengkap')
+    ) {
+      accessToken = null;
+    } else {
+      throw error;
+    }
+  }
   return request<ChapterContent>(
     '/nexverse/works/' + encodeURIComponent(slug) + '/chapters/' + encodeURIComponent(chapterId) + '/',
     accessToken,
