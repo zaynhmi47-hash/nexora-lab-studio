@@ -126,7 +126,7 @@ export default function WorkDetailScreen() {
           <Ionicons name="arrow-forward" color="#FFFFFF" size={17} />
         </Pressable>
       ) : (
-        <View style={styles.notice}><Ionicons name="lock-closed-outline" size={16} color={palette.muted} /><Text style={styles.noticeText}>Belum ada bab pratinjau gratis. Akses premium akan diaktifkan setelah sistem entitlement tersedia.</Text></View>
+        <View style={styles.notice}><Ionicons name="lock-closed-outline" size={16} color={palette.muted} /><Text style={styles.noticeText}>Belum ada bab pratinjau gratis. Pembelian premium belum dapat dilakukan dari aplikasi karena integrasi payment gateway belum diaktifkan.</Text></View>
       )}
       <Text style={styles.disclaimer}>Konten bab dan hak akses dikirim serta diperiksa oleh Nexora API. Bab premium tidak dapat dibaca hanya dengan mengubah aplikasi.</Text>
     </ScrollView>
