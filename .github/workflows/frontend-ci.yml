@@ -74,3 +74,6 @@ jobs:
 
       - name: Typecheck
         run: pnpm typecheck
+
+      - name: Export Nexverse web bundle
+        run: pnpm exec expo export --platform web
