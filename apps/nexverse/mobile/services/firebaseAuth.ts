@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { getApp, getApps, initializeApp } from 'firebase/app';
 // @ts-ignore Firebase's React Native entrypoint exports this; Expo's TypeScript resolver selects web declarations.
 import { getReactNativePersistence } from 'firebase/auth';
@@ -47,10 +48,15 @@ export function getNexoraFirebaseAuth(): Auth {
         });
       })();
 
+  // AsyncStorage persistence is only valid on native platforms. On web,
+  // Firebase Auth uses its browser persistence implementation.
+  if (Platform.OS === 'web') {
+    authInstance = getAuth(app);
+    return authInstance;
+  }
+
   try {
     authInstance = initializeAuth(app, {
-      // Firebase's React Native conditional entrypoint exports this helper.
-      // The TypeScript resolver in this Expo workspace resolves the web declaration.
       persistence: getReactNativePersistence(AsyncStorage),
     });
   } catch (error) {
