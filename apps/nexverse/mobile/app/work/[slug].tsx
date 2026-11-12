@@ -111,10 +111,10 @@ export default function WorkDetailScreen() {
       {story.chapterList.length === 0 ? (
         <Text style={styles.empty}>Belum ada bab yang diterbitkan.</Text>
       ) : story.chapterList.map(chapter => (
-        <Pressable key={chapter.id} onPress={() => chapter.freePreview ? openChapter(chapter.id) : undefined} disabled={!chapter.freePreview} style={[styles.chapter, !chapter.freePreview && styles.chapterLocked]}>
+        <Pressable key={chapter.id} onPress={() => openChapter(chapter.id)} style={[styles.chapter, !chapter.freePreview && styles.chapterLocked]}>
           <View style={styles.chapterMain}>
             <Text style={styles.chapterTitle}>Bab {chapter.number} · {chapter.title}</Text>
-            <Text style={styles.chapterMeta}>{chapter.freePreview ? 'Pratinjau gratis' : 'Memerlukan akses premium'}</Text>
+            <Text style={styles.chapterMeta}>{chapter.freePreview ? 'Pratinjau gratis' : 'Akses premium · diverifikasi server'}</Text>
             {chapter.summary ? <Text style={styles.chapterSummary} numberOfLines={2}>{chapter.summary}</Text> : null}
           </View>
           <Ionicons name={chapter.freePreview ? 'chevron-forward' : 'lock-closed-outline'} color={palette.muted} size={18} />
