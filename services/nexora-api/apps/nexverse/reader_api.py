@@ -89,7 +89,7 @@ class NexverseReadingProgressDetailView(APIView):
     def get(self, request, work_id):
         work = get_object_or_404(_readable_work_queryset(), pk=work_id)
         progress = (
-            _readable_progress_queryset()
+            _readable_progress_queryset(request.user)
             .filter(user=request.user, work=work)
             .select_related("work", "chapter")
             .first()
