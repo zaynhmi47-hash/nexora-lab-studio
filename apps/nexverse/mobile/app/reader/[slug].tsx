@@ -129,6 +129,7 @@ export default function ReaderScreen() {
           <Ionicons name={premiumRequired ? 'lock-closed-outline' : 'cloud-offline-outline'} size={32} color={theme.muted} />
           <Text style={[styles.stateTitle, { color: theme.text }]}>{premiumRequired ? 'Akses premium diperlukan' : 'Bab belum dapat dibuka'}</Text>
           <Text style={[styles.stateText, { color: theme.muted }]}>{error || 'Konten bab tidak tersedia.'}</Text>
+          {premiumRequired ? <Text style={[styles.stateText, { color: theme.muted }]}>Jika Anda sudah membeli bab ini, masuk menggunakan akun Nexora yang sama. Pembelian baru belum tersedia di aplikasi.</Text> : null}
           <Pressable onPress={() => premiumRequired ? router.back() : void loadChapter()} style={styles.retry}>
             <Text style={styles.retryText}>{premiumRequired ? 'Kembali ke cerita' : 'Coba lagi'}</Text>
           </Pressable>
