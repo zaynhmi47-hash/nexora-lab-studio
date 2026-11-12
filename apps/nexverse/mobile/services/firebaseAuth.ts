@@ -9,6 +9,7 @@ import {
   signOut,
   onAuthStateChanged,
   type Auth,
+  type Persistence,
   type User,
   type UserCredential,
 } from 'firebase/auth';
@@ -17,7 +18,7 @@ import {
 // web bundle does not require a named React Native-only export at module load.
 const getReactNativePersistence = (
   firebaseAuthSdk as typeof firebaseAuthSdk & {
-    getReactNativePersistence: (storage: typeof AsyncStorage) => never;
+    getReactNativePersistence: (storage: typeof AsyncStorage) => Persistence;
   }
 ).getReactNativePersistence;
 
