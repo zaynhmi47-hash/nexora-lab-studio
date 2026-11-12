@@ -1,7 +1,8 @@
+from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from apps.identity.models import NexoraUser
-from .models import NexverseAuthor, NexverseChapter, NexverseReadingProgress, NexverseWork
+from .models import (NexverseAuthor, NexverseChapter, NexverseChapterPrice, NexverseEntitlement, NexversePurchase, NexverseReadingProgress, NexverseWork)
 
 
 class NexverseReadingProgressApiTests(APITestCase):
@@ -78,6 +79,43 @@ class NexverseReadingProgressApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, 404)
         self.assertEqual(NexverseReadingProgress.objects.count(), 0)
+
+    def test_entitled_reader_can_save_and_resume_paid_chapter_progress(self):
+        price = NexverseChapterPrice.objects.create(
+            chapter=self.paid, currency="IDR", amount_minor=12500
+        )
+        purchase = NexversePurchase.objects.create(
+            user=self.user,
+            chapter=self.paid,
+            price=price,
+            idempotency_key="paid-progress-test",
+            currency="IDR",
+            amount_minor=12500,
+            status=NexversePurchase.Status.PAID,
+            payment_provider="test",
+            provider_reference="paid-progress-reference",
+            paid_at=timezone.now(),
+        )
+        NexverseEntitlement.objects.create(
+            purchase=purchase,
+            user=self.user,
+            work=self.work,
+            chapter=self.paid,
+            status=NexverseEntitlement.Status.ACTIVE,
+            starts_at=timezone.now(),
+        )
+
+        saved = self.client.put(
+            self.url,
+            {"chapterId": str(self.paid.id), "positionChars": 8, "progressPercent": 35},
+            format="json",
+        )
+        self.assertEqual(saved.status_code, 200)
+        self.assertEqual(saved.data["item"]["chapterId"], str(self.paid.id))
+
+        resumed = self.client.get(self.url)
+        self.assertEqual(resumed.status_code, 200)
+        self.assertEqual(resumed.data["item"]["progressPercent"], 35)
 
     def test_invalid_position_is_rejected(self):
         response = self.client.put(
