@@ -146,7 +146,7 @@ export default function ReaderScreen() {
             onScrollEndDrag={event => void saveProgress(event.nativeEvent.contentOffset.y, contentHeight, viewportHeight)}
             onMomentumScrollEnd={event => void saveProgress(event.nativeEvent.contentOffset.y, contentHeight, viewportHeight)}
           >
-            <Text style={[styles.chapterKicker, { color: palette.green }]}>NEXVERSE · PRATINJAU GRATIS</Text>
+            <Text style={[styles.chapterKicker, { color: palette.green }]}>{chapter.freePreview ? 'NEXVERSE · PRATINJAU GRATIS' : 'NEXVERSE · AKSES PREMIUM'}</Text>
             <Text style={[styles.chapterTitle, { color: theme.text }]}>{chapter.title}</Text>
             <Text style={[styles.chapterMeta, { color: theme.muted }]}>Bab {chapter.number}</Text>
             {resumeMessage ? <Text style={[styles.resume, { color: theme.muted }]}>{resumeMessage}</Text> : null}
