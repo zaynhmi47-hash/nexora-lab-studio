@@ -22,6 +22,7 @@ const readerThemes = {
 export default function ReaderScreen() {
   const { slug, chapterId, workId } = useLocalSearchParams<{ slug: string; chapterId: string; workId: string }>();
   const scrollRef = useRef<ScrollView>(null);
+  const progressSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [chapter, setChapter] = useState<ChapterContent | null>(null);
   const [preferences, setPreferences] = useState<ReaderPreferences>(DEFAULT_READER_PREFERENCES);
   const [preferencesReady, setPreferencesReady] = useState(false);
@@ -76,6 +77,10 @@ export default function ReaderScreen() {
   }, [chapterId, slug, workId]);
 
   useEffect(() => { void loadChapter(); }, [loadChapter]);
+
+  useEffect(() => () => {
+    if (progressSaveTimer.current) clearTimeout(progressSaveTimer.current);
+  }, []);
 
   useEffect(() => {
     if (resumeRatio !== null && contentHeight > 0 && viewportHeight > 0) {
@@ -144,8 +149,23 @@ export default function ReaderScreen() {
             onContentSizeChange={(_, height) => setContentHeight(height)}
             onScroll={event => setScrollY(event.nativeEvent.contentOffset.y)}
             scrollEventThrottle={100}
-            onScrollEndDrag={event => void saveProgress(event.nativeEvent.contentOffset.y, contentHeight, viewportHeight)}
-            onMomentumScrollEnd={event => void saveProgress(event.nativeEvent.contentOffset.y, contentHeight, viewportHeight)}
+            onScrollEndDrag={event => {
+              if (progressSaveTimer.current) clearTimeout(progressSaveTimer.current);
+              const offset = event.nativeEvent.contentOffset.y;
+              progressSaveTimer.current = setTimeout(() => {
+                progressSaveTimer.current = null;
+                void saveProgress(offset, contentHeight, viewportHeight);
+              }, 350);
+            }}
+            onMomentumScrollBegin={() => {
+              if (progressSaveTimer.current) clearTimeout(progressSaveTimer.current);
+              progressSaveTimer.current = null;
+            }}
+            onMomentumScrollEnd={event => {
+              if (progressSaveTimer.current) clearTimeout(progressSaveTimer.current);
+              progressSaveTimer.current = null;
+              void saveProgress(event.nativeEvent.contentOffset.y, contentHeight, viewportHeight);
+            }}
           >
             <Text style={[styles.chapterKicker, { color: palette.green }]}>{chapter.freePreview ? 'NEXVERSE · PRATINJAU GRATIS' : 'NEXVERSE · AKSES PREMIUM'}</Text>
             <Text style={[styles.chapterTitle, { color: theme.text }]}>{chapter.title}</Text>
