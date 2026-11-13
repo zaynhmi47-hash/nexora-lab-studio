@@ -60,7 +60,6 @@ export function getNexoraFirebaseAuth(): Auth {
   // against another Nexora/Firebase environment by accident.
   if (
     firebaseConfig.projectId &&
-    app.options.projectId &&
     app.options.projectId !== firebaseConfig.projectId
   ) {
     throw new Error(
