@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getApp, getApps, initializeApp } from 'firebase/app';
-// @ts-ignore Firebase's React Native entrypoint exports this; Expo's TypeScript resolver selects web declarations.
-import { getReactNativePersistence } from 'firebase/auth';
+import { Platform } from 'react-native';
+import { getApps, initializeApp } from 'firebase/app';
+import * as firebaseAuthSdk from 'firebase/auth';
 import {
   getAuth,
   initializeAuth,
@@ -9,9 +9,18 @@ import {
   signOut,
   onAuthStateChanged,
   type Auth,
+  type Persistence,
   type User,
   type UserCredential,
 } from 'firebase/auth';
+
+// Access this conditional Firebase export through the module namespace so the
+// web bundle does not require a named React Native-only export at module load.
+const getReactNativePersistence = (
+  firebaseAuthSdk as typeof firebaseAuthSdk & {
+    getReactNativePersistence: (storage: typeof AsyncStorage) => Persistence;
+  }
+).getReactNativePersistence;
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY?.trim(),
@@ -29,28 +38,44 @@ export function getNexoraFirebaseAuth(): Auth {
 
   // Prefer the Firebase app already initialized by Nexora Core. This lets
   // connected apps share the same identity session without duplicate config.
-  const app = getApps().length > 0
-    ? getApp()
-    : (() => {
-        if (!firebaseConfig.apiKey || !firebaseConfig.projectId || !firebaseConfig.appId) {
-          throw new Error(
-            'Konfigurasi Firebase belum lengkap. Isi EXPO_PUBLIC_FIREBASE_API_KEY, PROJECT_ID, dan APP_ID.',
-          );
-        }
-        return initializeApp({
-          apiKey: firebaseConfig.apiKey,
-          projectId: firebaseConfig.projectId,
-          appId: firebaseConfig.appId,
-          ...(firebaseConfig.authDomain ? { authDomain: firebaseConfig.authDomain } : {}),
-          ...(firebaseConfig.storageBucket ? { storageBucket: firebaseConfig.storageBucket } : {}),
-          ...(firebaseConfig.messagingSenderId ? { messagingSenderId: firebaseConfig.messagingSenderId } : {}),
-        });
-      })();
+  const existingDefaultApp = getApps().find(candidate => candidate.name === '[DEFAULT]');
+  const app = existingDefaultApp ?? (() => {
+    if (!firebaseConfig.apiKey || !firebaseConfig.projectId || !firebaseConfig.appId) {
+      throw new Error(
+        'Konfigurasi Firebase belum lengkap. Isi EXPO_PUBLIC_FIREBASE_API_KEY, PROJECT_ID, dan APP_ID.',
+      );
+    }
+    return initializeApp({
+      apiKey: firebaseConfig.apiKey,
+      projectId: firebaseConfig.projectId,
+      appId: firebaseConfig.appId,
+      ...(firebaseConfig.authDomain ? { authDomain: firebaseConfig.authDomain } : {}),
+      ...(firebaseConfig.storageBucket ? { storageBucket: firebaseConfig.storageBucket } : {}),
+      ...(firebaseConfig.messagingSenderId ? { messagingSenderId: firebaseConfig.messagingSenderId } : {}),
+    });
+  })();
+
+  // A shared default app is safe only when it belongs to the same identity
+  // project configured for this client. Fail fast instead of authenticating
+  // against another Nexora/Firebase environment by accident.
+  if (
+    firebaseConfig.projectId &&
+    app.options.projectId !== firebaseConfig.projectId
+  ) {
+    throw new Error(
+      'Firebase project mismatch. Nexverse and Nexora Core must use the same EXPO_PUBLIC_FIREBASE_PROJECT_ID.',
+    );
+  }
+
+  // AsyncStorage persistence is only valid on native platforms. On web,
+  // Firebase Auth uses its browser persistence implementation.
+  if (Platform.OS === 'web') {
+    authInstance = getAuth(app);
+    return authInstance;
+  }
 
   try {
     authInstance = initializeAuth(app, {
-      // Firebase's React Native conditional entrypoint exports this helper.
-      // The TypeScript resolver in this Expo workspace resolves the web declaration.
       persistence: getReactNativePersistence(AsyncStorage),
     });
   } catch (error) {

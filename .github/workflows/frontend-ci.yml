@@ -69,8 +69,14 @@ jobs:
           node-version: 22
           package-manager-cache: false
 
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+      - name: Install Nexverse dependencies
+        run: pnpm install --no-frozen-lockfile --filter nexverse-mobile...
 
       - name: Typecheck
         run: pnpm typecheck
+
+      - name: Export Nexverse web bundle
+        run: pnpm exec expo export --platform web
+
+      - name: Export Nexverse Android bundle
+        run: pnpm exec expo export --platform android

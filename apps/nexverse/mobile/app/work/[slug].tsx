@@ -111,10 +111,10 @@ export default function WorkDetailScreen() {
       {story.chapterList.length === 0 ? (
         <Text style={styles.empty}>Belum ada bab yang diterbitkan.</Text>
       ) : story.chapterList.map(chapter => (
-        <Pressable key={chapter.id} onPress={() => chapter.freePreview ? openChapter(chapter.id) : undefined} disabled={!chapter.freePreview} style={[styles.chapter, !chapter.freePreview && styles.chapterLocked]}>
+        <Pressable key={chapter.id} onPress={() => openChapter(chapter.id)} style={[styles.chapter, !chapter.freePreview && styles.chapterLocked]}>
           <View style={styles.chapterMain}>
             <Text style={styles.chapterTitle}>Bab {chapter.number} · {chapter.title}</Text>
-            <Text style={styles.chapterMeta}>{chapter.freePreview ? 'Pratinjau gratis' : 'Memerlukan akses premium'}</Text>
+            <Text style={styles.chapterMeta}>{chapter.freePreview ? 'Pratinjau gratis' : 'Akses premium · diverifikasi server'}</Text>
             {chapter.summary ? <Text style={styles.chapterSummary} numberOfLines={2}>{chapter.summary}</Text> : null}
           </View>
           <Ionicons name={chapter.freePreview ? 'chevron-forward' : 'lock-closed-outline'} color={palette.muted} size={18} />
@@ -126,7 +126,7 @@ export default function WorkDetailScreen() {
           <Ionicons name="arrow-forward" color="#FFFFFF" size={17} />
         </Pressable>
       ) : (
-        <View style={styles.notice}><Ionicons name="lock-closed-outline" size={16} color={palette.muted} /><Text style={styles.noticeText}>Belum ada bab pratinjau gratis. Akses premium akan diaktifkan setelah sistem entitlement tersedia.</Text></View>
+        <View style={styles.notice}><Ionicons name="lock-closed-outline" size={16} color={palette.muted} /><Text style={styles.noticeText}>Belum ada bab pratinjau gratis. Pembelian premium belum dapat dilakukan dari aplikasi karena integrasi payment gateway belum diaktifkan.</Text></View>
       )}
       <Text style={styles.disclaimer}>Konten bab dan hak akses dikirim serta diperiksa oleh Nexora API. Bab premium tidak dapat dibaca hanya dengan mengubah aplikasi.</Text>
     </ScrollView>

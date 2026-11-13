@@ -8,6 +8,7 @@ env = environ.Env(
     DEBUG=(bool, False),
     ALLOWED_HOSTS=(list, []),
     CSRF_TRUSTED_ORIGINS=(list, []),
+    CORS_ALLOWED_ORIGINS=(list, []),
     DATABASE_URL=(str, "sqlite:///db.sqlite3"),
     DATABASE_CONN_MAX_AGE=(int, 0),
     DATABASE_CONN_HEALTH_CHECKS=(bool, True),
@@ -33,11 +34,13 @@ if not DEBUG and not ALLOWED_HOSTS:
     raise RuntimeError("ALLOWED_HOSTS must be explicitly configured when DEBUG=False.")
 
 INSTALLED_APPS = [
+    "corsheaders",
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes", "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
     "rest_framework", "apps.core", "apps.control_plane", "apps.identity", "apps.organizations", "apps.access", "apps.products", "apps.capabilities", "apps.learning", "apps.gamification", "apps.quran", "apps.dhikr", "apps.umrah", "apps.profile", "apps.knowledge", "apps.tajwid", "apps.arabic", "apps.fasting", "apps.dua", "apps.calendar", "apps.zakat", "apps.reminders", "apps.places", "apps.ramadan", "apps.finance", "apps.dating_social_professional", "apps.nexverse",
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware", "django.contrib.sessions.middleware.SessionMiddleware", "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware", "django.contrib.auth.middleware.AuthenticationMiddleware", "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware", "apps.core.middleware.RequestCorrelationMiddleware",
@@ -52,6 +55,9 @@ ASGI_APPLICATION = "config.asgi.application"
 
 DATABASES = {"default": {**env.db("DATABASE_URL"), "CONN_MAX_AGE": env("DATABASE_CONN_MAX_AGE"), "CONN_HEALTH_CHECKS": env("DATABASE_CONN_HEALTH_CHECKS")}}
 CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
+CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
+CORS_URLS_REGEX = r"^/api/.*$"
+CORS_ALLOW_CREDENTIALS = False
 CONTROL_PLANE_BOOTSTRAP_EMAILS = env("CONTROL_PLANE_BOOTSTRAP_EMAILS")
 CONTROL_PLANE_SESSION_AGE = env("CONTROL_PLANE_SESSION_AGE")
 CONTROL_PLANE_LOGIN_RATE_LIMIT = env("CONTROL_PLANE_LOGIN_RATE_LIMIT")
