@@ -105,7 +105,7 @@ export const SplashScreen: React.FC = () => {
       <div className="w-full max-w-md pb-4 text-center z-10">
         <div className="inline-flex items-center gap-2 text-slate-500 text-xs font-mono">
           <CheckCircle2 className="w-3.5 h-3.5 text-blue-500" />
-          <span>Local Mock Authentication Architecture • Step 2</span>
+          <span>Nexora Identity • Secure session verification</span>
         </div>
       </div>
     </div>

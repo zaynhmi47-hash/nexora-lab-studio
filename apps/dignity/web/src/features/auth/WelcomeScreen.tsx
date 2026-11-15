@@ -18,7 +18,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { PrimaryButton, SecondaryButton, GhostButton } from '../../components/ui/Button';
 
 export const WelcomeScreen: React.FC = () => {
-  const { setAuthStage, demoLogin, guestLogin } = useAuth();
+  const { setAuthStage, demoLogin, guestLogin, demoAuthEnabled } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [socialToast, setSocialToast] = useState<string | null>(null);
 
@@ -92,7 +92,7 @@ export const WelcomeScreen: React.FC = () => {
       </header>
 
       {/* Social Toast Simulation */}
-      {socialToast && (
+      {demoAuthEnabled && socialToast && (
         <div className="fixed top-20 right-6 z-50 bg-blue-600 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-200">
           <Sparkles className="w-4 h-4 animate-spin" />
           <span>{socialToast}</span>
@@ -129,6 +129,8 @@ export const WelcomeScreen: React.FC = () => {
               <ArrowRight className="w-4 h-4" />
             </PrimaryButton>
 
+            {demoAuthEnabled && (
+              <>
             <SecondaryButton
               size="lg"
               onClick={() => demoLogin('alexandria')}
@@ -146,9 +148,12 @@ export const WelcomeScreen: React.FC = () => {
               <Compass className="w-4 h-4" />
               <span>Explore as Guest</span>
             </GhostButton>
+              </>
+            )}
           </div>
 
-          {/* Social Sign-in divider */}
+          {demoAuthEnabled && (
+          <>
           <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
             <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-3">
               Or quickly continue with social accounts (Mock OAuth):
@@ -203,6 +208,9 @@ export const WelcomeScreen: React.FC = () => {
               </button>
             </div>
           </div>
+          </>
+
+          )}
         </div>
 
         {/* Right Column: Platform Preview & Value Highlights */}

@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'dignity.auth.session';
 const SPLASH_KEY = 'dignity.auth.seen_splash';
+const ONBOARDING_KEY_PREFIX = 'dignity.onboarding.completed.';
 
 export interface StoredAuthSession {
   userId: string;
@@ -60,6 +61,17 @@ export const authStorage = {
     }
 
     window.localStorage.setItem(SPLASH_KEY, String(value));
+  },
+
+
+  getOnboardingCompleted(userId: string): boolean {
+    if (!canUseStorage()) return false;
+    return window.localStorage.getItem(`${ONBOARDING_KEY_PREFIX}${userId}`) === 'true';
+  },
+
+  setOnboardingCompleted(userId: string, value: boolean): void {
+    if (!canUseStorage()) return;
+    window.localStorage.setItem(`${ONBOARDING_KEY_PREFIX}${userId}`, String(value));
   },
 
   clearAll(): void {

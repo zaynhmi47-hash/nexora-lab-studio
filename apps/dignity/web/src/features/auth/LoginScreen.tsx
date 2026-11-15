@@ -19,7 +19,7 @@ import { FormInput } from '../../components/ui/Input';
 import { ForgotPasswordModal } from './ForgotPasswordModal';
 
 export const LoginScreen: React.FC = () => {
-  const { login, demoLogin, setAuthStage, state } = useAuth();
+  const { login, demoLogin, setAuthStage, state, demoAuthEnabled } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -99,7 +99,7 @@ export const LoginScreen: React.FC = () => {
 
         {/* Auth Form Card */}
         <div className="bg-white dark:bg-slate-900 py-8 px-6 sm:px-8 shadow-xl rounded-3xl border border-slate-200 dark:border-slate-800 relative">
-          {/* Quick Demo Logins Banner */}
+          {demoAuthEnabled && (
           <div className="mb-6 p-3.5 rounded-2xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60">
             <div className="flex items-center gap-1.5 text-xs font-bold text-blue-700 dark:text-blue-300 mb-2">
               <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
@@ -139,11 +139,12 @@ export const LoginScreen: React.FC = () => {
               </button>
             </div>
           </div>
+          )}
 
-          {errors.general && (
+          {(errors.general || state.error) && (
             <div className="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-400 flex items-start gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{errors.general}</span>
+              <span>{errors.general || state.error}</span>
             </div>
           )}
 
@@ -236,7 +237,7 @@ export const LoginScreen: React.FC = () => {
             </PrimaryButton>
           </form>
 
-          {/* Social Sign In */}
+          {demoAuthEnabled && (
           <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-800">
             <div className="text-center text-xs text-slate-400 mb-3">Or sign in with</div>
             <div className="grid grid-cols-3 gap-2">
@@ -289,6 +290,7 @@ export const LoginScreen: React.FC = () => {
               </button>
             </div>
           </div>
+          )}
         </div>
 
         {/* Bottom register link */}
