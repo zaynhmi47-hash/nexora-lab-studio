@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 
 from apps.access.models import Permission, RolePermission
 from apps.access.services import assign_role, provision_organization_access
-from apps.core.exceptions import PermissionDeniedException
+from apps.core.exceptions import ConflictException, PermissionDeniedException
 from apps.identity.models import NexoraUser
 from apps.organizations.services import MembershipService, OrganizationService
 
@@ -70,3 +70,56 @@ def test_owner_can_assign_non_owner_role():
 
     target_membership.refresh_from_db()
     assert target_membership.role.slug == "admin"
+
+
+@pytest.mark.django_db
+def test_membership_management_requires_organization_permission():
+    owner = NexoraUser.objects.create(email="owner@example.com", status=NexoraUser.Status.ACTIVE)
+    outsider = NexoraUser.objects.create(email="outsider@example.com", status=NexoraUser.Status.ACTIVE)
+    target = NexoraUser.objects.create(email="target@example.com", status=NexoraUser.Status.ACTIVE)
+    organization = OrganizationService.create_organization(name="Acme", created_by=owner)
+    target_membership = MembershipService.add_user(user=target, organization_id=organization.id)
+
+    with pytest.raises(PermissionDeniedException):
+        MembershipService.suspend_membership(actor=outsider, membership_id=target_membership.id)
+
+    target_membership.refresh_from_db()
+    assert target_membership.status == target_membership.Status.ACTIVE
+
+
+@pytest.mark.django_db
+def test_admin_can_suspend_member_but_cannot_revoke_last_owner():
+    owner = NexoraUser.objects.create(email="owner@example.com", status=NexoraUser.Status.ACTIVE)
+    admin = NexoraUser.objects.create(email="admin@example.com", status=NexoraUser.Status.ACTIVE)
+    target = NexoraUser.objects.create(email="target@example.com", status=NexoraUser.Status.ACTIVE)
+    organization = OrganizationService.create_organization(name="Acme", created_by=owner)
+    admin_membership = MembershipService.add_user(user=admin, organization_id=organization.id)
+    target_membership = MembershipService.add_user(user=target, organization_id=organization.id)
+    assign_role(actor=owner, membership=admin_membership, role=organization.roles.get(slug="admin"))
+
+    suspended = MembershipService.suspend_membership(actor=admin, membership_id=target_membership.id)
+    assert suspended.status == suspended.Status.SUSPENDED
+
+    owner_membership = organization.memberships.get(user=owner)
+    with pytest.raises(ConflictException, match="at least one active owner"):
+        MembershipService.revoke_membership(actor=owner, membership_id=owner_membership.id)
+
+    owner_membership.refresh_from_db()
+    assert owner_membership.status == owner_membership.Status.ACTIVE
+
+
+@pytest.mark.django_db
+def test_owner_cannot_demote_the_last_active_owner():
+    owner = NexoraUser.objects.create(email="owner@example.com", status=NexoraUser.Status.ACTIVE)
+    organization = OrganizationService.create_organization(name="Acme", created_by=owner)
+    owner_membership = organization.memberships.get(user=owner)
+
+    with pytest.raises(ConflictException, match="at least one active owner"):
+        assign_role(
+            actor=owner,
+            membership=owner_membership,
+            role=organization.roles.get(slug="admin"),
+        )
+
+    owner_membership.refresh_from_db()
+    assert owner_membership.role.slug == "owner"
