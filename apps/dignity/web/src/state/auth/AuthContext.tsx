@@ -148,12 +148,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const identity = await resolveNexoraIdentity(firebaseUser);
           if (!active) return;
+          const user = userFromIdentity(identity);
+          const onboardingCompleted = authStorage.getOnboardingCompleted(user.id);
           setState({
-            authStage: 'authenticated',
+            authStage: onboardingCompleted ? 'authenticated' : 'onboarding',
             isAuthenticated: true,
             isLoading: false,
-            onboardingCompleted: true,
-            user: userFromIdentity(identity),
+            onboardingCompleted,
+            user,
             error: null,
           });
         } catch (error) {
@@ -276,6 +278,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error };
     }
 
+    authStorage.setOnboardingCompleted(result.user.id, true);
     setState({
       authStage: 'authenticated',
       isAuthenticated: true,
