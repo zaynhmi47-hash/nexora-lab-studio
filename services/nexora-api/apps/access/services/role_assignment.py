@@ -1,10 +1,10 @@
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
+from apps.access.models import Role
 from apps.access.services.authorization import authorize
 from apps.core.exceptions import ConflictException, NotFoundException, PermissionDeniedException
 from apps.organizations.models import Membership, Organization
-from apps.access.models import Role
 
 
 @transaction.atomic
