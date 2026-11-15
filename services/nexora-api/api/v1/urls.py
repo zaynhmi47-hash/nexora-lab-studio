@@ -52,6 +52,7 @@ urlpatterns = [
     path("products/", include("apps.capabilities.api.urls_products")),
     path("capabilities/", include("apps.capabilities.api.urls")),
     path("organizations/<uuid:organization_id>/finance/transactions/", include("apps.finance.api.urls")),
+    path("organizations/<uuid:organization_id>/academic/", include("apps.academic.urls")),
     path("organizations/<uuid:organization_id>/finance/budgets/summary/", FinanceBudgetSummaryView.as_view(), name="finance-budget-summary"),
     path("organizations/<uuid:organization_id>/finance/budgets/", FinanceBudgetListView.as_view(), name="finance-budget-list"),
     path("organizations/<uuid:organization_id>/finance/budgets/<uuid:budget_id>/", FinanceBudgetDetailView.as_view(), name="finance-budget-detail"),

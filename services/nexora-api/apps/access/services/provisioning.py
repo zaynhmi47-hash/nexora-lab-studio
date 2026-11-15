@@ -11,6 +11,8 @@ DEFAULT_PERMISSIONS = {
     "organization.roles.manage": ("Manage roles", "Manage organization roles."),
     "finance.read": ("Finance read", "Read finance records and reports."),
     "finance.write": ("Finance write", "Create, update, and void finance records."),
+    "academic.read": ("Academic read", "Read academic terms, programs, and classrooms."),
+    "academic.manage": ("Academic manage", "Manage academic structure and enrollments."),
 }
 
 ROLE_PERMISSIONS = {
@@ -23,8 +25,10 @@ ROLE_PERMISSIONS = {
         "organization.roles.read",
         "finance.read",
         "finance.write",
+        "academic.read",
+        "academic.manage",
     },
-    "member": {"organization.read", "finance.read"},
+    "member": {"organization.read", "finance.read", "academic.read"},
 }
 
 
