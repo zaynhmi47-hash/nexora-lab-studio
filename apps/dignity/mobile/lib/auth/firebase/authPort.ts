@@ -6,8 +6,7 @@ import {
   updateProfile,
 } from 'firebase/auth';
 
-import type { AuthPort, AuthSession } from '../types';
-import type { AuthRegistration } from '../types';
+import type { AuthPort, AuthRegistration, AuthSession } from '../types';
 import { createNexoraAuthAdapter } from '../createAuthAdapter';
 import { getFirebaseAuth } from './client';
 import { createFirebaseNexoraIdentityPort } from './identityPort';
@@ -16,14 +15,11 @@ import { createFirebaseTokenPort } from './tokenPort';
 function waitForInitialFirebaseSession(): Promise<void> {
   return new Promise((resolve, reject) => {
     const auth = getFirebaseAuth();
-    const unsubscribe = onIdTokenChanged(
-      auth,
-      () => {
-        unsubscribe();
-        resolve();
-      },
-      reject,
-    );
+    let unsubscribe = () => undefined;
+    unsubscribe = onIdTokenChanged(auth, () => {
+      unsubscribe();
+      resolve();
+    }, reject);
   });
 }
 
@@ -32,6 +28,7 @@ function firebaseErrorMessage(error: unknown): string {
     const code = String((error as { code: unknown }).code);
     const messages: Record<string, string> = {
       'auth/invalid-credential': 'Email or password is incorrect.',
+      'auth/invalid-login-credentials': 'Email or password is incorrect.',
       'auth/user-disabled': 'This account has been disabled.',
       'auth/email-already-in-use': 'An account with this email already exists.',
       'auth/invalid-email': 'Please enter a valid email address.',
@@ -76,6 +73,7 @@ export function createFirebaseAuthPort(baseUrl: string): AuthPort {
     async signIn(email, password) {
       try {
         await signInWithEmailAndPassword(getFirebaseAuth(), email.trim(), password);
+        initialized = true;
         return await adapter.getSession();
       } catch (error) {
         throw new Error(firebaseErrorMessage(error));
@@ -89,6 +87,7 @@ export function createFirebaseAuthPort(baseUrl: string): AuthPort {
           input.password,
         );
         await updateProfile(credential.user, { displayName: input.displayName.trim() });
+        initialized = true;
         return await adapter.getSession();
       } catch (error) {
         throw new Error(firebaseErrorMessage(error));
@@ -105,9 +104,18 @@ export function createFirebaseAuthPort(baseUrl: string): AuthPort {
       await adapter.signOut();
     },
     subscribe(listener) {
-      return onIdTokenChanged(getFirebaseAuth(), async () => {
-        listener(await resolveCurrentSession());
-      });
+      try {
+        return onIdTokenChanged(getFirebaseAuth(), async () => {
+          listener(await resolveCurrentSession());
+        });
+      } catch (error) {
+        listener({
+          status: 'unavailable',
+          identity: null,
+          error: error instanceof Error ? error.message : 'Firebase authentication is unavailable.',
+        });
+        return () => undefined;
+      }
     },
   };
 }
