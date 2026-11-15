@@ -19,7 +19,7 @@ export class NexoraIdentityError extends Error {
 }
 
 export async function resolveNexoraIdentity(user: FirebaseUser): Promise<NexoraWebIdentity> {
-  const baseUrl = (import.meta.env.VITE_NEXORA_API_URL || 'http://localhost:8000').replace(/\/$/, '');
+  const baseUrl = (import.meta.env.VITE_NEXORA_API_URL || '').replace(/\/$/, '');
   const token = await user.getIdToken();
   const response = await fetch(`${baseUrl}/api/v1/identity/session/`, {
     method: 'GET',
