@@ -15,8 +15,10 @@ import { useAuth } from '../../state/auth/AuthContext';
 import { AuthStage } from '../../types';
 
 export const AuthDevBar: React.FC = () => {
-  const { state, setAuthStage, demoLogin, logout, resetDemoState } = useAuth();
+  const { state, setAuthStage, demoLogin, logout, resetDemoState, demoAuthEnabled } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
+
+  if (!demoAuthEnabled) return null;
 
   return (
     <aside aria-label="Dev State Switcher" className="fixed bottom-3 right-3 z-50">
