@@ -29,7 +29,6 @@ urlpatterns = [
     path("identity/me/", CurrentIdentityView.as_view(), name="identity-me"),
     path("app-state/", CurrentAppStateView.as_view(), name="app-state"),
     path("learning/", include("apps.learning.urls")),
-    path("academic/", include("apps.academic.urls")),
     path("nexverse/", include("apps.nexverse.urls")),
     path("gamification/", include("apps.gamification.urls")),
     path("quran/", include("apps.quran.urls")),
