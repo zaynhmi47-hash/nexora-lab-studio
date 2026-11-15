@@ -1,20 +1,36 @@
 # Provider integration boundary
 
-Concrete Firebase authentication belongs in an infrastructure adapter and is not imported by route screens.
+Current mobile authentication flow:
 
-Current production wiring:
+Firebase Auth (email/password)
+  -> Firebase ID token
+  -> TokenPort
+  -> GET /api/v1/identity/session/
+  -> Django FirebaseIdentityAuthentication
+  -> Nexora IdentityService
+  -> Nexora UUID
+  -> Dignity AuthProvider / screens
 
-```text
-Firebase Auth SDK
-      -> TokenPort
-      -> GET /v1/identity/session/
-      -> NexoraIdentity
-      -> AuthProvider
-      -> Dignity screens
-```
+## Implemented behavior
 
-The backend verifies Firebase ID tokens with the Firebase Admin integration, reconciles the provider subject to the internal NEXORA user UUID, and returns only the application identity needed by the client.
+- Firebase restores persisted sessions and notifies Dignity when the ID token changes.
+- Email/password sign-in and registration are handled by Firebase Auth.
+- Password reset requests are sent through Firebase Auth.
+- The client exchanges a Firebase ID token for the internal Nexora identity.
+- The API remains responsible for token verification and identity reconciliation.
+- Sign-out clears the Firebase session.
+- Missing Firebase configuration is reported as an unavailable auth state instead of crashing during module import.
 
-The mobile client treats ID tokens as opaque credentials. It does not persist provider subjects as application identities, and it never receives or uses Firebase Admin/service-account credentials.
+## Required Expo environment
 
-Google sign-in is intentionally the next provider-specific step. The current adapter establishes Firebase session restoration, token handling, bearer injection, sign-out, and Nexora identity resolution without coupling route screens to a provider SDK.
+Copy .env.example to .env in apps/dignity/mobile and provide the public Firebase web/app configuration values plus the Nexora API base URL. These values are client configuration, not service-account secrets. Never put Firebase Admin credentials in an Expo environment variable.
+
+For a physical Android device, EXPO_PUBLIC_NEXORA_API_URL must use a reachable development host/LAN address or HTTPS tunnel. localhost refers to the device itself, not the Codespace or developer computer.
+
+## Security boundaries
+
+- Firebase ID tokens are credentials; do not log or persist them in feature code.
+- The provider subject is not a Dignity user ID.
+- The internal user ID is the UUID returned by Nexora Identity.
+- Service-account and Firebase Admin credentials are server-only.
+- Registration does not accept a client-selected privileged role. Authorization and institutional membership must be granted by Nexora Core/Dignity backend policy.
