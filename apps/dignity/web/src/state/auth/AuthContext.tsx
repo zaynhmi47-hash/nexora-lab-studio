@@ -9,7 +9,7 @@ import {
 } from 'react';
 import {
   createUserWithEmailAndPassword,
-  onAuthStateChanged,
+  onIdTokenChanged,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const auth = getDignityFirebaseAuth();
-      unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
         if (!active) return;
 
         if (!firebaseUser) {
@@ -238,6 +238,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         input.password,
       );
       await updateProfile(credential.user, { displayName: input.name.trim() });
+      await credential.user.getIdToken(true);
       return { success: true };
     } catch (error) {
       const message = getFirebaseErrorMessage(error);
