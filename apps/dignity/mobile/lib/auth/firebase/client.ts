@@ -1,21 +1,45 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getApp, getApps, initializeApp } from 'firebase/app';
+import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
 import {
   getAuth,
   getReactNativePersistence,
   initializeAuth,
   type Auth,
 } from 'firebase/auth';
+import { Platform } from 'react-native';
 
-import { firebaseConfig } from './config';
+import { getFirebaseConfig } from './config';
 
-const hasExistingFirebaseApp = getApps().length > 0;
-const firebaseApp = hasExistingFirebaseApp ? getApp() : initializeApp(firebaseConfig);
+let firebaseApp: FirebaseApp | null = null;
+let firebaseAuth: Auth | null = null;
 
-export const firebaseAuth: Auth = hasExistingFirebaseApp
-  ? getAuth(firebaseApp)
-  : initializeAuth(firebaseApp, {
+export function getFirebaseApp(): FirebaseApp {
+  if (!firebaseApp) {
+    firebaseApp = getApps().length > 0 ? getApp() : initializeApp(getFirebaseConfig());
+  }
+  return firebaseApp;
+}
+
+export function getFirebaseAuth(): Auth {
+  if (firebaseAuth) return firebaseAuth;
+
+  const app = getFirebaseApp();
+  if (Platform.OS === 'web') {
+    firebaseAuth = getAuth(app);
+    return firebaseAuth;
+  }
+
+  try {
+    firebaseAuth = initializeAuth(app, {
       persistence: getReactNativePersistence(AsyncStorage),
     });
-
-export { firebaseApp };
+  } catch (error) {
+    // Another module may have initialized Auth for the shared Firebase app.
+    if (error instanceof Error && error.message.includes('already initialized')) {
+      firebaseAuth = getAuth(app);
+    } else {
+      throw error;
+    }
+  }
+  return firebaseAuth;
+}
