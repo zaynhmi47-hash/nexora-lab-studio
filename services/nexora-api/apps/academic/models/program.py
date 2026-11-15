@@ -25,7 +25,7 @@ class AcademicProgram(AuditableBaseModel):
                 name="academic_program_org_code_unique",
             )
         ]
-        indexes = [models.Index(fields=("organization", "is_active"), name="academic_program_org_active_idx")]
+        indexes = [models.Index(fields=("organization", "is_active"), name="acad_program_org_active_idx")]
 
     def __str__(self) -> str:
         return f"{self.organization_id}:{self.code}"
