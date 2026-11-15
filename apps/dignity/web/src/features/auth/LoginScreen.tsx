@@ -238,7 +238,6 @@ export const LoginScreen: React.FC = () => {
           </form>
 
           {demoAuthEnabled && (
-          {/* Social Sign In */}
           <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-800">
             <div className="text-center text-xs text-slate-400 mb-3">Or sign in with</div>
             <div className="grid grid-cols-3 gap-2">
@@ -290,7 +289,7 @@ export const LoginScreen: React.FC = () => {
                 </svg>
               </button>
             </div>
-          </div
+          </div>
           )}>
         </div>
 
