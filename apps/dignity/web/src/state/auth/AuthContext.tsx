@@ -118,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    let unsubscribe = () => undefined;
+    let unsubscribe: () => void = () => {};
 
     // Remove the legacy client-side "authenticated" flag. Firebase is the sole
     // source of provider session truth; localStorage must never grant access.
