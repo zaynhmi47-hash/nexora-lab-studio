@@ -322,3 +322,15 @@ No application runtime code was changed by this audit. Test execution was not pe
 - Added the Dignity mobile TypeScript check to Frontend CI.
 - The Dignity Web auth flow remains demo/local-storage based and is not yet integrated; organization membership and server-side Dignity role authorization are also still pending.
 - Validation is pending the new GitHub Actions run. Firebase project settings and a reachable API URL must be supplied in the local Expo environment before runtime sign-in can be exercised.
+
+## Dignity Web Nexora Identity integration — 2026-11-16
+
+- Added Firebase Web Auth SDK configuration and a provider-neutral Nexora identity resolver.
+- Replaced localStorage-based authenticated-session restoration with Firebase Auth session observation and backend identity resolution through GET /api/v1/identity/session/.
+- Implemented Firebase email/password login, account creation, password reset and sign-out.
+- The client maps the returned Nexora UUID to the Dignity UI profile; roles default to learner and are not accepted from client registration input.
+- Legacy localStorage authenticated flags are cleared. Onboarding completion is stored separately as a local UX preference only; it is not an authorization source and still needs a backend profile API.
+- Prototype/demo login and simulated OAuth controls are hidden unless explicitly enabled in development.
+- Added VITE_FIREBASE_* and VITE_NEXORA_API_URL configuration guidance and a Dignity Web typecheck/build CI job.
+- Runtime verification requires Firebase Auth email/password provider enabled, configured public web settings, and a reachable Django API origin. Organization membership/role authorization and persistent onboarding profile storage remain pending.
+- Validation is pending the current PR's GitHub Actions results.
