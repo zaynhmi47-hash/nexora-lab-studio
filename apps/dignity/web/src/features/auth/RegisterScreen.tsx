@@ -12,10 +12,8 @@ import {
   Sparkles,
   ShieldCheck,
   AlertCircle,
-  Info,
 } from 'lucide-react';
 import { useAuth } from '../../state/auth/AuthContext';
-import { UserRole } from '../../types';
 import { evaluatePasswordStrength } from '../../services/auth/authService';
 import { PrimaryButton } from '../../components/ui/Button';
 import { FormInput } from '../../components/ui/Input';
@@ -27,8 +25,7 @@ export const RegisterScreen: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState<UserRole>('learner');
-  const [termsAccepted, setTermsAccepted] = useState(true);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const [errors, setErrors] = useState<{
     name?: string;
@@ -79,7 +76,7 @@ export const RegisterScreen: React.FC = () => {
       name,
       email,
       password,
-      role,
+      role: 'learner',
       termsAccepted,
     });
 
@@ -168,52 +165,8 @@ export const RegisterScreen: React.FC = () => {
               required
             />
 
-            {/* Role Selection with Clear Learner Default Note */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
-                <span>Account Role</span>
-                <span className="text-[10px] font-normal text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                  <Info className="w-3 h-3" />
-                  Default: Learner
-                </span>
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setRole('learner')}
-                  className={`p-2.5 rounded-xl border text-left text-xs font-semibold transition-all ${
-                    role === 'learner'
-                      ? 'border-blue-600 bg-blue-50/70 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 ring-1 ring-blue-600'
-                      : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span>Learner</span>
-                    {role === 'learner' && <Check className="w-3.5 h-3.5 text-blue-600" />}
-                  </div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal mt-0.5">
-                    Courses & Labs
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setRole('instructor')}
-                  className={`p-2.5 rounded-xl border text-left text-xs font-semibold transition-all ${
-                    role === 'instructor'
-                      ? 'border-blue-600 bg-blue-50/70 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 ring-1 ring-blue-600'
-                      : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span>Instructor</span>
-                    {role === 'instructor' && <Check className="w-3.5 h-3.5 text-blue-600" />}
-                  </div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal mt-0.5">
-                    Course Creation
-                  </div>
-                </button>
-              </div>
+            <div className="rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/60 dark:bg-blue-950/30 p-3 text-xs text-slate-600 dark:text-slate-300">
+              New accounts start with the Learner role. Instructor and institutional permissions must be granted through an authorized Dignity/Nexora workflow.
             </div>
 
             {/* Password */}
