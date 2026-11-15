@@ -130,6 +130,7 @@ export const WelcomeScreen: React.FC = () => {
             </PrimaryButton>
 
             {demoAuthEnabled && (
+              <>
             <SecondaryButton
               size="lg"
               onClick={() => demoLogin('alexandria')}
@@ -147,11 +148,12 @@ export const WelcomeScreen: React.FC = () => {
               <Compass className="w-4 h-4" />
               <span>Explore as Guest</span>
             </GhostButton>
+              </>
             )}
           </div>
 
           {demoAuthEnabled && (
-          {/* Social Sign-in divider */}
+          <>
           <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
             <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-3">
               Or quickly continue with social accounts (Mock OAuth):
@@ -206,6 +208,8 @@ export const WelcomeScreen: React.FC = () => {
               </button>
             </div>
           </div>
+          </>
+
           )}
         </div>
 
