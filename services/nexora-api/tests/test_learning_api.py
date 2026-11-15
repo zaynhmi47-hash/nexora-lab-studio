@@ -51,3 +51,11 @@ def test_quiz_endpoint_does_not_expose_answer_key_or_explanation():
     ]
     assert "correctOptionIndex" not in payload[0]
     assert "explanation" not in payload[0]
+
+@pytest.mark.django_db
+def test_quiz_endpoint_requires_authentication():
+    client = APIClient()
+
+    response = client.get("/api/v1/learning/lessons/any-lesson/quiz/")
+
+    assert response.status_code == 401
