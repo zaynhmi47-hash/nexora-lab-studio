@@ -3,6 +3,43 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+def provision_academic_permissions(apps, schema_editor):
+    Permission = apps.get_model("access", "Permission")
+    Role = apps.get_model("access", "Role")
+    RolePermission = apps.get_model("access", "RolePermission")
+
+    read_permission, _ = Permission.objects.get_or_create(
+        code="academic.read",
+        defaults={
+            "name": "Academic read",
+            "description": "Read academic terms, programs, and classrooms.",
+            "category": "academic",
+            "is_system": True,
+        },
+    )
+    manage_permission, _ = Permission.objects.get_or_create(
+        code="academic.manage",
+        defaults={
+            "name": "Academic manage",
+            "description": "Manage academic structure and enrollments.",
+            "category": "academic",
+            "is_system": True,
+        },
+    )
+    for role in Role.objects.filter(slug__in=("owner", "admin", "member"), deleted_at__isnull=True):
+        RolePermission.objects.get_or_create(role=role, permission=read_permission)
+        if role.slug in ("owner", "admin"):
+            RolePermission.objects.get_or_create(role=role, permission=manage_permission)
+
+
+def remove_academic_permissions(apps, schema_editor):
+    Permission = apps.get_model("access", "Permission")
+    RolePermission = apps.get_model("access", "RolePermission")
+    codes = ("academic.read", "academic.manage")
+    RolePermission.objects.filter(permission__code__in=codes).delete()
+    Permission.objects.filter(code__in=codes).delete()
+
+
 class Migration(migrations.Migration):
     initial = True
 
@@ -82,7 +119,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="academicprogram",
-            index=models.Index(fields=["organization", "is_active"], name="academic_program_org_active_idx"),
+            index=models.Index(fields=["organization", "is_active"], name="acad_program_org_active_idx"),
         ),
         migrations.AddConstraint(
             model_name="academicterm",
@@ -114,6 +151,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="academicenrollment",
-            index=models.Index(fields=["membership", "status"], name="academic_enroll_member_status_idx"),
+            index=models.Index(fields=["membership", "status"], name="acad_enroll_member_status_idx"),
         ),
+        migrations.RunPython(provision_academic_permissions, remove_academic_permissions),
     ]
