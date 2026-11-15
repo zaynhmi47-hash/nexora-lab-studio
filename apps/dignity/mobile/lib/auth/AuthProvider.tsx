@@ -28,9 +28,28 @@ export function AuthProvider({ children, port }: PropsWithChildren<{ port?: Auth
 
   useEffect(() => {
     let active = true;
-    void authPort.getSession().then((nextSession) => {
+    const publish = (nextSession: AuthSession) => {
       if (active) setSession(nextSession);
-    });
+    };
+
+    if (authPort.subscribe) {
+      const unsubscribe = authPort.subscribe(publish);
+      return () => {
+        active = false;
+        unsubscribe();
+      };
+    }
+
+    void authPort.getSession()
+      .then(publish)
+      .catch((error: unknown) => {
+        publish({
+          status: 'error',
+          identity: null,
+          error: error instanceof Error ? error.message : 'Unable to restore authentication session.',
+        });
+      });
+
     return () => {
       active = false;
     };
