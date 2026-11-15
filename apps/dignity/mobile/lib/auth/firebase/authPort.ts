@@ -61,7 +61,7 @@ export function createFirebaseAuthPort(baseUrl: string): AuthPort {
       return await getSession();
     } catch (error) {
       return {
-        status: 'signed_out',
+        status: 'unavailable',
         identity: null,
         error: error instanceof Error ? error.message : 'Unable to resolve Nexora identity.',
       };
@@ -105,9 +105,19 @@ export function createFirebaseAuthPort(baseUrl: string): AuthPort {
     },
     subscribe(listener) {
       try {
-        return onIdTokenChanged(getFirebaseAuth(), async () => {
-          listener(await resolveCurrentSession());
+        let active = true;
+        let generation = 0;
+        const unsubscribe = onIdTokenChanged(getFirebaseAuth(), async () => {
+          const currentGeneration = ++generation;
+          const nextSession = await resolveCurrentSession();
+          if (active && currentGeneration === generation) listener(nextSession);
         });
+
+        return () => {
+          active = false;
+          generation += 1;
+          unsubscribe();
+        };
       } catch (error) {
         listener({
           status: 'unavailable',
