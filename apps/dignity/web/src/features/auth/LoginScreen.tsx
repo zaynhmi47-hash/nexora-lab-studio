@@ -290,7 +290,7 @@ export const LoginScreen: React.FC = () => {
               </button>
             </div>
           </div>
-          )}>
+          )}
         </div>
 
         {/* Bottom register link */}
