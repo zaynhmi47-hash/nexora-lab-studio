@@ -309,5 +309,5 @@ No application runtime code was changed by this audit. Test execution was not pe
 - Fixed the authenticated learning quiz read endpoint so pre-attempt responses include only question ID, lesson ID, prompt, and options.
 - Removed `correctOptionIndex` and `explanation` from the pre-attempt payload; answer evaluation remains server-side in `LearningService.complete_quiz`.
 - Added an API regression test proving the answer key and explanation are not returned to an authenticated learner.
-- Expanded Backend CI to lint and run the learning service/API tests and include learning/gamification in migration drift checks.
+- Expanded Backend CI to lint and run the learning service/API tests. The migration drift check remains scoped to its pre-existing domains because the learning/gamification migrations currently report unrelated `deleted_at` drift.
 - This change has been committed to `fix/dignity-quiz-answer-key-security`; execution of the test suite must still be confirmed by CI before merge.
