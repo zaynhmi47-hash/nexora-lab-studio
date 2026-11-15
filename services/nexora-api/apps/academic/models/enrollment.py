@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 from apps.core.models import AuditableBaseModel
+from apps.organizations.models import Membership
 
 
 class AcademicEnrollment(AuditableBaseModel):
@@ -48,7 +49,7 @@ class AcademicEnrollment(AuditableBaseModel):
         ]
         indexes = [
             models.Index(fields=("organization", "term", "status"), name="academic_enroll_org_term_idx"),
-            models.Index(fields=("membership", "status"), name="academic_enroll_member_status_idx"),
+            models.Index(fields=("membership", "status"), name="acad_enroll_member_status_idx"),
         ]
 
     def clean(self):
@@ -62,7 +63,7 @@ class AcademicEnrollment(AuditableBaseModel):
             errors["membership"] = "The membership must belong to the enrollment organization."
         if self.classroom_id and self.term_id and self.classroom.term_id != self.term_id:
             errors["term"] = "The enrollment term must match the classroom term."
-        if self.membership_id and self.membership.status != self.membership.Status.ACTIVE:
+        if self.membership_id and self.membership.status != Membership.Status.ACTIVE:
             errors["membership"] = "Only active organization memberships can be enrolled."
         if errors:
             raise ValidationError(errors)
