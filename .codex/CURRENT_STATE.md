@@ -331,6 +331,6 @@ No application runtime code was changed by this audit. Test execution was not pe
 - The client maps the returned Nexora UUID to the Dignity UI profile; roles default to learner and are not accepted from client registration input.
 - Legacy localStorage authenticated flags are cleared. Onboarding completion is stored separately as a local UX preference only; it is not an authorization source and still needs a backend profile API.
 - Prototype/demo login and simulated OAuth controls are hidden unless explicitly enabled in development.
-- Added VITE_FIREBASE_* and VITE_NEXORA_API_URL configuration guidance and a Dignity Web typecheck/build CI job.
-- Runtime verification requires Firebase Auth email/password provider enabled, configured public web settings, and a reachable Django API origin. Organization membership/role authorization and persistent onboarding profile storage remain pending.
-- Validation is pending the current PR's GitHub Actions results.
+- Added VITE_FIREBASE_* and VITE_NEXORA_API_URL configuration guidance, a same-origin Vite /api proxy for local development, and a Dignity Web typecheck/build CI job.
+- GitHub Actions passed for Dignity Web typecheck/build, Dignity Mobile typecheck, Finance/Nexverse mobile typechecks, and dependency-boundary checks on the current branch head.
+- Runtime sign-in has not been exercised against live Firebase credentials. Firebase Auth email/password must be enabled, public web/mobile config supplied, and the Django API reachable. Organization membership/role authorization and persistent backend onboarding profile storage remain pending.
