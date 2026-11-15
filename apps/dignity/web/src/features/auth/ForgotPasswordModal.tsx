@@ -75,7 +75,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
           </div>
 
           <p className="text-xs text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
-            Please check your email and click the link in the message. In this prototype, the reset flow is fully simulated.
+            Please check your email and follow the secure password reset link sent by Firebase Authentication.
           </p>
 
           <div className="flex flex-col gap-2.5">
