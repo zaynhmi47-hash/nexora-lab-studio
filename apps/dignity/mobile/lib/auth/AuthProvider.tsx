@@ -44,16 +44,23 @@ export function AuthProvider({ children, port }: PropsWithChildren<{ port?: Auth
 
   useEffect(() => {
     let active = true;
-    const unsubscribe = authPort.subscribe((nextSession) => {
-      if (active) setSession(nextSession);
-    });
+    let revision = 0;
+    const publish = (nextSession: AuthSession) => {
+      if (!active) return;
+      revision += 1;
+      setSession(nextSession);
+    };
+
+    const unsubscribe = authPort.subscribe(publish);
+    const initialRevision = revision;
 
     void authPort.getSession()
       .then((nextSession) => {
-        if (active) setSession(nextSession);
+        // A token-change event is newer than the initial restoration request.
+        if (active && revision === initialRevision) setSession(nextSession);
       })
       .catch((error: unknown) => {
-        if (active) {
+        if (active && revision === initialRevision) {
           setSession({
             status: 'unavailable',
             identity: null,
