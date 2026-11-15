@@ -8,10 +8,13 @@ import {
   type ReactNode,
 } from 'react';
 import {
+  browserLocalPersistence,
+  browserSessionPersistence,
   createUserWithEmailAndPassword,
   onIdTokenChanged,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
+  setPersistence,
   signOut,
   updateProfile,
 } from 'firebase/auth';
@@ -198,7 +201,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (input: LoginInput) => {
     setState((current) => ({ ...current, isLoading: true, error: null }));
     try {
-      await signInWithEmailAndPassword(getDignityFirebaseAuth(), input.email.trim(), input.password);
+      const auth = getDignityFirebaseAuth();
+      await setPersistence(auth, input.rememberMe ? browserLocalPersistence : browserSessionPersistence);
+      await signInWithEmailAndPassword(auth, input.email.trim(), input.password);
       return { success: true };
     } catch (error) {
       const message = getFirebaseErrorMessage(error);
