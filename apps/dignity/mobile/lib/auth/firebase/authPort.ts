@@ -15,7 +15,7 @@ import { createFirebaseTokenPort } from './tokenPort';
 function waitForInitialFirebaseSession(): Promise<void> {
   return new Promise((resolve, reject) => {
     const auth = getFirebaseAuth();
-    let unsubscribe = () => undefined;
+    let unsubscribe: () => void = () => {};
     unsubscribe = onIdTokenChanged(auth, () => {
       unsubscribe();
       resolve();
