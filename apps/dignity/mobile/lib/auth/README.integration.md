@@ -5,7 +5,7 @@ Current mobile authentication flow:
 Firebase Auth (email/password)
   -> Firebase ID token
   -> TokenPort
-  -> GET /v1/identity/session/
+  -> GET /api/v1/identity/session/
   -> Django FirebaseIdentityAuthentication
   -> Nexora IdentityService
   -> Nexora UUID
