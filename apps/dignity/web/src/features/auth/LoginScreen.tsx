@@ -100,7 +100,6 @@ export const LoginScreen: React.FC = () => {
         {/* Auth Form Card */}
         <div className="bg-white dark:bg-slate-900 py-8 px-6 sm:px-8 shadow-xl rounded-3xl border border-slate-200 dark:border-slate-800 relative">
           {demoAuthEnabled && (
-          {/* Quick Demo Logins Banner */}
           <div className="mb-6 p-3.5 rounded-2xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60">
             <div className="flex items-center gap-1.5 text-xs font-bold text-blue-700 dark:text-blue-300 mb-2">
               <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
@@ -142,10 +141,10 @@ export const LoginScreen: React.FC = () => {
           </div>
           )}
 
-          {errors.general && (
+          {(errors.general || state.error) && (
             <div className="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-400 flex items-start gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{errors.general}</span>
+              <span>{errors.general || state.error}</span>
             </div>
           )}
 
@@ -238,6 +237,7 @@ export const LoginScreen: React.FC = () => {
             </PrimaryButton>
           </form>
 
+          {demoAuthEnabled && (
           {/* Social Sign In */}
           <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-800">
             <div className="text-center text-xs text-slate-400 mb-3">Or sign in with</div>
@@ -290,7 +290,8 @@ export const LoginScreen: React.FC = () => {
                 </svg>
               </button>
             </div>
-          </div>
+          </div
+          )}>
         </div>
 
         {/* Bottom register link */}
