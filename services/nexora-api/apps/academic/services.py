@@ -6,7 +6,8 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
-from apps.academic.models import AcademicAuditEvent, AcademicClassroom, AcademicProgram, AcademicTerm
+from apps.academic.models import AcademicClassroom, AcademicProgram, AcademicTerm
+from apps.control_plane.audit import record_control_plane_audit
 from apps.organizations.models import Organization
 
 
@@ -52,13 +53,15 @@ class AcademicService:
 
     @staticmethod
     def _audit(*, actor, organization, action, resource, instance):
-        AcademicAuditEvent.objects.create(
-            organization=organization,
+        record_control_plane_audit(
+            event_type="ACADEMIC_RESOURCE_CHANGED",
             actor=actor,
-            action=action,
-            resource_type=resource,
-            resource_id=instance.id,
-            changes={},
+            metadata={
+                "organization_id": str(organization.id),
+                "action": action,
+                "resource": resource,
+                "resource_id": str(instance.id),
+            },
         )
 
     @staticmethod
