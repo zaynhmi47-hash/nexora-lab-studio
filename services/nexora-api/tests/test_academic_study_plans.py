@@ -1,7 +1,7 @@
 import pytest
 from django.core.exceptions import ValidationError
 
-from apps.academic.models import AcademicCourse, AcademicCourseOffering, AcademicProgram, AcademicTerm, AcademicStudyPlan, AcademicClassroom
+from apps.academic.models import AcademicCourse, AcademicCourseOffering, AcademicProgram, AcademicTerm, AcademicStudyPlan, AcademicClassroom, AcademicEnrollment
 from apps.academic.study_plan_services import AcademicStudyPlanService
 from apps.identity.models import NexoraUser
 from apps.organizations.models import Membership
@@ -34,6 +34,10 @@ def test_study_plan_enforces_credit_limit():
     classroom = AcademicClassroom.objects.create(organization=organization, program=program, term=term, code="LIM-A", name="Limit A", status=AcademicClassroom.Status.OPEN)
     course = AcademicCourse.objects.create(organization=organization, code="LIM101", name="Limit Course", credit_units=4)
     offering = AcademicCourseOffering.objects.create(organization=organization, classroom=classroom, course=course, code="LIM101-A", status=AcademicCourseOffering.Status.OPEN)
+    AcademicEnrollment.objects.create(
+        organization=organization, classroom=classroom, term=term, membership=member,
+        role=AcademicEnrollment.Role.STUDENT, status=AcademicEnrollment.Status.ACTIVE,
+    )
     plan = AcademicStudyPlanService.create(organization=organization, membership=member, term=term, max_credit_units=3)
     with pytest.raises(ValidationError):
         AcademicStudyPlanService.add_offering(plan_id=plan.id, organization=organization, offering_id=offering.id)
