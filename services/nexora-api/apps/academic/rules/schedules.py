@@ -48,6 +48,39 @@ class AcademicScheduleService:
         return slot
 
     @staticmethod
+    @transaction.atomic
+    def update_slot(*, organization, slot_id, changes):
+        slot = AcademicOfferingSchedule.objects.select_for_update().filter(
+            id=slot_id,
+            organization=organization,
+            deleted_at__isnull=True,
+        ).select_related("offering").first()
+        if slot is None:
+            raise ValidationError({"schedule": "Schedule slot not found."})
+        slot.offering.__class__.objects.select_for_update().get(
+            pk=slot.offering_id,
+            organization=organization,
+        )
+        weekday = changes.get("weekday", slot.weekday)
+        starts_at = changes.get("starts_at", slot.starts_at)
+        ends_at = changes.get("ends_at", slot.ends_at)
+        overlaps = AcademicOfferingSchedule.objects.filter(
+            organization=organization,
+            offering=slot.offering,
+            weekday=weekday,
+            deleted_at__isnull=True,
+            starts_at__lt=ends_at,
+            ends_at__gt=starts_at,
+        ).exclude(pk=slot.pk).exists()
+        if overlaps:
+            raise ValidationError({"schedule": "This offering already has an overlapping session on that weekday."})
+        for field, value in changes.items():
+            setattr(slot, field, value)
+        slot.full_clean()
+        slot.save()
+        return slot
+
+    @staticmethod
     def evaluate_candidate(*, plan, offering):
         existing_items = AcademicStudyPlanItem.objects.filter(
             study_plan=plan,
