@@ -109,8 +109,7 @@ class AcademicStudyPlanItemCreateView(APIView):
         plan = AcademicStudyPlanDetailView._get(
             organization=organization, plan_id=plan_id, user=request.user,
         )
-        serializer = serializers.Serializer(data=request.data)
-        serializer.fields["offering"] = serializers.UUIDField()
+        serializer = AcademicStudyPlanItemCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
             item = AcademicStudyPlanService.add_offering(
