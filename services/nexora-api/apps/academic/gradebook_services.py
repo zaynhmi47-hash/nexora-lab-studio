@@ -241,6 +241,17 @@ class AcademicGradebookService:
         final_grade.save()
         _audit(actor=actor, organization=organization, action="final_grade_published", resource="final_grade", resource_id=final_grade.id, offering=offering)
 
+        if passed is False:
+            # Revoke only completion evidence issued by this gradebook; never touch external evidence.
+            stale = AcademicCourseCompletion.objects.filter(
+                organization=organization, membership=entry.membership, course=offering.course,
+                status=AcademicCourseCompletion.Status.VERIFIED,
+                evidence_reference__startswith="academic-final-grade:", deleted_at__isnull=True,
+            )
+            for completion in stale:
+                completion.status = AcademicCourseCompletion.Status.REJECTED
+                completion.save(update_fields=("status", "updated_at"))
+                _audit(actor=actor, organization=organization, action="course_completion_revoked", resource="course_completion", resource_id=completion.id, offering=offering)
         if passed is True:
             completion = AcademicCourseCompletion.objects.filter(
                 organization=organization, membership=entry.membership, course=offering.course,
