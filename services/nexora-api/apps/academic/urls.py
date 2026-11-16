@@ -3,6 +3,7 @@ from django.urls import path
 from apps.academic.api import AcademicOverviewView, AcademicResourceDetailView, AcademicResourceListCreateView
 from apps.academic.enrollment_api import AcademicEnrollmentDetailView, AcademicEnrollmentListCreateView
 from apps.academic.offering_api import AcademicCourseOfferingDetailView, AcademicCourseOfferingListCreateView
+from apps.academic.schedule_api import AcademicOfferingScheduleDetailView, AcademicOfferingScheduleListCreateView
 from apps.academic.study_plan_api import (
     AcademicStudyPlanDetailView,
     AcademicStudyPlanItemCreateView,
@@ -17,6 +18,8 @@ urlpatterns = [
     path("enrollments/<uuid:enrollment_id>/", AcademicEnrollmentDetailView.as_view(), name="academic-enrollment-detail"),
     path("offerings/", AcademicCourseOfferingListCreateView.as_view(), name="academic-offering-list"),
     path("offerings/<uuid:offering_id>/", AcademicCourseOfferingDetailView.as_view(), name="academic-offering-detail"),
+    path("offerings/<uuid:offering_id>/schedules/", AcademicOfferingScheduleListCreateView.as_view(), name="academic-offering-schedules"),
+    path("schedules/<uuid:slot_id>/", AcademicOfferingScheduleDetailView.as_view(), name="academic-offering-schedule-detail"),
     path("study-plans/", AcademicStudyPlanListCreateView.as_view(), name="academic-study-plan-list"),
     path("study-plans/<uuid:plan_id>/", AcademicStudyPlanDetailView.as_view(), name="academic-study-plan-detail"),
     path("study-plans/<uuid:plan_id>/items/", AcademicStudyPlanItemCreateView.as_view(), name="academic-study-plan-items"),
