@@ -116,7 +116,7 @@ class AcademicGradeEntryListCreateView(APIView):
             organization=organization, offering=offering, deleted_at__isnull=True,
         ).select_related("component", "membership").order_by("membership_id", "component__sequence", "-revision")
         if not instructor:
-            queryset = queryset.filter(membership__user=request.user, status=AcademicGradeEntry.Status.PUBLISHED)
+            queryset = queryset.filter(membership__user=request.user, status=AcademicGradeEntry.Status.PUBLISHED).exclude(revisions__status=AcademicGradeEntry.Status.PUBLISHED)
         return success_response(AcademicGradeEntrySerializer(queryset, many=True).data)
 
     def post(self, request, organization_id, offering_id):
@@ -162,5 +162,5 @@ class AcademicMyFinalGradesView(APIView):
         grades = AcademicFinalGrade.objects.filter(
             organization=organization, membership__user=request.user,
             status=AcademicFinalGrade.Status.PUBLISHED,
-        ).select_related("offering", "offering__course").order_by("-published_at", "-revision")
+        ).exclude(revisions__isnull=False).select_related("offering", "offering__course").order_by("-published_at", "-revision")
         return success_response(AcademicFinalGradeSerializer(grades, many=True).data)
