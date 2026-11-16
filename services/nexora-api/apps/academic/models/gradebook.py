@@ -80,7 +80,7 @@ class AcademicGradeEntry(AuditableBaseModel):
         ]
         indexes = [
             models.Index(fields=("organization", "offering", "membership"), name="acad_grade_roster_idx"),
-            models.Index(fields=("component", "status"), name="acad_grade_component_status_idx"),
+            models.Index(fields=("component", "status"), name="acad_grade_comp_status_idx"),
         ]
 
     def clean(self):
