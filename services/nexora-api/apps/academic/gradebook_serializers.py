@@ -1,24 +1,26 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 
 from apps.academic.models import AcademicAssessmentComponent, AcademicFinalGrade, AcademicGradeEntry, AcademicGradingPolicy
 
 
 class AcademicGradingPolicyCreateSerializer(serializers.Serializer):
-    passing_score = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=0, max_value=100, required=False, allow_null=True)
+    passing_score = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=Decimal("0"), max_value=Decimal("100"), required=False, allow_null=True)
 
 
 class AcademicAssessmentComponentCreateSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=32)
     name = serializers.CharField(max_length=120)
-    weight_percent = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=0.01, max_value=100)
-    max_score = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=0.01)
+    weight_percent = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=Decimal("0.01"), max_value=Decimal("100"))
+    max_score = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=Decimal("0.01"))
     sequence = serializers.IntegerField(min_value=1, max_value=32767, required=False, default=1)
 
 
 class AcademicGradeEntryCreateSerializer(serializers.Serializer):
     component_id = serializers.UUIDField()
     membership_id = serializers.UUIDField()
-    score = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=0)
+    score = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=Decimal("0"))
     feedback = serializers.CharField(required=False, allow_blank=True, max_length=10000, default="")
 
 
