@@ -32,6 +32,7 @@ class ControlPlaneAuditEventType(models.TextChoices):
     BOOTSTRAP_COMPLETED = "BOOTSTRAP_COMPLETED", "Bootstrap completed"
     BOOTSTRAP_REJECTED = "BOOTSTRAP_REJECTED", "Bootstrap rejected"
     TELEMETRY_CLEARED = "TELEMETRY_CLEARED", "Request telemetry cleared"
+    ACADEMIC_RESOURCE_CHANGED = "ACADEMIC_RESOURCE_CHANGED", "Academic resource changed"
 
 
 class ControlPlaneAuditEvent(models.Model):
