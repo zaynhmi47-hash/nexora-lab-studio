@@ -244,3 +244,56 @@ def test_krs_add_offering_rejects_schedule_conflict(schedule_context):
             organization=ctx["organization"],
             offering_id=ctx["second_offering"].id,
         )
+
+@pytest.mark.django_db
+def test_study_plan_validation_rejects_existing_schedule_conflict(schedule_context):
+    ctx = schedule_context
+    AcademicStudyPlanItem.objects.create(
+        study_plan=ctx["plan"],
+        organization=ctx["organization"],
+        offering=ctx["second_offering"],
+        credit_units_snapshot=3,
+    )
+    AcademicScheduleService.create_slot(
+        organization=ctx["organization"],
+        offering=ctx["first_offering"],
+        weekday=AcademicOfferingSchedule.Weekday.SATURDAY,
+        starts_at="08:00",
+        ends_at="09:30",
+    )
+    AcademicScheduleService.create_slot(
+        organization=ctx["organization"],
+        offering=ctx["second_offering"],
+        weekday=AcademicOfferingSchedule.Weekday.SATURDAY,
+        starts_at="09:00",
+        ends_at="10:00",
+    )
+
+    with pytest.raises(ValidationError, match="overlapping"):
+        AcademicScheduleService.ensure_plan_has_no_conflicts(plan=ctx["plan"])
+
+
+@pytest.mark.django_db
+def test_schedule_update_rejects_overlap_with_another_slot(schedule_context):
+    ctx = schedule_context
+    first = AcademicScheduleService.create_slot(
+        organization=ctx["organization"],
+        offering=ctx["first_offering"],
+        weekday=AcademicOfferingSchedule.Weekday.SUNDAY,
+        starts_at="08:00",
+        ends_at="09:00",
+    )
+    AcademicScheduleService.create_slot(
+        organization=ctx["organization"],
+        offering=ctx["first_offering"],
+        weekday=AcademicOfferingSchedule.Weekday.SUNDAY,
+        starts_at="10:00",
+        ends_at="11:00",
+    )
+
+    with pytest.raises(ValidationError, match="overlapping"):
+        AcademicScheduleService.update_slot(
+            organization=ctx["organization"],
+            slot_id=first.id,
+            changes={"starts_at": "10:30", "ends_at": "11:30"},
+        )
