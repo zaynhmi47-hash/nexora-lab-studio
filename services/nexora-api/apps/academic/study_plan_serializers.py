@@ -34,3 +34,7 @@ class AcademicStudyPlanSerializer(serializers.ModelSerializer):
 
 class AcademicStudyPlanCreateSerializer(serializers.Serializer):
     term = serializers.UUIDField()
+
+
+class AcademicStudyPlanItemCreateSerializer(serializers.Serializer):
+    offering = serializers.UUIDField()
