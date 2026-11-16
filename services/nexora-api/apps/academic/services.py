@@ -73,7 +73,8 @@ class AcademicService:
             raise ValidationError({"status": "New classrooms must start in draft status."})
         AcademicService._validate(instance)
         try:
-            instance.save()
+            with transaction.atomic():
+                instance.save()
         except IntegrityError as exc:
             raise ValidationError({"code": "A resource with this code already exists."}) from exc
         AcademicService._audit(actor=actor, organization=organization, action="created", resource=resource, instance=instance)
@@ -130,7 +131,8 @@ class AcademicService:
             setattr(instance, key, value)
         AcademicService._validate(instance)
         try:
-            instance.save()
+            with transaction.atomic():
+                instance.save()
         except IntegrityError as exc:
             raise ValidationError({"code": "A resource with this code already exists."}) from exc
         AcademicService._audit(actor=actor, organization=organization, action="updated", resource=resource, instance=instance)
