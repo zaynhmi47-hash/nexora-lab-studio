@@ -1,9 +1,10 @@
 import pytest
 from rest_framework.test import APIClient
 
-from apps.academic.models import AcademicClassroom, AcademicProgram, AcademicTerm
+from apps.academic.models import AcademicClassroom, AcademicEnrollment, AcademicProgram, AcademicTerm
 from apps.control_plane.audit import ControlPlaneAuditEvent
 from apps.identity.models import NexoraUser
+from apps.organizations.models import Membership
 from apps.organizations.services import OrganizationService
 
 
@@ -125,3 +126,50 @@ def test_program_archive_is_soft_and_audited(academic_context):
         metadata__resource_id=str(program.id),
         metadata__action="archived",
     ).exists()
+
+
+
+@pytest.mark.django_db
+def test_term_cannot_close_while_classroom_is_open(academic_context):
+    _, organization, client = academic_context
+    term = AcademicTerm.objects.create(
+        organization=organization, code="2027-1", name="Semester 1",
+        starts_on="2027-01-01", ends_on="2027-06-30", status=AcademicTerm.Status.ACTIVE,
+    )
+    program = AcademicProgram.objects.create(organization=organization, code="ENG", name="Engineering")
+    AcademicClassroom.objects.create(
+        organization=organization, program=program, term=term,
+        code="ENG-A", name="Engineering A", status=AcademicClassroom.Status.OPEN,
+    )
+    response = client.patch(
+        f"/api/v1/organizations/{organization.id}/academic/terms/{term.id}/",
+        {"status": AcademicTerm.Status.CLOSED},
+        format="json",
+    )
+    assert response.status_code == 400
+    term.refresh_from_db()
+    assert term.status == AcademicTerm.Status.ACTIVE
+
+
+@pytest.mark.django_db
+def test_classroom_with_active_enrollment_cannot_be_archived(academic_context):
+    owner, organization, client = academic_context
+    term = AcademicTerm.objects.create(
+        organization=organization, code="2027-2", name="Semester 2",
+        starts_on="2027-07-01", ends_on="2027-12-31", status=AcademicTerm.Status.ACTIVE,
+    )
+    program = AcademicProgram.objects.create(organization=organization, code="SCI", name="Science")
+    classroom = AcademicClassroom.objects.create(
+        organization=organization, program=program, term=term,
+        code="SCI-A", name="Science A", status=AcademicClassroom.Status.OPEN,
+    )
+    membership = Membership.objects.active().get(user=owner, organization=organization)
+    AcademicEnrollment.objects.create(
+        organization=organization, classroom=classroom, term=term, membership=membership,
+    )
+    response = client.delete(
+        f"/api/v1/organizations/{organization.id}/academic/classrooms/{classroom.id}/",
+    )
+    assert response.status_code == 400
+    classroom.refresh_from_db()
+    assert classroom.deleted_at is None
