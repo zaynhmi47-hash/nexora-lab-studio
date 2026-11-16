@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from apps.academic.models import AcademicCourseOffering, AcademicEnrollment, AcademicStudyPlan, AcademicStudyPlanItem
 from apps.academic.rules.prerequisites import AcademicPrerequisiteService
+from apps.academic.rules.schedules import AcademicScheduleService
 
 
 class AcademicStudyPlanService:
@@ -56,6 +57,8 @@ class AcademicStudyPlanService:
             membership=plan.membership,
             course=offering.course,
         )
+        # A timetable conflict blocks adding this offering; missing schedule data is reported as pending.
+        AcademicScheduleService.ensure_candidate_has_no_conflict(plan=plan, offering=offering)
         credit_units = offering.curriculum_entry.credit_units if offering.curriculum_entry_id else offering.course.credit_units
         current = sum(plan.items.filter(deleted_at__isnull=True).values_list("credit_units_snapshot", flat=True))
         if current + credit_units > plan.max_credit_units:
@@ -83,6 +86,7 @@ class AcademicStudyPlanService:
             raise ValidationError({"status": "Only draft study plans can be submitted."})
         if not plan.items.filter(deleted_at__isnull=True).exists():
             raise ValidationError({"items": "At least one course must be selected."})
+        AcademicScheduleService.ensure_plan_has_no_conflicts(plan=plan)
         plan.status = AcademicStudyPlan.Status.SUBMITTED
         plan.submitted_at = timezone.now()
         plan.save(update_fields=("status", "submitted_at", "updated_at"))
