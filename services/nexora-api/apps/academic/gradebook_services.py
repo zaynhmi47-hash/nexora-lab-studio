@@ -55,8 +55,8 @@ class AcademicGradebookService:
         return offering
 
     @staticmethod
-    def _ensure_instructor(*, organization, offering, actor):
-        allowed = AcademicEnrollment.objects.active().filter(
+    def _instructor_enrollment(organization, offering, actor):
+        return AcademicEnrollment.objects.active().filter(
             organization=organization,
             classroom=offering.classroom,
             term=offering.classroom.term,
@@ -65,7 +65,10 @@ class AcademicGradebookService:
             role=AcademicEnrollment.Role.INSTRUCTOR,
             status=AcademicEnrollment.Status.ACTIVE,
         ).exists()
-        if not allowed:
+
+    @staticmethod
+    def _ensure_instructor(*, organization, offering, actor):
+        if not AcademicGradebookService._instructor_enrollment(organization, offering, actor):
             raise ValidationError({"instructor": "An active instructor enrollment in this offering classroom is required."})
 
     @staticmethod
