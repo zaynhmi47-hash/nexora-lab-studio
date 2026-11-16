@@ -3,6 +3,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.academic.models import AcademicCourseOffering, AcademicEnrollment, AcademicStudyPlan, AcademicStudyPlanItem
+from apps.academic.rules.prerequisites import AcademicPrerequisiteService
 
 
 class AcademicStudyPlanService:
@@ -48,6 +49,13 @@ class AcademicStudyPlanService:
         ).exists()
         if not eligible:
             raise ValidationError({"enrollment": "An active student enrollment in this offering classroom is required."})
+
+        # Never infer prerequisite completion from enrollment or a self-reported claim.
+        AcademicPrerequisiteService.ensure_eligible(
+            organization=organization,
+            membership=plan.membership,
+            course=offering.course,
+        )
         credit_units = offering.curriculum_entry.credit_units if offering.curriculum_entry_id else offering.course.credit_units
         current = sum(plan.items.filter(deleted_at__isnull=True).values_list("credit_units_snapshot", flat=True))
         if current + credit_units > plan.max_credit_units:
