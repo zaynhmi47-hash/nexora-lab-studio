@@ -5,6 +5,7 @@ from django.utils import timezone
 from apps.academic.models import AcademicCourse, AcademicCourseCompletion
 from apps.academic.rules.prerequisites import AcademicPrerequisiteService
 from apps.identity.models import NexoraUser
+from apps.organizations.models import Membership
 from apps.organizations.services import OrganizationService
 
 
@@ -18,7 +19,7 @@ def academic_context():
         name="Prerequisite School",
         created_by=owner,
     )
-    membership = organization.memberships.get(user=owner)
+    membership = Membership.objects.get(organization=organization, user=owner)
     prerequisite = AcademicCourse.objects.create(
         organization=organization,
         code="MATH100",
