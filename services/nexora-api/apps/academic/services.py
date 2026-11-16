@@ -93,6 +93,11 @@ class AcademicService:
             raise ValidationError({"status": "Invalid academic term status transition."})
         if next_status == AcademicTerm.Status.ACTIVE and instance.ends_on < timezone.localdate():
             raise ValidationError({"status": "An expired academic term cannot be activated."})
+        if next_status == AcademicTerm.Status.CLOSED and instance.classrooms.filter(
+            status__in=(AcademicClassroom.Status.OPEN, AcademicClassroom.Status.IN_PROGRESS),
+            deleted_at__isnull=True,
+        ).exists():
+            raise ValidationError({"status": "Complete or cancel all open classrooms before closing the term."})
 
     @staticmethod
     def _validate_classroom_transition(instance, next_status):
@@ -131,6 +136,12 @@ class AcademicService:
             AcademicService._validate_classroom_transition(instance, data["status"])
         for key, value in data.items():
             setattr(instance, key, value)
+        if resource == "classrooms" and "capacity" in data and data["capacity"] is not None:
+            active_count = instance.enrollments.filter(
+                status="active", deleted_at__isnull=True,
+            ).count()
+            if data["capacity"] < active_count:
+                raise ValidationError({"capacity": "Capacity cannot be lower than the current active enrollment count."})
         AcademicService._validate(instance)
         try:
             with transaction.atomic():
@@ -148,6 +159,10 @@ class AcademicService:
             raise ValidationError({"detail": "A program with classrooms cannot be archived."})
         if resource == "terms" and instance.classrooms.filter(deleted_at__isnull=True).exists():
             raise ValidationError({"detail": "A term with classrooms cannot be archived."})
+        if resource == "classrooms" and instance.enrollments.filter(
+            status="active", deleted_at__isnull=True,
+        ).exists():
+            raise ValidationError({"detail": "A classroom with active enrollments cannot be archived."})
         instance.soft_delete()
         AcademicService._audit(actor=actor, organization=organization, action="archived", resource=resource, instance=instance)
         return instance
