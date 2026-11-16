@@ -4,20 +4,18 @@ import pytest
 from rest_framework.exceptions import ValidationError
 
 from apps.academic.gradebook_services import AcademicGradebookService
+from apps.access.models import Role
 from apps.academic.models import (
-    AcademicAssessmentComponent,
+    AcademicCourseCompletion,
     AcademicClassroom,
     AcademicCourse,
     AcademicCourseOffering,
     AcademicEnrollment,
     AcademicFinalGrade,
-    AcademicGradeEntry,
-    AcademicGradingPolicy,
     AcademicProgram,
     AcademicTerm,
 )
 from apps.identity.models import NexoraUser
-from apps.access.models import Role
 from apps.organizations.models import Membership
 from apps.organizations.services import OrganizationService
 
@@ -110,6 +108,8 @@ def test_gradebook_publishes_weighted_final_grade_and_verified_completion(gradeb
     assert result_two["final_grade"].weighted_score == Decimal("86.00")
     assert result_two["final_grade"].is_pass is True
     assert AcademicFinalGrade.objects.filter(membership=ctx["student_membership"]).count() == 1
+    completion = AcademicCourseCompletion.objects.get(membership=ctx["student_membership"], course=ctx["course"])
+    assert completion.status == AcademicCourseCompletion.Status.VERIFIED
 
 
 @pytest.mark.django_db
