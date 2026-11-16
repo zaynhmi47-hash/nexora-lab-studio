@@ -137,7 +137,7 @@ class Migration(migrations.Migration):
         migrations.AddIndex(model_name="academicgradingpolicy", index=models.Index(fields=["organization", "status"], name="acad_grade_policy_status_idx")),
         migrations.AddIndex(model_name="academicassessmentcomponent", index=models.Index(fields=["organization", "policy", "is_active"], name="acad_assessment_policy_idx")),
         migrations.AddIndex(model_name="academicgradeentry", index=models.Index(fields=["organization", "offering", "membership"], name="acad_grade_roster_idx")),
-        migrations.AddIndex(model_name="academicgradeentry", index=models.Index(fields=["component", "status"], name="acad_grade_component_status_idx")),
+        migrations.AddIndex(model_name="academicgradeentry", index=models.Index(fields=["component", "status"], name="acad_grade_comp_status_idx")),
         migrations.AddIndex(model_name="academicfinalgrade", index=models.Index(fields=["organization", "membership", "published_at"], name="acad_final_grade_student_idx")),
         migrations.RunPython(provision_grade_permission, remove_grade_permission),
     ]
