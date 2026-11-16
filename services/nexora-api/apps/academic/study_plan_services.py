@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from apps.academic.models import AcademicCourseOffering, AcademicStudyPlan, AcademicStudyPlanItem
+from apps.academic.models import AcademicCourseOffering, AcademicEnrollment, AcademicStudyPlan, AcademicStudyPlanItem
 
 
 class AcademicStudyPlanService:
@@ -38,6 +38,16 @@ class AcademicStudyPlanService:
         ).select_related("classroom", "course").first()
         if offering is None or offering.classroom.term_id != plan.term_id:
             raise ValidationError({"offering": "An open offering in the selected term is required."})
+        eligible = AcademicEnrollment.objects.active().filter(
+            organization=organization,
+            membership=plan.membership,
+            classroom=offering.classroom,
+            term=plan.term,
+            role=AcademicEnrollment.Role.STUDENT,
+            status=AcademicEnrollment.Status.ACTIVE,
+        ).exists()
+        if not eligible:
+            raise ValidationError({"enrollment": "An active student enrollment in this offering classroom is required."})
         credit_units = offering.curriculum_entry.credit_units if offering.curriculum_entry_id else offering.course.credit_units
         current = sum(plan.items.filter(deleted_at__isnull=True).values_list("credit_units_snapshot", flat=True))
         if current + credit_units > plan.max_credit_units:
