@@ -1,5 +1,4 @@
 import pytest
-from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.academic.models import AcademicClassroom, AcademicProgram, AcademicTerm
