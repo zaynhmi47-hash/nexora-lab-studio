@@ -17,6 +17,7 @@ from apps.academic.models import (
     AcademicTerm,
 )
 from apps.identity.models import NexoraUser
+from apps.access.models import Role
 from apps.organizations.models import Membership
 from apps.organizations.services import OrganizationService
 
@@ -27,8 +28,9 @@ def gradebook_context():
     teacher = NexoraUser.objects.create(email="grade-teacher@school.test", status=NexoraUser.Status.ACTIVE)
     student = NexoraUser.objects.create(email="grade-student@school.test", status=NexoraUser.Status.ACTIVE)
     organization = OrganizationService.create_organization(name="Gradebook School", created_by=owner)
-    teacher_membership = Membership.objects.get(organization=organization, user=teacher)
-    student_membership = Membership.objects.get(organization=organization, user=student)
+    member_role = Role.objects.get(organization=organization, slug="member")
+    teacher_membership = Membership.objects.create(organization=organization, user=teacher, role=member_role)
+    student_membership = Membership.objects.create(organization=organization, user=student, role=member_role)
     program = AcademicProgram.objects.create(organization=organization, code="GRD", name="Grade Program")
     term = AcademicTerm.objects.create(
         organization=organization, code="GRD-2026", name="Grade Term",
