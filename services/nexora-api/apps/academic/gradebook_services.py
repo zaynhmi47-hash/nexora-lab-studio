@@ -62,6 +62,7 @@ class AcademicGradebookService:
             term=offering.classroom.term,
             membership__user=actor,
             membership__status=Membership.Status.ACTIVE,
+            membership__deleted_at__isnull=True,
             role=AcademicEnrollment.Role.INSTRUCTOR,
             status=AcademicEnrollment.Status.ACTIVE,
         ).exists()
@@ -161,7 +162,7 @@ class AcademicGradebookService:
         ).first()
         if component is None:
             raise NotFound("Assessment component not found.")
-        membership = Membership.objects.active().filter(
+        membership = Membership.objects.active().select_for_update().filter(
             id=membership_id, organization=organization, status=Membership.Status.ACTIVE,
         ).first()
         if membership is None:
@@ -211,6 +212,11 @@ class AcademicGradebookService:
         entry.save(update_fields=("status", "published_by", "published_at", "updated_at"))
         _audit(actor=actor, organization=organization, action="grade_published", resource="grade_entry", resource_id=entry.id, offering=offering)
 
+        membership = Membership.objects.active().select_for_update().filter(
+            id=entry.membership_id, organization=organization, status=Membership.Status.ACTIVE,
+        ).first()
+        if membership is None:
+            raise ValidationError({"membership": "The student membership is no longer active."})
         policy = entry.component.policy
         components = list(policy.components.filter(is_active=True, deleted_at__isnull=True))
         latest_entries = []
