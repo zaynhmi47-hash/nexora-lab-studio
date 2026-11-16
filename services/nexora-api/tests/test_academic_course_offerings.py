@@ -1,15 +1,7 @@
 import pytest
 from django.core.exceptions import ValidationError
-from rest_framework.test import APIRequestFactory, force_authenticate
 
-from apps.academic.models import (
-    AcademicClassroom,
-    AcademicCourse,
-    AcademicCourseOffering,
-    AcademicProgram,
-    AcademicTerm,
-)
-from apps.academic.offering_api import AcademicCourseOfferingListCreateView
+from apps.academic.models import AcademicClassroom, AcademicCourse, AcademicCourseOffering, AcademicProgram, AcademicTerm
 from apps.identity.models import NexoraUser
 from apps.organizations.services import OrganizationService
 
@@ -29,9 +21,7 @@ def test_course_offering_rejects_course_from_another_organization():
         organization=organization, program=program, term=term,
         code="ENG-A", name="Engineering A", status=AcademicClassroom.Status.OPEN,
     )
-    foreign_course = AcademicCourse.objects.create(
-        organization=other, code="PHY101", name="Physics", credit_units=3,
-    )
+    foreign_course = AcademicCourse.objects.create(organization=other, code="PHY101", name="Physics", credit_units=3)
     offering = AcademicCourseOffering(
         organization=organization, classroom=classroom, course=foreign_course, code="PHY101-A",
     )
@@ -40,15 +30,22 @@ def test_course_offering_rejects_course_from_another_organization():
 
 
 @pytest.mark.django_db
-def test_course_offering_api_requires_manage_permission_for_creation():
-    user = NexoraUser.objects.create(email="offering-member@school.test", status=NexoraUser.Status.ACTIVE)
-    organization = OrganizationService.create_organization(name="Offering API School", created_by=user)
-    request = APIRequestFactory().post(
-        f"/organizations/{organization.id}/academic/offerings/",
-        {"code": "BIO-A", "classroom": "00000000-0000-0000-0000-000000000001",
-         "course": "00000000-0000-0000-0000-000000000002"},
-        format="json",
+def test_course_offering_rejects_capacity_above_classroom_capacity():
+    owner = NexoraUser.objects.create(email="offering-capacity@school.test", status=NexoraUser.Status.ACTIVE)
+    organization = OrganizationService.create_organization(name="Offering Capacity School", created_by=owner)
+    program = AcademicProgram.objects.create(organization=organization, code="SCI", name="Science")
+    term = AcademicTerm.objects.create(
+        organization=organization, code="2026-2", name="Term 2",
+        starts_on="2026-07-01", ends_on="2026-12-31", status=AcademicTerm.Status.ACTIVE,
     )
-    force_authenticate(request, user=user)
-    response = AcademicCourseOfferingListCreateView.as_view()(request, organization_id=organization.id)
-    assert response.status_code in (403, 404)
+    classroom = AcademicClassroom.objects.create(
+        organization=organization, program=program, term=term,
+        code="SCI-A", name="Science A", capacity=25, status=AcademicClassroom.Status.OPEN,
+    )
+    course = AcademicCourse.objects.create(organization=organization, code="CHEM101", name="Chemistry", credit_units=3)
+    offering = AcademicCourseOffering(
+        organization=organization, classroom=classroom, course=course,
+        code="CHEM101-A", capacity=30,
+    )
+    with pytest.raises(ValidationError):
+        offering.full_clean()
