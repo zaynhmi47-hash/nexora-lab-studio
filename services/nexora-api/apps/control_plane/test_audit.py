@@ -20,6 +20,7 @@ class ControlPlaneAuditBoundaryTests(SimpleTestCase):
                 "BOOTSTRAP_COMPLETED",
                 "BOOTSTRAP_REJECTED",
                 "TELEMETRY_CLEARED",
+                "ACADEMIC_RESOURCE_CHANGED",
             },
             set(ControlPlaneAuditEventType.values),
         )
