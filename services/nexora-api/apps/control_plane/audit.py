@@ -31,7 +31,7 @@ class ControlPlaneAuditEventType(models.TextChoices):
     PRINCIPAL_DISABLED = "PRINCIPAL_DISABLED", "Principal disabled"
     BOOTSTRAP_COMPLETED = "BOOTSTRAP_COMPLETED", "Bootstrap completed"
     BOOTSTRAP_REJECTED = "BOOTSTRAP_REJECTED", "Bootstrap rejected"
-    TELEMETRY_CLEARED = "TELEMETRY_CLEARED", "Request telemetry cleared"
+    TELEMETRY_CLEARED = "TELEMETRY_CLEARED", "Request telemetry cleared"\n    ACADEMIC_RESOURCE_CHANGED = "ACADEMIC_RESOURCE_CHANGED", "Academic resource changed"
 
 
 class ControlPlaneAuditEvent(models.Model):
