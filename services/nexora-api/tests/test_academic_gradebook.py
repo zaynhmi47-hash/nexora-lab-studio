@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 import pytest
-from django.core.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError
 
 from apps.academic.gradebook_services import AcademicGradebookService
 from apps.academic.models import (
