@@ -13,6 +13,7 @@ DEFAULT_PERMISSIONS = {
     "finance.write": ("Finance write", "Create, update, and void finance records."),
     "academic.read": ("Academic read", "Read academic terms, programs, and classrooms."),
     "academic.manage": ("Academic manage", "Manage academic structure and enrollments."),
+    "academic.grade": ("Academic grade", "Record and publish grades for assigned classrooms."),
 }
 
 ROLE_PERMISSIONS = {
@@ -27,8 +28,9 @@ ROLE_PERMISSIONS = {
         "finance.write",
         "academic.read",
         "academic.manage",
+        "academic.grade",
     },
-    "member": {"organization.read", "finance.read", "academic.read"},
+    "member": {"organization.read", "finance.read", "academic.read", "academic.grade"},
 }
 
 
