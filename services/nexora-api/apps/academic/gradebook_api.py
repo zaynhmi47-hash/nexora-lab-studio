@@ -1,5 +1,5 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError
 from rest_framework import serializers
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
@@ -16,6 +16,7 @@ from apps.academic.gradebook_services import AcademicGradebookService
 from apps.academic.models import (
     AcademicAssessmentComponent,
     AcademicCourseOffering,
+    AcademicEnrollment,
     AcademicFinalGrade,
     AcademicGradeEntry,
     AcademicGradingPolicy,
@@ -23,6 +24,15 @@ from apps.academic.models import (
 from apps.control_plane.audit import record_control_plane_audit
 from apps.core.api.response import success_response
 from apps.organizations.models import Membership, Organization
+
+
+class GradingPolicyInputSerializer(serializers.Serializer):
+    max_score = serializers.DecimalField(max_digits=7, decimal_places=2, required=False, default=100)
+    passing_score = serializers.DecimalField(max_digits=7, decimal_places=2, required=False, allow_null=True, default=None)
+
+
+class FinalGradePublishInputSerializer(serializers.Serializer):
+    membership = serializers.UUIDField()
 
 
 def _organization(organization_id):
@@ -62,6 +72,17 @@ def _audit(request, organization, action, resource, resource_id):
     )
 
 
+def _is_assigned_instructor(*, organization, offering, user):
+    membership = Membership.objects.active().filter(
+        organization=organization, user=user, status=Membership.Status.ACTIVE,
+    ).first()
+    return bool(membership and AcademicEnrollment.objects.active().filter(
+        organization=organization, classroom=offering.classroom,
+        membership=membership, role=AcademicEnrollment.Role.INSTRUCTOR,
+        status=AcademicEnrollment.Status.ACTIVE,
+    ).exists())
+
+
 class AcademicGradingPolicyView(APIView):
     permission_classes = [IsAuthenticated, NexoraPermission]
     required_permission = "academic.manage"
@@ -77,15 +98,11 @@ class AcademicGradingPolicyView(APIView):
     def put(self, request, organization_id, offering_id):
         organization = _organization(organization_id)
         offering = _offering(organization, offering_id)
-        serializer = serializers.Serializer(data=request.data)
-        serializer.fields["max_score"] = serializers.DecimalField(max_digits=7, decimal_places=2, required=False, default=100)
-        serializer.fields["passing_score"] = serializers.DecimalField(max_digits=7, decimal_places=2, required=False, allow_null=True)
+        serializer = GradingPolicyInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
             policy = AcademicGradebookService.configure_policy(
-                organization=organization, offering=offering,
-                max_score=serializer.validated_data.get("max_score", 100),
-                passing_score=serializer.validated_data.get("passing_score"),
+                organization=organization, offering=offering, **serializer.validated_data,
             )
         except DjangoValidationError as exc:
             _translate(exc)
@@ -138,12 +155,12 @@ class AcademicGradeEntryListCreateView(APIView):
         queryset = AcademicGradeEntry.objects.active().filter(
             organization=organization, offering=offering,
         ).select_related("component", "membership", "graded_by")
-        if request.user.is_authenticated:
-            queryset = queryset.filter(status=AcademicGradeEntry.Status.PUBLISHED)
-            if request.user.is_staff:
-                queryset = AcademicGradeEntry.objects.active().filter(
-                    organization=organization, offering=offering,
-                ).select_related("component", "membership", "graded_by")
+        if not request.user.is_staff and not _is_assigned_instructor(
+            organization=organization, offering=offering, user=request.user,
+        ):
+            queryset = queryset.filter(
+                membership__user=request.user, status=AcademicGradeEntry.Status.PUBLISHED,
+            )
         return success_response(AcademicGradeEntrySerializer(queryset, many=True).data)
 
     def post(self, request, organization_id, offering_id):
@@ -207,15 +224,16 @@ class AcademicFinalGradeListPublishView(APIView):
         queryset = AcademicFinalGrade.objects.active().filter(
             organization=organization, offering=offering, status=AcademicFinalGrade.Status.PUBLISHED,
         ).select_related("offering__course", "published_by")
-        if not request.user.is_staff:
+        if not request.user.is_staff and not _is_assigned_instructor(
+            organization=organization, offering=offering, user=request.user,
+        ):
             queryset = queryset.filter(membership__user=request.user)
         return success_response(AcademicFinalGradeSerializer(queryset, many=True).data)
 
     def post(self, request, organization_id, offering_id):
         organization = _organization(organization_id)
         offering = _offering(organization, offering_id)
-        serializer = serializers.Serializer(data=request.data)
-        serializer.fields["membership"] = serializers.UUIDField()
+        serializer = FinalGradePublishInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         membership = Membership.objects.active().filter(
             id=serializer.validated_data["membership"], organization=organization,
