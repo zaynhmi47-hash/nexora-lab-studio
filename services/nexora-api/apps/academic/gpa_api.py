@@ -61,7 +61,12 @@ def _can_access_student_gpa(*, request, organization, membership, term):
         membership__user=request.user,
         role=AcademicEnrollment.Role.INSTRUCTOR,
         status=AcademicEnrollment.Status.ACTIVE,
-    ).exists()
+        classroom__enrollments__organization=organization,
+        classroom__enrollments__term=term,
+        classroom__enrollments__membership=membership,
+        classroom__enrollments__role=AcademicEnrollment.Role.STUDENT,
+        classroom__enrollments__status=AcademicEnrollment.Status.ACTIVE,
+    ).distinct().exists()
 
 
 def _organization(organization_id):
