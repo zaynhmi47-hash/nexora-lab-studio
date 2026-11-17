@@ -201,10 +201,13 @@ class AcademicGradebookService:
         if outcome == AcademicFinalGrade.Outcome.PASSED:
             completion = AcademicCourseCompletion.objects.filter(
                 organization=organization, membership=membership,
-                course=offering.course, deleted_at__isnull=True,
+                course=offering.course,
+                evidence_reference=f"gradebook:final-grade:{grade.pk}",
+                deleted_at__isnull=True,
             ).first()
             completion = completion or AcademicCourseCompletion(
                 organization=organization, membership=membership, course=offering.course,
+                evidence_reference=f"gradebook:final-grade:{grade.pk}",
             )
             completion.status = AcademicCourseCompletion.Status.VERIFIED
             completion.completed_at = completion.completed_at or grade.published_at
@@ -257,11 +260,14 @@ class AcademicGradebookService:
         if grade.outcome == AcademicFinalGrade.Outcome.PASSED:
             completion = AcademicCourseCompletion.objects.filter(
                 organization=grade.organization, membership=grade.membership,
-                course=grade.offering.course, deleted_at__isnull=True,
+                course=grade.offering.course,
+                evidence_reference=f"gradebook:final-grade:{grade.pk}",
+                deleted_at__isnull=True,
             ).first()
             completion = completion or AcademicCourseCompletion(
                 organization=grade.organization, membership=grade.membership,
                 course=grade.offering.course,
+                evidence_reference=f"gradebook:final-grade:{grade.pk}",
             )
             completion.status = AcademicCourseCompletion.Status.VERIFIED
             completion.completed_at = completion.completed_at or grade.published_at
@@ -269,4 +275,18 @@ class AcademicGradebookService:
             completion.verified_by = changed_by
             completion.full_clean()
             completion.save()
+        else:
+            completion = AcademicCourseCompletion.objects.filter(
+                organization=grade.organization, membership=grade.membership,
+                course=grade.offering.course,
+                evidence_reference=f"gradebook:final-grade:{grade.pk}",
+                status=AcademicCourseCompletion.Status.VERIFIED,
+                deleted_at__isnull=True,
+            ).first()
+            if completion:
+                completion.status = AcademicCourseCompletion.Status.REJECTED
+                completion.verified_at = None
+                completion.verified_by = None
+                completion.full_clean()
+                completion.save()
         return grade
