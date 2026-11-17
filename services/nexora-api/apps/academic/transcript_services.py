@@ -269,6 +269,11 @@ class AcademicTranscriptService:
             through_term = latest_grade.offering.classroom.term if latest_grade else None
         if through_term is None or through_term.organization_id != organization.pk:
             raise ValidationError({"through_term": "A valid transcript period is required."})
+        if not AcademicTerm.objects.active().filter(
+            id=through_term.pk, organization=organization,
+            classrooms__program=program,
+        ).exists():
+            raise ValidationError({"through_term": "Transcript period is not part of the selected program."})
 
         issued_at = timezone.now()
         snapshot = AcademicTranscriptService._build_snapshot(
