@@ -55,8 +55,8 @@ class AcademicGpaService:
         return policy
 
     @staticmethod
-    def _select_attempts(grades, *, policy):
-        by_course = {}
+    def _resolve_attempts(grades, *, policy):
+        attempts = []
         for grade in grades:
             if grade.credit_units_snapshot is None or grade.credit_units_snapshot <= 0:
                 raise ValidationError({
@@ -71,7 +71,7 @@ class AcademicGpaService:
             band = AcademicGradingScaleService.resolve_grade(
                 grading_scale=policy.grading_scale, percentage=normalized,
             )
-            by_course.setdefault(grade.offering.course_id, []).append({
+            attempts.append({
                 "grade": grade,
                 "band": band,
                 "grade_points": band.grade_points,
@@ -79,23 +79,30 @@ class AcademicGpaService:
                 "credits": grade.credit_units_snapshot,
             })
 
+        return attempts
+
+    @staticmethod
+    def _select_attempts(attempts, *, policy):
+        by_course = {}
+        for attempt in attempts:
+            by_course.setdefault(attempt["grade"].offering.course_id, []).append(attempt)
         selected = []
-        for attempts in by_course.values():
+        for course_attempts in by_course.values():
             if policy.retake_strategy == AcademicGpaPolicy.RetakeStrategy.FIRST:
-                chosen = min(attempts, key=lambda item: (item["grade"].published_at, str(item["grade"].pk)))
+                chosen = min(course_attempts, key=lambda item: (item["grade"].published_at, str(item["grade"].pk)))
             elif policy.retake_strategy == AcademicGpaPolicy.RetakeStrategy.LATEST:
-                chosen = max(attempts, key=lambda item: (item["grade"].published_at, str(item["grade"].pk)))
+                chosen = max(course_attempts, key=lambda item: (item["grade"].published_at, str(item["grade"].pk)))
             else:
                 chosen = max(
-                    attempts,
+                    course_attempts,
                     key=lambda item: (item["grade_points"], item["grade"].published_at, str(item["grade"].pk)),
                 )
             selected.append(chosen)
         return selected
 
     @staticmethod
-    def _summarize(selected, *, policy):
-        attempted = sum(item["credits"] for item in selected)
+    def _summarize(selected, *, all_attempts, policy):
+        attempted = sum(item["credits"] for item in all_attempts)
         earned = sum(item["credits"] for item in selected if item["is_passing"])
         denominator = sum(
             item["credits"] for item in selected
@@ -130,6 +137,7 @@ class AcademicGpaService:
         return {
             "gpa": gpa,
             "attempted_credits": attempted,
+            "gpa_credits": denominator,
             "earned_credits": earned,
             "details": details,
         }
@@ -159,10 +167,16 @@ class AcademicGpaService:
         ).order_by("published_at", "id"))
 
         term_grades = [grade for grade in grades if grade.offering.classroom.term_id == term.pk]
-        cumulative_selected = AcademicGpaService._select_attempts(grades, policy=policy)
-        term_selected = AcademicGpaService._select_attempts(term_grades, policy=policy)
-        term_summary = AcademicGpaService._summarize(term_selected, policy=policy)
-        cumulative_summary = AcademicGpaService._summarize(cumulative_selected, policy=policy)
+        term_attempts = AcademicGpaService._resolve_attempts(term_grades, policy=policy)
+        cumulative_attempts = AcademicGpaService._resolve_attempts(grades, policy=policy)
+        cumulative_selected = AcademicGpaService._select_attempts(cumulative_attempts, policy=policy)
+        term_selected = AcademicGpaService._select_attempts(term_attempts, policy=policy)
+        term_summary = AcademicGpaService._summarize(
+            term_selected, all_attempts=term_attempts, policy=policy,
+        )
+        cumulative_summary = AcademicGpaService._summarize(
+            cumulative_selected, all_attempts=cumulative_attempts, policy=policy,
+        )
 
         latest_version = AcademicGpaCalculation.objects.filter(
             organization=organization, membership=membership, term=term,
@@ -177,8 +191,10 @@ class AcademicGpaService:
             term_gpa=term_summary["gpa"],
             cumulative_gpa=cumulative_summary["gpa"],
             term_attempted_credits=term_summary["attempted_credits"],
+            term_gpa_credits=term_summary["gpa_credits"],
             term_earned_credits=term_summary["earned_credits"],
             cumulative_attempted_credits=cumulative_summary["attempted_credits"],
+            cumulative_gpa_credits=cumulative_summary["gpa_credits"],
             cumulative_earned_credits=cumulative_summary["earned_credits"],
             details={
                 "policy_version": policy.version,
