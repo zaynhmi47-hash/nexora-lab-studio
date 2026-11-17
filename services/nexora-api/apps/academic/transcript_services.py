@@ -125,12 +125,29 @@ class AcademicTranscriptService:
             include_failed = calculation.details.get("include_failed_grades", True)
             term_gpa_rows = [
                 row for row in calculation.details.get("term", [])
-                if row.get("course_id") in course_ids
+                if row.get("program_id") == str(program.pk)
             ]
             cumulative_gpa_rows = [
                 row for row in calculation.details.get("cumulative", [])
-                if row.get("course_id") in course_ids
+                if row.get("program_id") == str(program.pk)
             ]
+            expected_term_courses = {str(grade.offering.course_id) for grade in term_grades}
+            expected_cumulative_courses = {str(grade.offering.course_id) for grade in grades
+                                            if grade.offering.classroom.term.starts_on <= term.starts_on}
+            if not expected_term_courses.issubset({row.get("course_id") for row in term_gpa_rows}):
+                raise ValidationError({
+                    "gpa_provenance": (
+                        f"GPA snapshot for term {term.code} lacks program-level provenance. "
+                        "Recalculate GPA before issuing this transcript."
+                    )
+                })
+            if not expected_cumulative_courses.issubset({row.get("course_id") for row in cumulative_gpa_rows}):
+                raise ValidationError({
+                    "gpa_provenance": (
+                        f"Cumulative GPA snapshot for term {term.code} lacks program-level provenance. "
+                        "Recalculate GPA before issuing this transcript."
+                    )
+                })
             term_gpa, term_gpa_credits = AcademicTranscriptService._gpa_for_rows(
                 term_gpa_rows, include_failed_grades=include_failed,
             )
@@ -150,6 +167,7 @@ class AcademicTranscriptService:
                 grade_rows.append({
                     "final_grade_id": str(grade.pk),
                     "course_id": str(grade.offering.course_id),
+                    "program_id": str(program.pk),
                     "course_code": grade.course_code_snapshot,
                     "course_name": grade.course_name_snapshot,
                     "credit_units": grade.credit_units_snapshot,
