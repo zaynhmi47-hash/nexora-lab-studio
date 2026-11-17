@@ -167,12 +167,10 @@ def test_gpa_policy_is_versioned_and_keeps_prior_calculation_provenance(gpa_cont
     assert second.version == 2
     assert calculation.policy_id == first.pk
     assert calculation.details["retake_strategy"] == AcademicGpaPolicy.RetakeStrategy.FIRST
-    assert AcademicGpaCalculationSnapshotIsImmutable(calculation)
-
-
-def AcademicGpaCalculationSnapshotIsImmutable(calculation):
-    calculation.refresh_from_db()
-    return calculation.policy.version == 1
+    assert calculation.policy.version == 1
+    calculation.term_gpa = Decimal("1.000")
+    with pytest.raises(RuntimeError, match="immutable"):
+        calculation.save()
 
 
 @pytest.mark.django_db
