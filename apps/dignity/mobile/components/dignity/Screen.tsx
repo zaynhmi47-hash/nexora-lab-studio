@@ -1,11 +1,11 @@
 import type { PropsWithChildren } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing } from '@/theme/tokens';
 
 interface ScreenProps extends PropsWithChildren {
   scroll?: boolean;
-  contentStyle?: object;
+  contentStyle?: StyleProp<ViewStyle>;
 }
 
 export function Screen({ children, scroll = true, contentStyle }: ScreenProps) {
