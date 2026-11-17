@@ -92,6 +92,8 @@ class AcademicGradebookService:
             raise ValidationError({"component": "Assessment component does not belong to this offering."})
         if membership.organization_id != organization.pk:
             raise ValidationError({"membership": "Student membership belongs to another organization."})
+        if membership.status != "active":
+            raise ValidationError({"membership": "Student membership must be active."})
         enrolled = AcademicEnrollment.objects.filter(
             organization=organization, classroom=offering.classroom,
             membership=membership, role=AcademicEnrollment.Role.STUDENT,
@@ -134,6 +136,8 @@ class AcademicGradebookService:
 
     @staticmethod
     def calculate_final_score(*, organization, offering, membership):
+        if membership.organization_id != organization.pk or membership.status != "active":
+            raise ValidationError({"membership": "An active membership in this organization is required."})
         policy = AcademicGradingPolicy.objects.filter(
             organization=organization, offering=offering, is_active=True, deleted_at__isnull=True,
         ).first()
@@ -173,6 +177,8 @@ class AcademicGradebookService:
         )
         if membership.organization_id != organization.pk:
             raise ValidationError({"membership": "Membership belongs to another organization."})
+        if membership.status != "active":
+            raise ValidationError({"membership": "Student membership must be active."})
         score, policy = AcademicGradebookService.calculate_final_score(
             organization=organization, offering=offering, membership=membership,
         )
