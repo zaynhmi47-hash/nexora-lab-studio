@@ -4,6 +4,11 @@ from apps.academic.api import AcademicOverviewView, AcademicResourceDetailView, 
 from apps.academic.enrollment_api import AcademicEnrollmentDetailView, AcademicEnrollmentListCreateView
 from apps.academic.grading_scale_api import AcademicGradingScaleView
 from apps.academic.gpa_api import AcademicGpaCalculationView, AcademicGpaPolicyView
+from apps.academic.transcript_api import (
+    AcademicTranscriptDetailView,
+    AcademicTranscriptListIssueView,
+    AcademicTranscriptRevokeView,
+)
 from apps.academic.gradebook_api import (
     AcademicAssessmentComponentListCreateView,
     AcademicFinalGradeListPublishView,
@@ -33,6 +38,9 @@ urlpatterns = [
     path("grading-scales/", AcademicGradingScaleView.as_view(), name="academic-grading-scales"),
     path("gpa/policy/", AcademicGpaPolicyView.as_view(), name="academic-gpa-policy"),
     path("gpa/calculations/", AcademicGpaCalculationView.as_view(), name="academic-gpa-calculations"),
+    path("transcripts/", AcademicTranscriptListIssueView.as_view(), name="academic-transcript-list-issue"),
+    path("transcripts/<uuid:transcript_id>/", AcademicTranscriptDetailView.as_view(), name="academic-transcript-detail"),
+    path("transcripts/<uuid:transcript_id>/revoke/", AcademicTranscriptRevokeView.as_view(), name="academic-transcript-revoke"),
     path("offerings/<uuid:offering_id>/grading-policy/", AcademicGradingPolicyView.as_view(), name="academic-grading-policy"),
     path("offerings/<uuid:offering_id>/assessment-components/", AcademicAssessmentComponentListCreateView.as_view(), name="academic-assessment-components"),
     path("offerings/<uuid:offering_id>/grade-entries/", AcademicGradeEntryListCreateView.as_view(), name="academic-grade-entries"),
