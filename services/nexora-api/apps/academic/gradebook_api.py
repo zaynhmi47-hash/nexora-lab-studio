@@ -114,7 +114,7 @@ class AcademicAssessmentComponentListCreateView(APIView):
     permission_classes = [IsAuthenticated, NexoraPermission]
 
     def get_permissions(self):
-        self.required_permission = "academic.manage" if self.request.method == "POST" else "academic.read"
+        self.required_permission = "academic.grade" if self.request.method == "POST" else "academic.read"
         return super().get_permissions()
 
     def get(self, request, organization_id, offering_id):
@@ -194,7 +194,7 @@ class AcademicGradeEntryListCreateView(APIView):
 
 class AcademicGradeEntryPublishView(APIView):
     permission_classes = [IsAuthenticated, NexoraPermission]
-    required_permission = "academic.manage"
+    required_permission = "academic.grade"
 
     def post(self, request, organization_id, entry_id):
         organization = _organization(organization_id)
@@ -215,7 +215,7 @@ class AcademicFinalGradeListPublishView(APIView):
     permission_classes = [IsAuthenticated, NexoraPermission]
 
     def get_permissions(self):
-        self.required_permission = "academic.manage" if self.request.method == "POST" else "academic.read"
+        self.required_permission = "academic.grade" if self.request.method == "POST" else "academic.read"
         return super().get_permissions()
 
     def get(self, request, organization_id, offering_id):
