@@ -143,6 +143,7 @@ def test_gpa_calculation_uses_published_grade_and_credit_provenance(gpa_context)
     assert calculation.term_attempted_credits == 3
     assert calculation.term_earned_credits == 3
     assert calculation.details["grading_scale_version"] == scale.version
+    assert calculation.details["term"][0]["program_id"] == str(ctx["offering"].classroom.program_id)
     assert calculation.details["term"][0]["course_code"] == "GPA101"
 
 
