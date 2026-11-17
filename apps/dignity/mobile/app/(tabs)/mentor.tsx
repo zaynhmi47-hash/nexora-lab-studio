@@ -1,0 +1,4 @@
+import { DomainLanding } from '@/components/dignity/DomainLanding';
+export default function MentorScreen() {
+  return <DomainLanding eyebrow="DIGNITY AI" title="A thoughtful companion for your growth." description="AI assistance will connect learning, practice and reflection while keeping you in control of your decisions." icon="sparkles-outline" status="AI INTEGRATION NOT CONNECTED" features={['Explain concepts and support learning','Generate practice questions and study plans','Offer reflection prompts and summarize your own notes','Suggest next steps with transparent evidence','Help educators draft learning materials']} boundary="AI suggestions are assistance, not diagnoses or definitive judgments. AI cannot silently change grades, attendance, KRS, enrollment or official records. Sensitive Grow data is excluded from prompts by default." />;
+}
