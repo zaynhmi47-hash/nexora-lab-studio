@@ -14,10 +14,10 @@ class AcademicGradingPolicy(AuditableBaseModel):
         on_delete=models.CASCADE,
         related_name="academic_grading_policies",
     )
-    offering = models.OneToOneField(
+    offering = models.ForeignKey(
         "academic.AcademicCourseOffering",
         on_delete=models.PROTECT,
-        related_name="grading_policy",
+        related_name="grading_policies",
     )
     max_score = models.DecimalField(max_digits=7, decimal_places=2, default=100)
     passing_score = models.DecimalField(
@@ -34,6 +34,11 @@ class AcademicGradingPolicy(AuditableBaseModel):
                 fields=("organization", "offering", "version"),
                 condition=Q(deleted_at__isnull=True),
                 name="acad_grade_policy_version_unique",
+            ),
+            models.UniqueConstraint(
+                fields=("organization", "offering"),
+                condition=Q(deleted_at__isnull=True, is_active=True),
+                name="acad_grade_policy_active_unique",
             ),
             models.CheckConstraint(
                 condition=Q(max_score__gt=0),
