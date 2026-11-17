@@ -35,6 +35,11 @@ class FinalGradePublishInputSerializer(serializers.Serializer):
     membership = serializers.UUIDField()
 
 
+class FinalGradeRevisionInputSerializer(serializers.Serializer):
+    new_score = serializers.DecimalField(max_digits=7, decimal_places=2)
+    reason = serializers.CharField(max_length=2000, allow_blank=False, trim_whitespace=True)
+
+
 def _organization(organization_id):
     organization = Organization.objects.active().filter(
         id=organization_id, status=Organization.Status.ACTIVE,
@@ -250,3 +255,27 @@ class AcademicFinalGradeListPublishView(APIView):
             _translate(exc)
         _audit(request, organization, "published", "final_grade", grade.pk)
         return success_response(AcademicFinalGradeSerializer(grade).data, status=201)
+
+
+
+class AcademicFinalGradeRevisionView(APIView):
+    permission_classes = [IsAuthenticated, NexoraPermission]
+    required_permission = "academic.grade"
+
+    def post(self, request, organization_id, grade_id):
+        organization = _organization(organization_id)
+        grade = AcademicFinalGrade.objects.active().filter(
+            id=grade_id, organization=organization,
+        ).select_related("offering", "membership").first()
+        if grade is None:
+            raise NotFound("Final grade not found.")
+        serializer = FinalGradeRevisionInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            grade = AcademicGradebookService.revise_final_grade(
+                grade=grade, changed_by=request.user, **serializer.validated_data,
+            )
+        except DjangoValidationError as exc:
+            _translate(exc)
+        _audit(request, organization, "revised", "final_grade", grade.pk)
+        return success_response(AcademicFinalGradeSerializer(grade).data)
