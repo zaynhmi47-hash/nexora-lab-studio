@@ -1,4 +1,5 @@
 import pytest
+from django.core.exceptions import ValidationError
 
 from apps.academic.models import (
     AcademicCourse,
@@ -104,5 +105,5 @@ def test_progress_rejects_enrollment_for_inactive_membership(progress_context):
     enrollment.membership.status = Membership.Status.SUSPENDED
     enrollment.membership.save(update_fields=("status",))
 
-    with pytest.raises(Exception, match="active organization membership"):
+    with pytest.raises(ValidationError, match="active organization membership"):
         AcademicProgressService.calculate(enrollment)
