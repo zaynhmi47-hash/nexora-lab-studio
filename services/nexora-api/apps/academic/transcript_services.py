@@ -11,7 +11,6 @@ from apps.academic.grading_scale_services import AcademicGradingScaleService
 from apps.academic.models import (
     AcademicFinalGrade,
     AcademicGpaCalculation,
-    AcademicProgram,
     AcademicTerm,
     AcademicTranscript,
 )
@@ -94,7 +93,6 @@ class AcademicTranscriptService:
             term = grade.offering.classroom.term
             grades_by_term.setdefault(term.pk, {"term": term, "grades": []})["grades"].append(grade)
 
-        course_ids = {str(grade.offering.course_id) for grade in grades}
         term_snapshots = []
         for term_data in sorted(
             grades_by_term.values(),
