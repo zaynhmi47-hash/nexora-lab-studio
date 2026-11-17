@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
   subtitle: { color: colors.muted, fontSize: 13, lineHeight: 20, marginTop: 8, marginBottom: spacing.xl },
   section: { marginBottom: spacing.section },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  method: { width: '48%', flexGrow: 1, minHeight: 130, padding: spacing.md },
+  method: { flexBasis: '47%', flexGrow: 1, minHeight: 130, padding: spacing.md },
   methodIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginBottom: 9 },
   methodTitle: { color: colors.ink, fontSize: 12, fontWeight: '900' },
   detail: { color: colors.muted, fontSize: 10, lineHeight: 15, marginTop: 4 },
