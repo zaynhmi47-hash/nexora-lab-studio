@@ -142,3 +142,44 @@ def test_grade_entry_requires_classroom_assigned_instructor(gradebook_context):
             component=component, membership=ctx["student_membership"],
             score=Decimal("90"), graded_by=outsider,
         )
+
+
+@pytest.mark.django_db
+def test_revision_reconciles_only_its_own_prerequisite_evidence(gradebook_context):
+    ctx = gradebook_context
+    org, offering = ctx["organization"], ctx["offering"]
+    AcademicGradebookService.configure_policy(
+        organization=org, offering=offering, max_score=Decimal("100"),
+        passing_score=Decimal("70"),
+    )
+    component = AcademicGradebookService.create_component(
+        organization=org, offering=offering, name="Final Exam",
+        weight_percent=Decimal("100"),
+    )
+    entry = AcademicGradebookService.record_grade(
+        organization=org, offering=offering, component=component,
+        membership=ctx["student_membership"], score=Decimal("85"),
+        graded_by=ctx["instructor"],
+    )
+    AcademicGradebookService.publish_component_grade(
+        entry=entry, published_by=ctx["instructor"],
+    )
+    grade = AcademicGradebookService.publish_final_grade(
+        organization=org, offering=offering, membership=ctx["student_membership"],
+        published_by=ctx["instructor"],
+    )
+    evidence = AcademicCourseCompletion.objects.get(
+        organization=org, membership=ctx["student_membership"],
+        course=ctx["course"], evidence_reference=f"gradebook:final-grade:{grade.pk}",
+    )
+
+    revised = AcademicGradebookService.revise_final_grade(
+        grade=grade, new_score=Decimal("50"), changed_by=ctx["instructor"],
+        reason="Correction after assessment moderation",
+    )
+
+    evidence.refresh_from_db()
+    assert revised.outcome == AcademicFinalGrade.Outcome.FAILED
+    assert evidence.status == AcademicCourseCompletion.Status.REJECTED
+    assert evidence.verified_at is None
+    assert evidence.verified_by is None
