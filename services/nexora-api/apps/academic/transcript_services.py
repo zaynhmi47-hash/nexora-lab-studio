@@ -112,7 +112,11 @@ class AcademicTranscriptService:
                         f"GPA for term {term.code} must be calculated before issuing the transcript."
                     )
                 })
-            latest_grade_update = max(grade.updated_at for grade in term_grades)
+            cumulative_grades_for_term = [
+                grade for grade in grades
+                if grade.offering.classroom.term.starts_on <= term.starts_on
+            ]
+            latest_grade_update = max(grade.updated_at for grade in cumulative_grades_for_term)
             if calculation.calculated_at < latest_grade_update:
                 raise ValidationError({
                     "gpa_calculation": (
