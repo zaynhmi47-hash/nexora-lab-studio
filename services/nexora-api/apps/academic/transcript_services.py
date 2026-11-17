@@ -1,6 +1,5 @@
 import hashlib
 import json
-import uuid
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.core.exceptions import ValidationError
@@ -177,7 +176,9 @@ class AcademicTranscriptService:
                 "term_gpa_credits": term_gpa_credits,
                 "term_attempted_credits": sum(grade.credit_units_snapshot for grade in term_grades),
                 "term_earned_credits": sum(
-                    row["credit_units"] for row in grade_rows if row["is_passing"]
+                    int(row["credit_units"])
+                    for row in term_gpa_rows
+                    if row.get("is_passing", False)
                 ),
                 "cumulative_gpa": str(cumulative_gpa) if cumulative_gpa is not None else None,
                 "cumulative_gpa_credits": cumulative_gpa_credits,
@@ -192,10 +193,9 @@ class AcademicTranscriptService:
             grade.credit_units_snapshot for grade in grades
         )
         cumulative_earned = sum(
-            row["credit_units"]
-            for term_data in term_snapshots
-            for row in term_data["grades"]
-            if row["is_passing"]
+            int(row["credit_units"])
+            for row in cumulative_gpa_rows
+            if row.get("is_passing", False)
         )
         return {
             "schema_version": 1,
@@ -241,13 +241,16 @@ class AcademicTranscriptService:
         if program.organization_id != organization.pk or not program.is_active:
             raise ValidationError({"program": "An active program in this organization is required."})
         if through_term is None:
-            through_term = AcademicTerm.objects.filter(
+            latest_grade = AcademicFinalGrade.objects.filter(
                 organization=organization,
-                classrooms__program=program,
-                classrooms__course_offerings__final_grades__membership=membership,
-                classrooms__course_offerings__final_grades__status=AcademicFinalGrade.Status.PUBLISHED,
+                membership=membership,
+                offering__classroom__program=program,
+                status=AcademicFinalGrade.Status.PUBLISHED,
                 deleted_at__isnull=True,
-            ).order_by("-starts_on").first()
+            ).select_related("offering__classroom__term").order_by(
+                "-offering__classroom__term__starts_on",
+            ).first()
+            through_term = latest_grade.offering.classroom.term if latest_grade else None
         if through_term is None or through_term.organization_id != organization.pk:
             raise ValidationError({"through_term": "A valid transcript period is required."})
 
