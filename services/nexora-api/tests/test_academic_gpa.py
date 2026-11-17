@@ -2,8 +2,10 @@ from decimal import Decimal
 
 import pytest
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 from apps.academic.gpa_services import AcademicGpaService
+from apps.academic.transcript_services import AcademicTranscriptService
 from apps.academic.gradebook_services import AcademicGradebookService
 from apps.academic.grading_scale_services import AcademicGradingScaleService
 from apps.academic.models import (
@@ -14,6 +16,7 @@ from apps.academic.models import (
     AcademicEnrollment,
     AcademicFinalGrade,
     AcademicGpaPolicy,
+    AcademicTranscript,
     AcademicProgram,
     AcademicTerm,
 )
@@ -207,3 +210,115 @@ def test_gpa_calculation_rejects_grade_without_credit_snapshot(gpa_context):
             organization=ctx["organization"], membership=ctx["student_membership"],
             term=ctx["term"], calculated_by=ctx["student"],
         )
+
+
+
+@pytest.mark.django_db
+def test_transcript_issuance_creates_verifiable_immutable_snapshot(gpa_context):
+    ctx = gpa_context
+    grade = _publish_final_grade(ctx, "82")
+    scale = _publish_scale(ctx["organization"])
+    AcademicGpaService.publish_policy(
+        organization=ctx["organization"],
+        grading_scale=scale,
+        retake_strategy=AcademicGpaPolicy.RetakeStrategy.HIGHEST,
+        include_failed_grades=True,
+    )
+    AcademicGpaService.calculate(
+        organization=ctx["organization"],
+        membership=ctx["student_membership"],
+        term=ctx["term"],
+        calculated_by=ctx["student"],
+    )
+
+    transcript = AcademicTranscriptService.issue(
+        organization=ctx["organization"],
+        membership=ctx["student_membership"],
+        program=grade.offering.classroom.program,
+        through_term=ctx["term"],
+        issued_by=ctx["instructor"],
+    )
+
+    assert transcript.status == AcademicTranscript.Status.ISSUED
+    assert transcript.snapshot["student"]["display_name"] == ctx["student"].display_name
+    assert transcript.snapshot["terms"][0]["grades"][0]["course_code"] == "GPA101"
+    assert transcript.snapshot["terms"][0]["term_gpa"] == "3.000"
+    assert transcript.snapshot["summary"]["cumulative_earned_credits"] == 3
+    assert AcademicTranscriptService.verify(transcript) is True
+
+    transcript.snapshot["student"]["display_name"] = "Tampered"
+    with pytest.raises(RuntimeError, match="immutable"):
+        transcript.save()
+
+
+@pytest.mark.django_db
+def test_transcript_requires_fresh_gpa_calculation(gpa_context):
+    ctx = gpa_context
+    grade = _publish_final_grade(ctx, "82")
+    scale = _publish_scale(ctx["organization"])
+    AcademicGpaService.publish_policy(
+        organization=ctx["organization"],
+        grading_scale=scale,
+        retake_strategy=AcademicGpaPolicy.RetakeStrategy.HIGHEST,
+        include_failed_grades=True,
+    )
+    AcademicGpaService.calculate(
+        organization=ctx["organization"],
+        membership=ctx["student_membership"],
+        term=ctx["term"],
+        calculated_by=ctx["student"],
+    )
+    grade.updated_at = timezone.now()
+    grade.save(update_fields=("updated_at",))
+
+    with pytest.raises(ValidationError, match="stale"):
+        AcademicTranscriptService.issue(
+            organization=ctx["organization"],
+            membership=ctx["student_membership"],
+            program=grade.offering.classroom.program,
+            through_term=ctx["term"],
+            issued_by=ctx["instructor"],
+        )
+
+
+@pytest.mark.django_db
+def test_transcript_revocation_preserves_original_checksum(gpa_context):
+    ctx = gpa_context
+    grade = _publish_final_grade(ctx, "82")
+    scale = _publish_scale(ctx["organization"])
+    AcademicGpaService.publish_policy(
+        organization=ctx["organization"],
+        grading_scale=scale,
+        retake_strategy=AcademicGpaPolicy.RetakeStrategy.HIGHEST,
+        include_failed_grades=True,
+    )
+    AcademicGpaService.calculate(
+        organization=ctx["organization"],
+        membership=ctx["student_membership"],
+        term=ctx["term"],
+        calculated_by=ctx["student"],
+    )
+    transcript = AcademicTranscriptService.issue(
+        organization=ctx["organization"],
+        membership=ctx["student_membership"],
+        program=grade.offering.classroom.program,
+        through_term=ctx["term"],
+        issued_by=ctx["instructor"],
+    )
+    original_checksum = transcript.snapshot_checksum
+
+    revoked = AcademicTranscriptService.revoke(
+        transcript=transcript,
+        revoked_by=ctx["instructor"],
+        reason="Issued against an incorrect student request.",
+    )
+
+    assert revoked.status == AcademicTranscript.Status.REVOKED
+    assert revoked.snapshot_checksum == original_checksum
+    assert AcademicTranscriptService.verify(revoked) is True
+    with pytest.raises(RuntimeError, match="cannot be re-issued"):
+        revoked.status = AcademicTranscript.Status.ISSUED
+        revoked.revoked_at = None
+        revoked.revoked_by = None
+        revoked.revocation_reason = ""
+        revoked.save()
