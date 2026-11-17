@@ -90,7 +90,10 @@ def _is_assigned_instructor(*, organization, offering, user):
 
 class AcademicGradingPolicyView(APIView):
     permission_classes = [IsAuthenticated, NexoraPermission]
-    required_permission = "academic.manage"
+
+    def get_permissions(self):
+        self.required_permission = "academic.manage" if self.request.method == "PUT" else "academic.read"
+        return super().get_permissions()
 
     def get(self, request, organization_id, offering_id):
         organization = _organization(organization_id)
