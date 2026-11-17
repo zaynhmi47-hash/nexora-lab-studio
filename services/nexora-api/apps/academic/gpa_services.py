@@ -120,6 +120,7 @@ class AcademicGpaService:
             {
                 "final_grade_id": str(item["grade"].pk),
                 "course_id": str(item["grade"].offering.course_id),
+                "program_id": str(item["grade"].offering.classroom.program_id),
                 "course_code": item["grade"].course_code_snapshot,
                 "course_name": item["grade"].course_name_snapshot,
                 "credit_units": item["credits"],
