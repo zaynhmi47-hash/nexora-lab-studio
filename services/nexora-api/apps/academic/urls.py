@@ -18,6 +18,7 @@ from apps.academic.gradebook_api import (
     AcademicGradingPolicyView,
 )
 from apps.academic.offering_api import AcademicCourseOfferingDetailView, AcademicCourseOfferingListCreateView
+from apps.academic.progress_api import AcademicProgramEnrollmentListCreateView, AcademicProgramProgressView
 from apps.academic.schedule_api import AcademicOfferingScheduleDetailView, AcademicOfferingScheduleListCreateView
 from apps.academic.study_plan_api import (
     AcademicStudyPlanDetailView,
@@ -31,6 +32,8 @@ urlpatterns = [
     path("overview/", AcademicOverviewView.as_view(), name="academic-overview"),
     path("classrooms/<uuid:classroom_id>/enrollments/", AcademicEnrollmentListCreateView.as_view(), name="academic-classroom-enrollments"),
     path("enrollments/<uuid:enrollment_id>/", AcademicEnrollmentDetailView.as_view(), name="academic-enrollment-detail"),
+    path("program-enrollments/", AcademicProgramEnrollmentListCreateView.as_view(), name="academic-program-enrollments"),
+    path("program-enrollments/<uuid:enrollment_id>/progress/", AcademicProgramProgressView.as_view(), name="academic-program-progress"),
     path("offerings/", AcademicCourseOfferingListCreateView.as_view(), name="academic-offering-list"),
     path("offerings/<uuid:offering_id>/", AcademicCourseOfferingDetailView.as_view(), name="academic-offering-detail"),
     path("offerings/<uuid:offering_id>/schedules/", AcademicOfferingScheduleListCreateView.as_view(), name="academic-offering-schedules"),
