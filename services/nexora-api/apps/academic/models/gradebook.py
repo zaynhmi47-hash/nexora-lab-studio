@@ -164,6 +164,9 @@ class AcademicFinalGrade(AuditableBaseModel):
     membership = models.ForeignKey("organizations.Membership", on_delete=models.PROTECT,
         related_name="academic_final_grades")
     final_score = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)
+    course_code_snapshot = models.CharField(max_length=32, blank=True)
+    course_name_snapshot = models.CharField(max_length=180, blank=True)
+    credit_units_snapshot = models.PositiveSmallIntegerField(null=True, blank=True)
     status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING, db_index=True)
     outcome = models.CharField(max_length=20, choices=Outcome.choices, default=Outcome.PENDING_POLICY)
     published_at = models.DateTimeField(null=True, blank=True)

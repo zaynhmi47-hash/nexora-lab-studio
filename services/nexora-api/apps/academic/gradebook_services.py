@@ -174,6 +174,12 @@ class AcademicGradebookService:
         grade = grade or AcademicFinalGrade(
             organization=organization, offering=offering, membership=membership)
         grade.grading_policy = policy
+        grade.course_code_snapshot = offering.course.code
+        grade.course_name_snapshot = offering.course.name
+        grade.credit_units_snapshot = (
+            offering.curriculum_entry.credit_units if offering.curriculum_entry_id
+            else offering.course.credit_units
+        )
         grade.final_score, grade.outcome = score, outcome
         grade.status, grade.published_at, grade.published_by = (
             AcademicFinalGrade.Status.PUBLISHED, timezone.now(), published_by)

@@ -10,6 +10,7 @@ from apps.academic.models.gradebook import (
     AcademicGradingPolicy,
 )
 from apps.academic.models.grading_scale import AcademicGradingScale, AcademicGradingScaleBand
+from apps.academic.models.gpa import AcademicGpaCalculation, AcademicGpaPolicy
 from apps.academic.models.offering import AcademicCourseOffering
 from apps.academic.models.prerequisite import AcademicCourseCompletion, AcademicCoursePrerequisite
 from apps.academic.models.program import AcademicProgram
@@ -24,4 +25,5 @@ __all__ = [
     "AcademicStudyPlan", "AcademicStudyPlanItem", "AcademicTerm",
     "AcademicGradingPolicy", "AcademicAssessmentComponent", "AcademicGradeEntry",
     "AcademicFinalGrade", "AcademicGradeRevision", "AcademicGradingScale", "AcademicGradingScaleBand",
+    "AcademicGpaPolicy", "AcademicGpaCalculation",
 ]
