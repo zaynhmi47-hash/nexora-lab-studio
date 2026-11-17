@@ -1,0 +1,4 @@
+import { DomainLanding } from '@/components/dignity/DomainLanding';
+export default function CareerScreen() {
+  return <DomainLanding eyebrow="DIGNITY CAREER" title="Turn capability into opportunity." description="Explore meaningful work, build professional capability and present evidence of what you can do." icon="briefcase-outline" features={['Career interests and pathway exploration','Competency maps and development plans','Projects, experience and portfolio','Professional learning and employability','Evidence review and achievement history']} boundary="Self-reported claims, AI suggestions, peer feedback and independently verified evidence must remain distinguishable. A portfolio is not an automatic credential." />;
+}
