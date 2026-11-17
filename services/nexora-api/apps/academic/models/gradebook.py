@@ -283,6 +283,17 @@ class AcademicGradeRevision(AuditableBaseModel):
         related_name="academic_grade_revisions",
     )
 
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise RuntimeError("Academic grade revision snapshots are immutable.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise RuntimeError("Academic grade revision snapshots cannot be deleted.")
+
+    def soft_delete(self):
+        raise RuntimeError("Academic grade revision snapshots cannot be archived.")
+
     class Meta:
         db_table = "academic_grade_revisions"
         constraints = [
