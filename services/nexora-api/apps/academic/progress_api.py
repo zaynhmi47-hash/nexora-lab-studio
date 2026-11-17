@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
 from apps.access.api.permissions import NexoraPermission
-from apps.academic.models import AcademicProgram, AcademicProgramEnrollment, AcademicProgressSnapshot
+from apps.academic.models import AcademicCurriculumCourse, AcademicProgram, AcademicProgramEnrollment, AcademicProgressSnapshot
 from apps.academic.progress_services import AcademicProgressService
 from apps.control_plane.audit import record_control_plane_audit
 from apps.core.api.response import success_response
