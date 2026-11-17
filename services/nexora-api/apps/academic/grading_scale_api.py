@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from rest_framework.exceptions import NotFound, ValidationError
@@ -22,7 +24,7 @@ class AcademicGradingScaleBandInputSerializer(serializers.Serializer):
 
 class AcademicGradingScaleInputSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=120, trim_whitespace=True)
-    maximum_grade_point = serializers.DecimalField(max_digits=5, decimal_places=2, min_value="0.01", max_value="10")
+    maximum_grade_point = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=Decimal("0.01"), max_value=Decimal("10"))
     bands = AcademicGradingScaleBandInputSerializer(many=True, allow_empty=False)
 
 
