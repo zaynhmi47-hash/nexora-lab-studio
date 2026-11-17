@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, spacing } from '@/theme/tokens';
+import { colors, spacing } from '@/theme/tokens';
 
 export interface Pillar {
   id: string;
