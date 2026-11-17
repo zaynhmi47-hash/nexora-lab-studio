@@ -25,13 +25,21 @@ class AcademicGradebookService:
         offering.__class__.objects.select_for_update().get(pk=offering.pk)
         if offering.organization_id != organization.pk:
             raise ValidationError({"offering": "Offering belongs to another organization."})
-        policy = AcademicGradingPolicy.objects.filter(
+        current = AcademicGradingPolicy.objects.select_for_update().filter(
+            organization=organization, offering=offering, is_active=True, deleted_at__isnull=True,
+        ).order_by("-version").first()
+        if current and current.max_score == max_score and current.passing_score == passing_score:
+            return current
+        next_version = (AcademicGradingPolicy.objects.filter(
             organization=organization, offering=offering, deleted_at__isnull=True,
-        ).first()
-        if policy is None:
-            policy = AcademicGradingPolicy(organization=organization, offering=offering)
-        policy.max_score = max_score
-        policy.passing_score = passing_score
+        ).order_by("-version").values_list("version", flat=True).first() or 0) + 1
+        if current:
+            current.is_active = False
+            current.save(update_fields=("is_active", "updated_at"))
+        policy = AcademicGradingPolicy(
+            organization=organization, offering=offering,
+            max_score=max_score, passing_score=passing_score, version=next_version,
+        )
         policy.full_clean()
         policy.save()
         return policy
