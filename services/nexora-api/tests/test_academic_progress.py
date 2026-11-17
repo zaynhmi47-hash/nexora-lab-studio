@@ -6,7 +6,6 @@ from apps.academic.models import (
     AcademicCurriculumCourse,
     AcademicProgram,
     AcademicProgramEnrollment,
-    AcademicProgressSnapshot,
 )
 from apps.academic.progress_services import AcademicProgressService
 from apps.identity.models import NexoraUser
