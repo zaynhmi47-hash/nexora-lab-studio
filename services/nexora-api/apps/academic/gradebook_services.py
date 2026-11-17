@@ -6,13 +6,8 @@ from django.db.models import Sum
 from django.utils import timezone
 
 from apps.academic.models import (
-    AcademicAssessmentComponent,
-    AcademicCourseCompletion,
-    AcademicEnrollment,
-    AcademicFinalGrade,
-    AcademicGradeEntry,
-    AcademicGradeRevision,
-    AcademicGradingPolicy,
+    AcademicAssessmentComponent, AcademicCourseCompletion, AcademicEnrollment,
+    AcademicFinalGrade, AcademicGradeEntry, AcademicGradeRevision, AcademicGradingPolicy,
 )
 
 
@@ -68,15 +63,13 @@ class AcademicGradebookService:
 
     @staticmethod
     def _ensure_assigned_instructor(*, organization, offering, user):
-        membership = offering.__class__._meta.apps.get_model(
-            "organizations", "Membership"
-        ).objects.filter(
+        membership = offering.__class__._meta.apps.get_model("organizations", "Membership").objects.filter(
             organization=organization, user=user, status="active", deleted_at__isnull=True,
         ).first()
         if membership is None or not AcademicEnrollment.objects.filter(
-            organization=organization, classroom=offering.classroom,
-            membership=membership, role=AcademicEnrollment.Role.INSTRUCTOR,
-            status=AcademicEnrollment.Status.ACTIVE, deleted_at__isnull=True,
+            organization=organization, classroom=offering.classroom, membership=membership,
+            role=AcademicEnrollment.Role.INSTRUCTOR, status=AcademicEnrollment.Status.ACTIVE,
+            deleted_at__isnull=True,
         ).exists():
             raise ValidationError({"actor": "User is not an active instructor assigned to this classroom."})
         return membership
@@ -86,33 +79,27 @@ class AcademicGradebookService:
     def record_grade(*, organization, offering, component, membership, score, graded_by):
         offering.__class__.objects.select_for_update().get(pk=offering.pk)
         AcademicGradebookService._ensure_assigned_instructor(
-            organization=organization, offering=offering, user=graded_by,
-        )
+            organization=organization, offering=offering, user=graded_by)
         if component.organization_id != organization.pk or component.offering_id != offering.pk:
             raise ValidationError({"component": "Assessment component does not belong to this offering."})
-        if membership.organization_id != organization.pk:
-            raise ValidationError({"membership": "Student membership belongs to another organization."})
-        if membership.status != "active":
-            raise ValidationError({"membership": "Student membership must be active."})
+        if membership.organization_id != organization.pk or membership.status != "active":
+            raise ValidationError({"membership": "An active membership in this organization is required."})
         enrolled = AcademicEnrollment.objects.filter(
-            organization=organization, classroom=offering.classroom,
-            membership=membership, role=AcademicEnrollment.Role.STUDENT,
-            status=AcademicEnrollment.Status.ACTIVE, deleted_at__isnull=True,
+            organization=organization, classroom=offering.classroom, membership=membership,
+            role=AcademicEnrollment.Role.STUDENT, status=AcademicEnrollment.Status.ACTIVE,
+            deleted_at__isnull=True,
         ).exists()
         if not enrolled:
             raise ValidationError({"membership": "Student must be actively enrolled in this classroom."})
         existing = AcademicGradeEntry.objects.filter(
-            organization=organization, component=component, membership=membership,
-            deleted_at__isnull=True,
+            organization=organization, component=component, membership=membership, deleted_at__isnull=True,
         ).first()
         if existing and existing.status == AcademicGradeEntry.Status.PUBLISHED:
             raise ValidationError({"score": "Published component grades cannot be overwritten."})
         entry = existing or AcademicGradeEntry(
             organization=organization, offering=offering, component=component,
-            membership=membership, graded_by=graded_by,
-        )
-        entry.score = score
-        entry.graded_by = graded_by
+            membership=membership, graded_by=graded_by)
+        entry.score, entry.graded_by = score, graded_by
         entry.full_clean()
         entry.save()
         return entry
@@ -121,15 +108,12 @@ class AcademicGradebookService:
     @transaction.atomic
     def publish_component_grade(*, entry, published_by):
         entry = AcademicGradeEntry.objects.select_for_update().select_related(
-            "offering", "membership", "organization", "component",
-        ).get(pk=entry.pk)
+            "offering", "membership", "organization", "component").get(pk=entry.pk)
         AcademicGradebookService._ensure_assigned_instructor(
-            organization=entry.organization, offering=entry.offering, user=published_by,
-        )
+            organization=entry.organization, offering=entry.offering, user=published_by)
         if entry.status == AcademicGradeEntry.Status.PUBLISHED:
             return entry
-        entry.status = AcademicGradeEntry.Status.PUBLISHED
-        entry.published_at = timezone.now()
+        entry.status, entry.published_at = AcademicGradeEntry.Status.PUBLISHED, timezone.now()
         entry.full_clean()
         entry.save(update_fields=("status", "published_at", "updated_at"))
         return entry
@@ -138,12 +122,11 @@ class AcademicGradebookService:
     def calculate_final_score(*, organization, offering, membership):
         if membership.organization_id != organization.pk or membership.status != "active":
             raise ValidationError({"membership": "An active membership in this organization is required."})
-        enrolled = AcademicEnrollment.objects.filter(
-            organization=organization, classroom=offering.classroom,
-            membership=membership, role=AcademicEnrollment.Role.STUDENT,
-            status=AcademicEnrollment.Status.ACTIVE, deleted_at__isnull=True,
-        ).exists()
-        if not enrolled:
+        if not AcademicEnrollment.objects.filter(
+            organization=organization, classroom=offering.classroom, membership=membership,
+            role=AcademicEnrollment.Role.STUDENT, status=AcademicEnrollment.Status.ACTIVE,
+            deleted_at__isnull=True,
+        ).exists():
             raise ValidationError({"membership": "Student must be actively enrolled in this offering's classroom."})
         policy = AcademicGradingPolicy.objects.filter(
             organization=organization, offering=offering, is_active=True, deleted_at__isnull=True,
@@ -151,19 +134,14 @@ class AcademicGradebookService:
         if policy is None:
             raise ValidationError({"grading_policy": "Configure a grading policy before calculating final grades."})
         components = list(AcademicAssessmentComponent.objects.filter(
-            organization=organization, offering=offering, is_active=True, deleted_at__isnull=True,
-        ))
+            organization=organization, offering=offering, is_active=True, deleted_at__isnull=True))
         if not components:
             raise ValidationError({"components": "At least one active assessment component is required."})
-        total_weight = sum((c.weight_percent for c in components), Decimal("0"))
-        if total_weight != Decimal("100"):
+        if sum((c.weight_percent for c in components), Decimal("0")) != Decimal("100"):
             raise ValidationError({"weight_percent": "Active assessment weights must total exactly 100 percent."})
-        entries = {
-            e.component_id: e for e in AcademicGradeEntry.objects.filter(
-                organization=organization, offering=offering, membership=membership,
-                status=AcademicGradeEntry.Status.PUBLISHED, deleted_at__isnull=True,
-            )
-        }
+        entries = {e.component_id: e for e in AcademicGradeEntry.objects.filter(
+            organization=organization, offering=offering, membership=membership,
+            status=AcademicGradeEntry.Status.PUBLISHED, deleted_at__isnull=True)}
         missing = [c.name for c in components if c.is_required and c.pk not in entries]
         if missing:
             raise ValidationError({"grades": "Required grades are not published: " + ", ".join(missing)})
@@ -180,126 +158,83 @@ class AcademicGradebookService:
     def publish_final_grade(*, organization, offering, membership, published_by):
         offering.__class__.objects.select_for_update().get(pk=offering.pk)
         AcademicGradebookService._ensure_assigned_instructor(
-            organization=organization, offering=offering, user=published_by,
-        )
-        if membership.organization_id != organization.pk:
-            raise ValidationError({"membership": "Membership belongs to another organization."})
-        if membership.status != "active":
-            raise ValidationError({"membership": "Student membership must be active."})
+            organization=organization, offering=offering, user=published_by)
+        if membership.organization_id != organization.pk or membership.status != "active":
+            raise ValidationError({"membership": "An active membership in this organization is required."})
         score, policy = AcademicGradebookService.calculate_final_score(
-            organization=organization, offering=offering, membership=membership,
-        )
-        if policy.passing_score is None:
-            outcome = AcademicFinalGrade.Outcome.PENDING_POLICY
-        elif score >= policy.passing_score:
-            outcome = AcademicFinalGrade.Outcome.PASSED
-        else:
-            outcome = AcademicFinalGrade.Outcome.FAILED
+            organization=organization, offering=offering, membership=membership)
+        outcome = (AcademicFinalGrade.Outcome.PENDING_POLICY if policy.passing_score is None
+                   else AcademicFinalGrade.Outcome.PASSED if score >= policy.passing_score
+                   else AcademicFinalGrade.Outcome.FAILED)
         grade = AcademicFinalGrade.objects.select_for_update().filter(
-            organization=organization, offering=offering, membership=membership,
-            deleted_at__isnull=True,
+            organization=organization, offering=offering, membership=membership, deleted_at__isnull=True,
         ).first()
         if grade and grade.status == AcademicFinalGrade.Status.PUBLISHED:
             raise ValidationError({"grade": "Published final grade is immutable; use the revision workflow."})
         grade = grade or AcademicFinalGrade(
-            organization=organization, offering=offering, membership=membership,
-        )
-        grade.final_score = score
-        grade.outcome = outcome
-        grade.status = AcademicFinalGrade.Status.PUBLISHED
-        grade.published_at = timezone.now()
-        grade.published_by = published_by
+            organization=organization, offering=offering, membership=membership)
+        grade.grading_policy = policy
+        grade.final_score, grade.outcome = score, outcome
+        grade.status, grade.published_at, grade.published_by = (
+            AcademicFinalGrade.Status.PUBLISHED, timezone.now(), published_by)
         grade.full_clean()
         grade.save()
-        if outcome == AcademicFinalGrade.Outcome.PASSED:
-            completion = AcademicCourseCompletion.objects.filter(
-                organization=organization, membership=membership,
-                course=offering.course,
-                evidence_reference=f"gradebook:final-grade:{grade.pk}",
-                deleted_at__isnull=True,
-            ).first()
+        AcademicGradebookService._reconcile_completion(grade=grade, actor=published_by)
+        return grade
+
+    @staticmethod
+    def _reconcile_completion(*, grade, actor):
+        evidence_reference = f"gradebook:final-grade:{grade.pk}"
+        completion = AcademicCourseCompletion.objects.filter(
+            organization=grade.organization, membership=grade.membership,
+            course=grade.offering.course, evidence_reference=evidence_reference, deleted_at__isnull=True,
+        ).first()
+        if grade.outcome == AcademicFinalGrade.Outcome.PASSED:
             completion = completion or AcademicCourseCompletion(
-                organization=organization, membership=membership, course=offering.course,
-                evidence_reference=f"gradebook:final-grade:{grade.pk}",
-            )
+                organization=grade.organization, membership=grade.membership,
+                course=grade.offering.course, evidence_reference=evidence_reference)
             completion.status = AcademicCourseCompletion.Status.VERIFIED
             completion.completed_at = completion.completed_at or grade.published_at
-            completion.verified_at = grade.published_at
-            completion.verified_by = published_by
+            completion.verified_at, completion.verified_by = grade.published_at, actor
             completion.full_clean()
             completion.save()
-        return grade
+        elif completion and completion.status == AcademicCourseCompletion.Status.VERIFIED:
+            completion.status = AcademicCourseCompletion.Status.REJECTED
+            completion.verified_at, completion.verified_by = None, None
+            completion.full_clean()
+            completion.save()
 
     @staticmethod
     @transaction.atomic
     def revise_final_grade(*, grade, new_score, changed_by, reason):
         grade = AcademicFinalGrade.objects.select_for_update().select_related(
-            "organization", "offering", "membership",
-        ).get(pk=grade.pk)
+            "organization", "offering", "membership", "grading_policy").get(pk=grade.pk)
         AcademicGradebookService._ensure_assigned_instructor(
-            organization=grade.organization, offering=grade.offering, user=changed_by,
-        )
+            organization=grade.organization, offering=grade.offering, user=changed_by)
         if grade.status != AcademicFinalGrade.Status.PUBLISHED:
             raise ValidationError({"grade": "Only published final grades can be revised."})
         if not reason or not reason.strip():
             raise ValidationError({"reason": "A revision reason is required."})
-        policy = AcademicGradingPolicy.objects.get(
-            organization=grade.organization, offering=grade.offering,
-            is_active=True, deleted_at__isnull=True,
-        )
+        # Revisions deliberately retain the policy version used at original publication.
+        policy = grade.grading_policy
+        if policy is None:
+            raise ValidationError({"grading_policy": "This historical grade has no policy provenance; it must be reviewed before revision."})
         score = Decimal(str(new_score))
         if score < 0 or score > policy.max_score:
-            raise ValidationError({"new_score": "Score is outside the grading policy range."})
+            raise ValidationError({"new_score": "Score is outside the original grading policy range."})
         revision_number = (grade.revisions.order_by("-revision_number").values_list(
-            "revision_number", flat=True
-        ).first() or 0) + 1
+            "revision_number", flat=True).first() or 0) + 1
         revision = AcademicGradeRevision(
-            organization=grade.organization, final_grade=grade,
-            revision_number=revision_number, previous_score=grade.final_score,
-            new_score=score, reason=reason.strip(), changed_by=changed_by,
-        )
+            organization=grade.organization, final_grade=grade, revision_number=revision_number,
+            previous_score=grade.final_score, new_score=score, reason=reason.strip(), changed_by=changed_by)
         revision.full_clean()
         revision.save()
         grade.final_score = score
-        grade.outcome = (
-            AcademicFinalGrade.Outcome.PENDING_POLICY if policy.passing_score is None
+        grade.outcome = (AcademicFinalGrade.Outcome.PENDING_POLICY if policy.passing_score is None
             else AcademicFinalGrade.Outcome.PASSED if score >= policy.passing_score
-            else AcademicFinalGrade.Outcome.FAILED
-        )
-        grade.published_by = changed_by
-        grade.published_at = timezone.now()
+            else AcademicFinalGrade.Outcome.FAILED)
+        grade.published_by, grade.published_at = changed_by, timezone.now()
         grade.full_clean()
         grade.save()
-        if grade.outcome == AcademicFinalGrade.Outcome.PASSED:
-            completion = AcademicCourseCompletion.objects.filter(
-                organization=grade.organization, membership=grade.membership,
-                course=grade.offering.course,
-                evidence_reference=f"gradebook:final-grade:{grade.pk}",
-                deleted_at__isnull=True,
-            ).first()
-            completion = completion or AcademicCourseCompletion(
-                organization=grade.organization, membership=grade.membership,
-                course=grade.offering.course,
-                evidence_reference=f"gradebook:final-grade:{grade.pk}",
-            )
-            completion.status = AcademicCourseCompletion.Status.VERIFIED
-            completion.completed_at = completion.completed_at or grade.published_at
-            completion.verified_at = grade.published_at
-            completion.verified_by = changed_by
-            completion.full_clean()
-            completion.save()
-        else:
-            completion = AcademicCourseCompletion.objects.filter(
-                organization=grade.organization, membership=grade.membership,
-                course=grade.offering.course,
-                evidence_reference=f"gradebook:final-grade:{grade.pk}",
-                status=AcademicCourseCompletion.Status.VERIFIED,
-                deleted_at__isnull=True,
-            ).first()
-            if completion:
-                completion.status = AcademicCourseCompletion.Status.REJECTED
-                completion.verified_at = None
-                completion.verified_by = None
-                completion.full_clean()
-                completion.save()
+        AcademicGradebookService._reconcile_completion(grade=grade, actor=changed_by)
         return grade

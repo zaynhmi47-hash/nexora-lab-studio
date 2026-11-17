@@ -2,6 +2,7 @@ from django.urls import path
 
 from apps.academic.api import AcademicOverviewView, AcademicResourceDetailView, AcademicResourceListCreateView
 from apps.academic.enrollment_api import AcademicEnrollmentDetailView, AcademicEnrollmentListCreateView
+from apps.academic.grading_scale_api import AcademicGradingScaleView
 from apps.academic.gradebook_api import (
     AcademicAssessmentComponentListCreateView,
     AcademicFinalGradeListPublishView,
@@ -28,6 +29,7 @@ urlpatterns = [
     path("offerings/<uuid:offering_id>/", AcademicCourseOfferingDetailView.as_view(), name="academic-offering-detail"),
     path("offerings/<uuid:offering_id>/schedules/", AcademicOfferingScheduleListCreateView.as_view(), name="academic-offering-schedules"),
     path("schedules/<uuid:slot_id>/", AcademicOfferingScheduleDetailView.as_view(), name="academic-offering-schedule-detail"),
+    path("grading-scales/", AcademicGradingScaleView.as_view(), name="academic-grading-scales"),
     path("offerings/<uuid:offering_id>/grading-policy/", AcademicGradingPolicyView.as_view(), name="academic-grading-policy"),
     path("offerings/<uuid:offering_id>/assessment-components/", AcademicAssessmentComponentListCreateView.as_view(), name="academic-assessment-components"),
     path("offerings/<uuid:offering_id>/grade-entries/", AcademicGradeEntryListCreateView.as_view(), name="academic-grade-entries"),

@@ -30,26 +30,14 @@ class AcademicGradingPolicy(AuditableBaseModel):
     class Meta:
         db_table = "academic_grading_policies"
         constraints = [
-            models.UniqueConstraint(
-                fields=("organization", "offering", "version"),
-                condition=Q(deleted_at__isnull=True),
-                name="acad_grade_policy_version_unique",
-            ),
-            models.UniqueConstraint(
-                fields=("organization", "offering"),
-                condition=Q(deleted_at__isnull=True, is_active=True),
-                name="acad_grade_policy_active_unique",
-            ),
-            models.CheckConstraint(
-                condition=Q(max_score__gt=0),
-                name="acad_grade_policy_max_positive",
-            ),
-            models.CheckConstraint(
-                condition=Q(passing_score__isnull=True) | (
-                    Q(passing_score__gte=0) & Q(passing_score__lte=models.F("max_score"))
-                ),
-                name="acad_grade_policy_pass_range",
-            ),
+            models.UniqueConstraint(fields=("organization", "offering", "version"),
+                condition=Q(deleted_at__isnull=True), name="acad_grade_policy_version_unique"),
+            models.UniqueConstraint(fields=("organization", "offering"),
+                condition=Q(deleted_at__isnull=True, is_active=True), name="acad_grade_policy_active_unique"),
+            models.CheckConstraint(condition=Q(max_score__gt=0), name="acad_grade_policy_max_positive"),
+            models.CheckConstraint(condition=Q(passing_score__isnull=True) | (
+                Q(passing_score__gte=0) & Q(passing_score__lte=models.F("max_score"))
+            ), name="acad_grade_policy_pass_range"),
         ]
 
     def clean(self):
@@ -68,22 +56,14 @@ class AcademicGradingPolicy(AuditableBaseModel):
 
 
 class AcademicAssessmentComponent(AuditableBaseModel):
-    organization = models.ForeignKey(
-        "organizations.Organization",
-        on_delete=models.CASCADE,
-        related_name="academic_assessment_components",
-    )
-    offering = models.ForeignKey(
-        "academic.AcademicCourseOffering",
-        on_delete=models.PROTECT,
-        related_name="assessment_components",
-    )
+    organization = models.ForeignKey("organizations.Organization", on_delete=models.CASCADE,
+        related_name="academic_assessment_components")
+    offering = models.ForeignKey("academic.AcademicCourseOffering", on_delete=models.PROTECT,
+        related_name="assessment_components")
     name = models.CharField(max_length=120)
     description = models.TextField(blank=True)
-    weight_percent = models.DecimalField(
-        max_digits=5, decimal_places=2,
-        validators=[MinValueValidator(0.01), MaxValueValidator(100)],
-    )
+    weight_percent = models.DecimalField(max_digits=5, decimal_places=2,
+        validators=[MinValueValidator(0.01), MaxValueValidator(100)])
     max_score = models.DecimalField(max_digits=7, decimal_places=2, default=100)
     is_required = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True, db_index=True)
@@ -93,23 +73,13 @@ class AcademicAssessmentComponent(AuditableBaseModel):
         db_table = "academic_assessment_components"
         ordering = ("position", "created_at")
         constraints = [
-            models.UniqueConstraint(
-                fields=("organization", "offering", "name"),
-                condition=Q(deleted_at__isnull=True),
-                name="acad_assessment_name_unique",
-            ),
-            models.CheckConstraint(
-                condition=Q(weight_percent__gt=0, weight_percent__lte=100),
-                name="acad_assessment_weight_range",
-            ),
-            models.CheckConstraint(
-                condition=Q(max_score__gt=0),
-                name="acad_assessment_max_score_positive",
-            ),
+            models.UniqueConstraint(fields=("organization", "offering", "name"),
+                condition=Q(deleted_at__isnull=True), name="acad_assessment_name_unique"),
+            models.CheckConstraint(condition=Q(weight_percent__gt=0, weight_percent__lte=100),
+                name="acad_assessment_weight_range"),
+            models.CheckConstraint(condition=Q(max_score__gt=0), name="acad_assessment_max_score_positive"),
         ]
-        indexes = [
-            models.Index(fields=("organization", "offering", "is_active"), name="acad_assessment_offer_idx"),
-        ]
+        indexes = [models.Index(fields=("organization", "offering", "is_active"), name="acad_assessment_offer_idx")]
 
     def clean(self):
         super().clean()
@@ -127,44 +97,26 @@ class AcademicGradeEntry(AuditableBaseModel):
         DRAFT = "draft", "Draft"
         PUBLISHED = "published", "Published"
 
-    organization = models.ForeignKey(
-        "organizations.Organization",
-        on_delete=models.CASCADE,
-        related_name="academic_grade_entries",
-    )
-    offering = models.ForeignKey(
-        "academic.AcademicCourseOffering",
-        on_delete=models.PROTECT,
-        related_name="grade_entries",
-    )
-    component = models.ForeignKey(
-        AcademicAssessmentComponent,
-        on_delete=models.PROTECT,
-        related_name="grade_entries",
-    )
-    membership = models.ForeignKey(
-        "organizations.Membership",
-        on_delete=models.PROTECT,
-        related_name="academic_grade_entries",
-    )
+    organization = models.ForeignKey("organizations.Organization", on_delete=models.CASCADE,
+        related_name="academic_grade_entries")
+    offering = models.ForeignKey("academic.AcademicCourseOffering", on_delete=models.PROTECT,
+        related_name="grade_entries")
+    component = models.ForeignKey(AcademicAssessmentComponent, on_delete=models.PROTECT,
+        related_name="grade_entries")
+    membership = models.ForeignKey("organizations.Membership", on_delete=models.PROTECT,
+        related_name="academic_grade_entries")
     score = models.DecimalField(max_digits=7, decimal_places=2)
     feedback = models.TextField(blank=True)
     status = models.CharField(max_length=12, choices=Status.choices, default=Status.DRAFT, db_index=True)
-    graded_by = models.ForeignKey(
-        "identity.NexoraUser",
-        on_delete=models.PROTECT,
-        related_name="academic_grade_entries",
-    )
+    graded_by = models.ForeignKey("identity.NexoraUser", on_delete=models.PROTECT,
+        related_name="academic_grade_entries")
     published_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "academic_grade_entries"
         constraints = [
-            models.UniqueConstraint(
-                fields=("organization", "component", "membership"),
-                condition=Q(deleted_at__isnull=True),
-                name="acad_grade_entry_component_member_unique",
-            ),
+            models.UniqueConstraint(fields=("organization", "component", "membership"),
+                condition=Q(deleted_at__isnull=True), name="acad_grade_entry_component_member_unique"),
             models.CheckConstraint(condition=Q(score__gte=0), name="acad_grade_entry_score_nonnegative"),
         ]
         indexes = [
@@ -202,50 +154,31 @@ class AcademicFinalGrade(AuditableBaseModel):
         PASSED = "passed", "Passed"
         FAILED = "failed", "Failed"
 
-    organization = models.ForeignKey(
-        "organizations.Organization",
-        on_delete=models.CASCADE,
-        related_name="academic_final_grades",
-    )
-    offering = models.ForeignKey(
-        "academic.AcademicCourseOffering",
-        on_delete=models.PROTECT,
-        related_name="final_grades",
-    )
-    membership = models.ForeignKey(
-        "organizations.Membership",
-        on_delete=models.PROTECT,
-        related_name="academic_final_grades",
-    )
+    organization = models.ForeignKey("organizations.Organization", on_delete=models.CASCADE,
+        related_name="academic_final_grades")
+    offering = models.ForeignKey("academic.AcademicCourseOffering", on_delete=models.PROTECT,
+        related_name="final_grades")
+    # Nullable only for historical rows created before policy provenance was introduced.
+    grading_policy = models.ForeignKey(AcademicGradingPolicy, null=True, blank=True,
+        on_delete=models.PROTECT, related_name="final_grades")
+    membership = models.ForeignKey("organizations.Membership", on_delete=models.PROTECT,
+        related_name="academic_final_grades")
     final_score = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)
     status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING, db_index=True)
-    outcome = models.CharField(
-        max_length=20, choices=Outcome.choices, default=Outcome.PENDING_POLICY,
-    )
+    outcome = models.CharField(max_length=20, choices=Outcome.choices, default=Outcome.PENDING_POLICY)
     published_at = models.DateTimeField(null=True, blank=True)
-    published_by = models.ForeignKey(
-        "identity.NexoraUser",
-        null=True, blank=True,
-        on_delete=models.PROTECT,
-        related_name="published_academic_final_grades",
-    )
+    published_by = models.ForeignKey("identity.NexoraUser", null=True, blank=True,
+        on_delete=models.PROTECT, related_name="published_academic_final_grades")
 
     class Meta:
         db_table = "academic_final_grades"
         constraints = [
-            models.UniqueConstraint(
-                fields=("organization", "offering", "membership"),
-                condition=Q(deleted_at__isnull=True),
-                name="acad_final_grade_offering_member_unique",
-            ),
-            models.CheckConstraint(
-                condition=Q(final_score__isnull=True) | Q(final_score__gte=0),
-                name="acad_final_grade_score_nonnegative",
-            ),
+            models.UniqueConstraint(fields=("organization", "offering", "membership"),
+                condition=Q(deleted_at__isnull=True), name="acad_final_grade_offering_member_unique"),
+            models.CheckConstraint(condition=Q(final_score__isnull=True) | Q(final_score__gte=0),
+                name="acad_final_grade_score_nonnegative"),
         ]
-        indexes = [
-            models.Index(fields=("organization", "offering", "status"), name="acad_final_offer_status_idx"),
-        ]
+        indexes = [models.Index(fields=("organization", "offering", "status"), name="acad_final_offer_status_idx")]
 
     def clean(self):
         super().clean()
@@ -254,8 +187,17 @@ class AcademicFinalGrade(AuditableBaseModel):
             errors["offering"] = "Offering must belong to this organization."
         if self.membership_id and self.membership.organization_id != self.organization_id:
             errors["membership"] = "Membership must belong to this organization."
+        if self.grading_policy_id:
+            if self.grading_policy.organization_id != self.organization_id:
+                errors["grading_policy"] = "Grading policy must belong to this organization."
+            if self.grading_policy.offering_id != self.offering_id:
+                errors["grading_policy"] = "Grading policy must belong to this offering."
+            if self.final_score is not None and self.final_score > self.grading_policy.max_score:
+                errors["final_score"] = "Final score exceeds the maximum of its recorded grading policy."
         if self.status == self.Status.PUBLISHED and (not self.published_at or not self.published_by_id):
             errors["status"] = "Published final grades require publisher and timestamp."
+        if self.status == self.Status.PUBLISHED and not self.grading_policy_id:
+            errors["grading_policy"] = "Published final grades require their exact grading policy version."
         if errors:
             raise ValidationError(errors)
 
@@ -263,25 +205,15 @@ class AcademicFinalGrade(AuditableBaseModel):
 class AcademicGradeRevision(AuditableBaseModel):
     """Immutable-by-convention snapshot retained whenever a published grade changes."""
 
-    organization = models.ForeignKey(
-        "organizations.Organization",
-        on_delete=models.CASCADE,
-        related_name="academic_grade_revisions",
-    )
-    final_grade = models.ForeignKey(
-        AcademicFinalGrade,
-        on_delete=models.PROTECT,
-        related_name="revisions",
-    )
+    organization = models.ForeignKey("organizations.Organization", on_delete=models.CASCADE,
+        related_name="academic_grade_revisions")
+    final_grade = models.ForeignKey(AcademicFinalGrade, on_delete=models.PROTECT, related_name="revisions")
     revision_number = models.PositiveSmallIntegerField()
     previous_score = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)
     new_score = models.DecimalField(max_digits=7, decimal_places=2)
     reason = models.TextField()
-    changed_by = models.ForeignKey(
-        "identity.NexoraUser",
-        on_delete=models.PROTECT,
-        related_name="academic_grade_revisions",
-    )
+    changed_by = models.ForeignKey("identity.NexoraUser", on_delete=models.PROTECT,
+        related_name="academic_grade_revisions")
 
     def save(self, *args, **kwargs):
         if self.pk and type(self).objects.filter(pk=self.pk).exists():
@@ -296,13 +228,8 @@ class AcademicGradeRevision(AuditableBaseModel):
 
     class Meta:
         db_table = "academic_grade_revisions"
-        constraints = [
-            models.UniqueConstraint(
-                fields=("final_grade", "revision_number"),
-                condition=Q(deleted_at__isnull=True),
-                name="acad_grade_revision_number_unique",
-            ),
-        ]
+        constraints = [models.UniqueConstraint(fields=("final_grade", "revision_number"),
+            condition=Q(deleted_at__isnull=True), name="acad_grade_revision_number_unique")]
 
     def clean(self):
         super().clean()
