@@ -7,6 +7,7 @@ from apps.academic.gradebook_api import (
     AcademicFinalGradeListPublishView,
     AcademicGradeEntryListCreateView,
     AcademicGradeEntryPublishView,
+    AcademicFinalGradeRevisionView,
     AcademicGradingPolicyView,
 )
 from apps.academic.offering_api import AcademicCourseOfferingDetailView, AcademicCourseOfferingListCreateView
@@ -32,6 +33,7 @@ urlpatterns = [
     path("offerings/<uuid:offering_id>/grade-entries/", AcademicGradeEntryListCreateView.as_view(), name="academic-grade-entries"),
     path("grade-entries/<uuid:entry_id>/publish/", AcademicGradeEntryPublishView.as_view(), name="academic-grade-entry-publish"),
     path("offerings/<uuid:offering_id>/final-grades/", AcademicFinalGradeListPublishView.as_view(), name="academic-final-grades"),
+    path("final-grades/<uuid:grade_id>/revise/", AcademicFinalGradeRevisionView.as_view(), name="academic-final-grade-revise"),
     path("study-plans/", AcademicStudyPlanListCreateView.as_view(), name="academic-study-plan-list"),
     path("study-plans/<uuid:plan_id>/", AcademicStudyPlanDetailView.as_view(), name="academic-study-plan-detail"),
     path("study-plans/<uuid:plan_id>/items/", AcademicStudyPlanItemCreateView.as_view(), name="academic-study-plan-items"),
