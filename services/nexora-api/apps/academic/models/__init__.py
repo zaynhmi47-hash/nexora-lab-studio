@@ -17,6 +17,7 @@ from apps.academic.models.program import AcademicProgram
 from apps.academic.models.schedule import AcademicOfferingSchedule
 from apps.academic.models.study_plan import AcademicStudyPlan, AcademicStudyPlanItem
 from apps.academic.models.term import AcademicTerm
+from apps.academic.models.transcript import AcademicTranscript
 
 __all__ = [
     "AcademicClassroom", "AcademicCourse", "AcademicCourseCompletion",
@@ -25,5 +26,5 @@ __all__ = [
     "AcademicStudyPlan", "AcademicStudyPlanItem", "AcademicTerm",
     "AcademicGradingPolicy", "AcademicAssessmentComponent", "AcademicGradeEntry",
     "AcademicFinalGrade", "AcademicGradeRevision", "AcademicGradingScale", "AcademicGradingScaleBand",
-    "AcademicGpaPolicy", "AcademicGpaCalculation",
+    "AcademicGpaPolicy", "AcademicGpaCalculation", "AcademicTranscript",
 ]
