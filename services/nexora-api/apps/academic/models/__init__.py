@@ -14,6 +14,7 @@ from apps.academic.models.gpa import AcademicGpaCalculation, AcademicGpaPolicy
 from apps.academic.models.offering import AcademicCourseOffering
 from apps.academic.models.prerequisite import AcademicCourseCompletion, AcademicCoursePrerequisite
 from apps.academic.models.program import AcademicProgram
+from apps.academic.models.progress import AcademicProgramEnrollment, AcademicProgressSnapshot
 from apps.academic.models.schedule import AcademicOfferingSchedule
 from apps.academic.models.study_plan import AcademicStudyPlan, AcademicStudyPlanItem
 from apps.academic.models.term import AcademicTerm
@@ -23,6 +24,7 @@ __all__ = [
     "AcademicClassroom", "AcademicCourse", "AcademicCourseCompletion",
     "AcademicCourseOffering", "AcademicCoursePrerequisite", "AcademicOfferingSchedule",
     "AcademicCurriculumCourse", "AcademicEnrollment", "AcademicProgram",
+    "AcademicProgramEnrollment", "AcademicProgressSnapshot",
     "AcademicStudyPlan", "AcademicStudyPlanItem", "AcademicTerm",
     "AcademicGradingPolicy", "AcademicAssessmentComponent", "AcademicGradeEntry",
     "AcademicFinalGrade", "AcademicGradeRevision", "AcademicGradingScale", "AcademicGradingScaleBand",
