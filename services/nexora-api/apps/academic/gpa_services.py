@@ -85,7 +85,11 @@ class AcademicGpaService:
     def _select_attempts(attempts, *, policy):
         by_course = {}
         for attempt in attempts:
-            by_course.setdefault(attempt["grade"].offering.course_id, []).append(attempt)
+            course_key = (
+                attempt["grade"].offering.classroom.program_id,
+                attempt["grade"].offering.course_id,
+            )
+            by_course.setdefault(course_key, []).append(attempt)
         selected = []
         for course_attempts in by_course.values():
             if policy.retake_strategy == AcademicGpaPolicy.RetakeStrategy.FIRST:
