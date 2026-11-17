@@ -183,3 +183,43 @@ def test_revision_reconciles_only_its_own_prerequisite_evidence(gradebook_contex
     assert evidence.status == AcademicCourseCompletion.Status.REJECTED
     assert evidence.verified_at is None
     assert evidence.verified_by is None
+
+
+@pytest.mark.django_db
+def test_published_grade_and_revision_keep_original_grading_policy_version(gradebook_context):
+    ctx = gradebook_context
+    organization, offering = ctx["organization"], ctx["offering"]
+    original_policy = AcademicGradebookService.configure_policy(
+        organization=organization, offering=offering,
+        max_score=Decimal("100"), passing_score=Decimal("70"),
+    )
+    component = AcademicGradebookService.create_component(
+        organization=organization, offering=offering,
+        name="Final Exam", weight_percent=Decimal("100"),
+    )
+    entry = AcademicGradebookService.record_grade(
+        organization=organization, offering=offering, component=component,
+        membership=ctx["student_membership"], score=Decimal("80"),
+        graded_by=ctx["instructor"],
+    )
+    AcademicGradebookService.publish_component_grade(entry=entry, published_by=ctx["instructor"])
+    grade = AcademicGradebookService.publish_final_grade(
+        organization=organization, offering=offering,
+        membership=ctx["student_membership"], published_by=ctx["instructor"],
+    )
+    assert grade.grading_policy_id == original_policy.pk
+
+    replacement_policy = AcademicGradebookService.configure_policy(
+        organization=organization, offering=offering,
+        max_score=Decimal("200"), passing_score=Decimal("150"),
+    )
+    assert replacement_policy.pk != original_policy.pk
+
+    revised = AcademicGradebookService.revise_final_grade(
+        grade=grade, new_score=Decimal("75"), changed_by=ctx["instructor"],
+        reason="Moderation correction under the original grading rules",
+    )
+
+    assert revised.grading_policy_id == original_policy.pk
+    assert revised.outcome == AcademicFinalGrade.Outcome.PASSED
+    assert revised.final_score == Decimal("75")
