@@ -26,7 +26,6 @@ def add_academic_grade_permission(apps, schema_editor):
 
 def remove_academic_grade_permission(apps, schema_editor):
     Permission = apps.get_model("access", "Permission")
-    RolePermission = apps.get_model("access", "RolePermission")
     Permission.objects.filter(code="academic.grade").delete()
 
 
