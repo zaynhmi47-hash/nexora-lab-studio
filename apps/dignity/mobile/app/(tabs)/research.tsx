@@ -1,0 +1,4 @@
+import { DomainLanding } from '@/components/dignity/DomainLanding';
+export default function ResearchScreen() {
+  return <DomainLanding eyebrow="DIGNITY RESEARCH" title="Explore questions. Create knowledge." description="A structured space for inquiry, research collaboration and responsible knowledge creation." icon="flask-outline" features={['Research ideas, questions and proposals','Supervisor and collaborator relationships','Milestones, reviews and research notes','Documents, references and datasets','Publication and research output records']} boundary="Research documents and participant-related information require appropriate access controls, consent and provenance. File storage will use Nexora Core capabilities." />;
+}
