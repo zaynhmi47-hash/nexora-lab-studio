@@ -45,8 +45,8 @@ class GpaCalculationOutputSerializer(serializers.ModelSerializer):
         fields = (
             "id", "calculation_version", "term", "policy",
             "term_gpa", "cumulative_gpa",
-            "term_attempted_credits", "term_earned_credits",
-            "cumulative_attempted_credits", "cumulative_earned_credits",
+            "term_attempted_credits", "term_gpa_credits", "term_earned_credits",
+            "cumulative_attempted_credits", "cumulative_gpa_credits", "cumulative_earned_credits",
             "details", "calculated_at",
         )
 
