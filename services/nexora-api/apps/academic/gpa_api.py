@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from apps.access.api.permissions import NexoraPermission
 from apps.academic.gpa_services import AcademicGpaService
 from apps.academic.models import (
+    AcademicEnrollment,
     AcademicGpaCalculation,
     AcademicGpaPolicy,
     AcademicGradingScale,
@@ -49,6 +50,18 @@ class GpaCalculationOutputSerializer(serializers.ModelSerializer):
             "cumulative_attempted_credits", "cumulative_gpa_credits", "cumulative_earned_credits",
             "details", "calculated_at",
         )
+
+
+def _can_access_student_gpa(*, request, organization, membership, term):
+    if request.user.is_staff or membership.user_id == request.user.id:
+        return True
+    return AcademicEnrollment.objects.active().filter(
+        organization=organization,
+        term=term,
+        membership__user=request.user,
+        role=AcademicEnrollment.Role.INSTRUCTOR,
+        status=AcademicEnrollment.Status.ACTIVE,
+    ).exists()
 
 
 def _organization(organization_id):
@@ -123,14 +136,25 @@ class AcademicGpaCalculationView(APIView):
         term_id = request.query_params.get("term_id")
         if not membership_id or not term_id:
             raise ValidationError({"detail": "membership_id and term_id are required."})
+        membership = Membership.objects.active().filter(
+            id=membership_id, organization=organization,
+            status=Membership.Status.ACTIVE,
+        ).first()
+        term = AcademicTerm.objects.active().filter(
+            id=term_id, organization=organization,
+        ).first()
+        if membership is None or term is None:
+            raise NotFound("Student membership or academic term not found.")
+        if not _can_access_student_gpa(
+            request=request, organization=organization, membership=membership, term=term,
+        ):
+            raise NotFound("GPA calculation not found.")
         queryset = AcademicGpaCalculation.objects.filter(
             organization=organization,
-            membership_id=membership_id,
-            term_id=term_id,
+            membership=membership,
+            term=term,
             deleted_at__isnull=True,
         ).select_related("policy", "term")
-        if not request.user.is_staff:
-            queryset = queryset.filter(membership__user=request.user)
         calculation = queryset.order_by("-calculation_version").first()
         if calculation is None:
             raise NotFound("GPA calculation not found.")
@@ -147,14 +171,16 @@ class AcademicGpaCalculationView(APIView):
         ).first()
         if membership is None:
             raise NotFound("Active student membership not found.")
-        if not request.user.is_staff and membership.user_id != request.user.id:
-            raise NotFound("Student membership not found.")
         term = AcademicTerm.objects.active().filter(
             id=serializer.validated_data["term_id"],
             organization=organization,
         ).first()
         if term is None:
             raise NotFound("Academic term not found.")
+        if not _can_access_student_gpa(
+            request=request, organization=organization, membership=membership, term=term,
+        ):
+            raise NotFound("Student membership not found.")
         try:
             calculation = AcademicGpaService.calculate(
                 organization=organization,
