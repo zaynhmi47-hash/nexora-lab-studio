@@ -15,7 +15,7 @@ export default function HomeScreen() {
   return <Screen>
     <View style={styles.topbar}>
       <View><Text style={styles.eyebrow}>NEXORA · HUMAN DEVELOPMENT</Text>
-        <Text style={styles.greeting}>{'Good morning' + (firstName ? ', ' + firstName : '') + '.'}</Text>
+        <Text style={styles.greeting}>{'Welcome back' + (firstName ? ', ' + firstName : '') + '.'}</Text>
         <Text style={styles.subGreeting}>Your growth, at your own pace.</Text>
       </View>
       <Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={() => router.push('/(tabs)/profile')} style={styles.avatar}>
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   section: { marginBottom: spacing.section },
   pillarGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   domainGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  domainCard: { width: '48%', flexGrow: 1, minHeight: 128, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: radius.medium, padding: spacing.md },
+  domainCard: { flexBasis: '47%', flexGrow: 1, minHeight: 128, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: radius.medium, padding: spacing.md },
   domainIcon: { width: 35, height: 35, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm },
   domainTitle: { color: colors.ink, fontSize: 14, fontWeight: '900' },
   domainSubtitle: { color: colors.muted, fontSize: 10, lineHeight: 15, marginTop: 4 },
