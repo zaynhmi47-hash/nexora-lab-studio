@@ -138,6 +138,13 @@ class AcademicGradebookService:
     def calculate_final_score(*, organization, offering, membership):
         if membership.organization_id != organization.pk or membership.status != "active":
             raise ValidationError({"membership": "An active membership in this organization is required."})
+        enrolled = AcademicEnrollment.objects.filter(
+            organization=organization, classroom=offering.classroom,
+            membership=membership, role=AcademicEnrollment.Role.STUDENT,
+            status=AcademicEnrollment.Status.ACTIVE, deleted_at__isnull=True,
+        ).exists()
+        if not enrolled:
+            raise ValidationError({"membership": "Student must be actively enrolled in this offering's classroom."})
         policy = AcademicGradingPolicy.objects.filter(
             organization=organization, offering=offering, is_active=True, deleted_at__isnull=True,
         ).first()
