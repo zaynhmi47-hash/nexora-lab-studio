@@ -9,6 +9,7 @@ Every application has an `AGENT.md` that defines its concept, scope, architectur
 - `nexora-office` — Nexora Office
 - `nexora-business-suite` — Nexora Business Suite
 - `nexora-finance` — Nexora Finance
+- `nexora-health` — Nexora Health (officially approved; foundation scaffold)
 - `dignity` — Dignity
 - `nexverse` — Nexverse
 - `nexora-ai` — Nexora AI
