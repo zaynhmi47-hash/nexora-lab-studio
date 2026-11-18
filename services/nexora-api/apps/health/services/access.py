@@ -8,6 +8,8 @@ def can_access_profile(*, actor, profile: HealthProfile, scope: str) -> bool:
     """Fail-closed authorization for health-profile resources."""
     if not getattr(actor, "is_authenticated", False):
         return False
+    if getattr(actor, "status", None) != "active":
+        return False
     if profile.deleted_at is not None or profile.status != HealthProfile.Status.ACTIVE:
         return False
     if profile.owner_id == actor.pk:
