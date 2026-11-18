@@ -18,7 +18,7 @@ Nexora Health is the Nexora parent application for personal and family health ma
 - External providers and devices must be accessed through explicit adapters/contracts, not imported into domain models.
 
 ## Initial implementation scope
-The foundation stage creates this contract and the Django app registration only. Do not create clinical models, expose endpoints, or store health data until ownership, consent, object-level authorization, audit and retention contracts are designed and tested.
+The foundation stage registers the Django app. The Identity & Consent stage adds only the health-profile ownership, explicit membership, purpose-specific consent schema and a fail-closed profile-access service. It does not expose API endpoints or store clinical records. Do not add clinical models or public APIs until grant/revoke application services, immutable access auditing, object-level authorization tests, attachment privacy and retention/export contracts are complete.
 
 Planned domains, introduced incrementally:
 1. Health profiles and access grants.
