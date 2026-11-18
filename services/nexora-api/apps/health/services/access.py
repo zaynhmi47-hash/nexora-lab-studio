@@ -23,7 +23,7 @@ def can_access_profile(*, actor, profile: HealthProfile, scope: str) -> bool:
     if membership is None or scope not in membership.scopes:
         return False
 
-    return HealthConsent.objects.filter(
+    consents = HealthConsent.objects.filter(
         profile=profile,
         subject_id=profile.owner_id,
         grantee=actor,
@@ -32,6 +32,7 @@ def can_access_profile(*, actor, profile: HealthProfile, scope: str) -> bool:
         revoked_at__isnull=True,
         deleted_at__isnull=True,
         granted_at__lte=now,
-    ).filter(
-        Q(expires_at__isnull=True) | Q(expires_at__gt=now)
-    ).filter(scopes__contains=[scope]).exists()
+    ).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=now))
+
+    # Evaluate JSON scopes in Python for SQLite compatibility in local tests.
+    return any(scope in consent.scopes for consent in consents.only("scopes"))
