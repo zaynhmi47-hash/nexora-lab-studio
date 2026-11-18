@@ -19,7 +19,7 @@ class HealthProfile(AuditableBaseModel):
     class Meta:
         db_table = "health_profiles"
         ordering = ("created_at",)
-        indexes = [models.Index(fields=("owner", "status"))]
+        indexes = [models.Index(fields=("owner", "status"), name="health_pro_owner__c8b7e0_idx")]
 
     def __str__(self):
         return self.display_name
@@ -47,7 +47,7 @@ class HealthProfileMember(AuditableBaseModel):
         constraints = [
             models.UniqueConstraint(fields=("profile", "user"), condition=Q(deleted_at__isnull=True), name="uq_health_profile_member"),
         ]
-        indexes = [models.Index(fields=("user", "revoked_at"))]
+        indexes = [models.Index(fields=("user", "revoked_at"), name="health_pro_user_i_28a3c1_idx")]
 
 
 class HealthConsent(AuditableBaseModel):
@@ -72,6 +72,6 @@ class HealthConsent(AuditableBaseModel):
     class Meta:
         db_table = "health_consents"
         indexes = [
-            models.Index(fields=("profile", "grantee", "status")),
-            models.Index(fields=("subject", "purpose", "status")),
+            models.Index(fields=("profile", "grantee", "status"), name="health_con_profile_5c54f2_idx"),
+            models.Index(fields=("subject", "purpose", "status"), name="health_con_subject_8e2a1d_idx"),
         ]
