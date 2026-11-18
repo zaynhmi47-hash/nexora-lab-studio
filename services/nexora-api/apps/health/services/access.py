@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.health.models import HealthConsent, HealthProfile, HealthProfileMember
@@ -18,31 +19,19 @@ def can_access_profile(*, actor, profile: HealthProfile, scope: str) -> bool:
         user=actor,
         revoked_at__isnull=True,
         deleted_at__isnull=True,
-    ).filter(
-        # Null expiry means no scheduled expiry.
-    ).first()
-    if membership is None or (membership.expires_at and membership.expires_at <= now):
-        return False
-    if scope not in membership.scopes:
+    ).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=now)).first()
+    if membership is None or scope not in membership.scopes:
         return False
 
     return HealthConsent.objects.filter(
         profile=profile,
-        subject=profile.owner,
+        subject_id=profile.owner_id,
         grantee=actor,
         purpose="delegated_health_access",
         status=HealthConsent.Status.GRANTED,
         revoked_at__isnull=True,
         deleted_at__isnull=True,
-    ).filter(
         granted_at__lte=now,
     ).filter(
-        models_expiry_filter(now)
-    ).filter(
-        scopes__contains=[scope]
-    ).exists()
-
-
-def models_expiry_filter(now):
-    from django.db.models import Q
-    return Q(expires_at__isnull=True) | Q(expires_at__gt=now)
+        Q(expires_at__isnull=True) | Q(expires_at__gt=now)
+    ).filter(scopes__contains=[scope]).exists()
