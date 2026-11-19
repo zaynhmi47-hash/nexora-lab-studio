@@ -53,3 +53,21 @@ def record_profile_read(*, actor, profile):
         correlation_id=context.correlation_id or "",
         details={"resource": "health_profile", "resource_id": str(profile.pk)},
     )
+
+
+@transaction.atomic
+def record_profile_created(*, actor, profile):
+    """Audit the creation of a new health-data boundary."""
+    context = get_request_context()
+    HealthAccessAuditEvent.objects.create(
+        profile=profile,
+        actor=actor,
+        subject=profile.owner,
+        grantee=actor,
+        action=HealthAccessAuditEvent.Action.PROFILE_CREATED,
+        purpose="health_profile_management",
+        scopes=["profile.write"],
+        policy_version="health-access-policy-v1",
+        correlation_id=context.correlation_id or "",
+        details={"resource": "health_profile", "resource_id": str(profile.pk)},
+    )
