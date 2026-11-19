@@ -41,7 +41,7 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
   const { status: authStatus, identity } = useAuth();
   const identityId = identity?.id ?? null;
   const api = useNexoraApi();
-  const requestVersion = useRef(0);
+  const requestVersion = useRef(0);\n  const lastIdentityId = useRef<string | null>(null);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string | null>(null);
   const [status, setStatus] = useState<OrganizationLoadStatus>('idle');
@@ -49,6 +49,8 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
 
   const refresh = useCallback(async () => {
     const requestId = ++requestVersion.current;
+    const identityChanged = lastIdentityId.current !== identityId;
+    lastIdentityId.current = authStatus === 'signed_in' ? identityId : null;
     if (authStatus !== 'signed_in') {
       setOrganizations([]);
       setSelectedOrganizationId(null);
@@ -57,9 +59,7 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
       return;
     }
 
-    setOrganizations([]);
-    setSelectedOrganizationId(null);
-    setStatus('loading');
+    if (identityChanged) {\n      setOrganizations([]);\n      setSelectedOrganizationId(null);\n    }\n    setStatus('loading');
     setError(null);
     try {
       const response = await api.request<Organization[]>('/api/v1/organizations/');
@@ -67,7 +67,7 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
 
       const nextOrganizations = Array.isArray(response.data) ? response.data : [];
       setOrganizations(nextOrganizations);
-      setSelectedOrganizationId(nextOrganizations[0]?.id ?? null);
+      setSelectedOrganizationId((current) =>\n        current && nextOrganizations.some((item) => item.id === current)\n          ? current\n          : nextOrganizations[0]?.id ?? null,\n      );
       setStatus('ready');
     } catch (cause) {
       if (requestId !== requestVersion.current) return;
