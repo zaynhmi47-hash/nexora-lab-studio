@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '@/components/dignity/Screen';
 import { SurfaceCard } from '@/components/dignity/SurfaceCard';
+import { OrganizationContextCard } from '@/components/dignity/OrganizationContextCard';
 import { useAuth } from '@/lib/auth';
 import { colors, radius, spacing } from '@/theme/tokens';
 export default function ProfileScreen() {
@@ -16,6 +17,7 @@ export default function ProfileScreen() {
       <Text style={styles.email}>{identity?.email ?? 'Account email unavailable'}</Text>
       <View style={styles.identityPill}><Ionicons name="shield-checkmark-outline" size={14} color={colors.primary} /><Text style={styles.identityText}>Nexora Identity · {status}</Text></View>
     </SurfaceCard>
+    <OrganizationContextCard />
     <Text style={styles.sectionTitle}>Your profile connects</Text>
     <ProfileRow icon="school-outline" title="Learning evidence" detail="Courses, practice and demonstrated skills" />
     <ProfileRow icon="leaf-outline" title="Personal growth" detail="Goals, habits and reflections — private by default" />
