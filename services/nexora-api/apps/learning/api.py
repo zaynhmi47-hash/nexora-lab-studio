@@ -43,7 +43,7 @@ class LearningCoursesView(APIView):
         completed = set(LearningService.completed_lesson_ids(request.user))
         courses = []
         for course in LearningService.courses():
-            lessons = list(course.lessons.filter(is_published=True))
+            lessons = list(course.lessons.filter(is_published=True, deleted_at__isnull=True))
             course_lessons = []
             for lesson in lessons:
                 payload = lesson_payload(lesson, completed)
