@@ -13,7 +13,7 @@ Dignity connects six bounded domains through one privacy-aware Dignity Profile:
 - Research — research projects, supervision and outputs.
 - AI — cross-domain assistance with explicit privacy and authority boundaries.
 
-The product supports the recurring cycle:
+The mobile shell loads the canonical Nexora identity from `GET /api/v1/identity/me/` and active organization memberships from `GET /api/v1/organizations/`. Organization selection is a UI context preference only; every organization-scoped API remains responsible for authorization.\n\nThe product supports the recurring cycle:
 
 Discover → Assess → Design → Learn → Practice → Reflect → Improve → Demonstrate → repeat.
 
@@ -42,7 +42,7 @@ Academic, Career, Research and AI Mentor are secondary domain destinations reach
 
 ## Implementation status
 
-This PR establishes the mobile parent shell, shared visual tokens/components, primary navigation, domain landing pages and first-pass screen experiences. The authenticated organization membership list is loaded from the Nexora organization API and can be selected as a navigation preference. This selection does not bypass server-side authorization or imply that every domain endpoint is organization-scoped. Grow goal/reflection interactions are local previews only. Persistent Grow storage, learning catalogs, Career/Research workflows, AI provider integration and domain-specific API connections are intentionally not represented as complete in this foundation PR.
+This PR establishes the mobile parent shell, shared visual tokens/components, primary navigation, domain landing pages and first-pass screen experiences. The authenticated organization membership list is loaded from the Nexora organization API and can be selected as a navigation preference. This selection does not bypass server-side authorization or imply that every domain endpoint is organization-scoped. Grow goal/reflection interactions are local previews only. The profile and organization providers handle loading/error states and ignore stale responses after identity changes. Persistent Grow storage, learning catalogs, Career/Research workflows, AI provider integration and domain-specific API connections are intentionally not represented as complete in this foundation PR.
 
 ## Next vertical slices
 
