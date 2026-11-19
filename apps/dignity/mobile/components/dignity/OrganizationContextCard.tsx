@@ -20,7 +20,7 @@ export function OrganizationContextCard() {
           organizations.length > 0 ? `${organizations.length} active organization membership${organizations.length === 1 ? '' : 's'}` :
           status === 'ready' ? 'Personal Dignity space' : 'Organization membership context is not available yet'}
       </Text>
-      {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+      {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}\n      <Text style={styles.hint}>Selection is a navigation preference. API permissions are checked independently for every request.</Text>
     </View>
     {organizations.length > 1 ? <Pressable accessibilityRole="button" accessibilityLabel="Select organization" onPress={cycleOrganization} style={styles.switch}>
       <Ionicons name="swap-horizontal" size={17} color={colors.primary} /><Text style={styles.switchText}>Change</Text>
@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
   eyebrow: { color: colors.muted, fontSize: 9, fontWeight: '900', letterSpacing: 1 },
   name: { color: colors.ink, fontSize: 13, fontWeight: '900', marginTop: 4 },
   detail: { color: colors.muted, fontSize: 10, lineHeight: 15, marginTop: 3 },
-  error: { color: colors.danger, fontSize: 10, marginTop: 4 },
+  error: { color: colors.danger, fontSize: 10, marginTop: 4 },\n  hint: { color: colors.muted, fontSize: 9, lineHeight: 13, marginTop: 5 },
   switch: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 8, paddingLeft: 4 },
   switchText: { color: colors.primary, fontSize: 10, fontWeight: '900' },
 });
