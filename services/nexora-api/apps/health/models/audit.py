@@ -3,12 +3,22 @@ from django.db import models
 from apps.core.models import TimestampedModel, UUIDModel
 
 
+class ImmutableAuditQuerySet(models.QuerySet):
+    def update(self, **kwargs):
+        raise ValueError("Health access audit events are immutable.")
+
+    def delete(self):
+        raise ValueError("Health access audit events cannot be deleted.")
+
+
 class HealthAccessAuditEvent(UUIDModel, TimestampedModel):
     """Append-only record of health-profile access delegation changes."""
 
     class Action(models.TextChoices):
         ACCESS_GRANTED = "access.granted", "Access granted"
         ACCESS_REVOKED = "access.revoked", "Access revoked"
+
+    objects = ImmutableAuditQuerySet.as_manager()
 
     profile = models.ForeignKey("health.HealthProfile", on_delete=models.PROTECT, related_name="access_audit_events")
     actor = models.ForeignKey("identity.NexoraUser", on_delete=models.PROTECT, related_name="health_access_audit_actions")
