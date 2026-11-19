@@ -97,6 +97,28 @@ def grant_profile_access(
         member.revoked_at = None
         member.save(update_fields=["granted_by", "role", "scopes", "expires_at", "revoked_at", "updated_at"])
 
+    previous_consents = list(HealthConsent.objects.select_for_update().filter(
+        profile=profile,
+        subject_id=profile.owner_id,
+        grantee=grantee,
+        purpose=DELEGATED_ACCESS_PURPOSE,
+        status=HealthConsent.Status.GRANTED,
+        revoked_at__isnull=True,
+        deleted_at__isnull=True,
+    ))
+    if previous_consents:
+        previous_scopes = sorted({scope for previous in previous_consents for scope in previous.scopes})
+        previous_policy_version = previous_consents[-1].policy_version
+        for previous in previous_consents:
+            previous.status = HealthConsent.Status.REVOKED
+            previous.revoked_at = now
+            previous.save(update_fields=["status", "revoked_at", "updated_at"])
+        _record_event(
+            actor=actor, profile=profile, grantee=grantee,
+            action=HealthAccessAuditEvent.Action.ACCESS_REVOKED,
+            scopes=previous_scopes, policy_version=previous_policy_version,
+        )
+
     consent = HealthConsent.objects.create(
         profile=profile,
         subject=profile.owner,
