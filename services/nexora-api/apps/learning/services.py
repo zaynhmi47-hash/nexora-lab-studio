@@ -57,8 +57,26 @@ class LearningService:
     @staticmethod
     def completed_lesson_ids(user: NexoraUser) -> list[str]:
         return list(
-            LearningLessonCompletion.objects.filter(user=user).values_list("lesson__key", flat=True)
+            LearningLessonCompletion.objects.filter(
+                user=user, deleted_at__isnull=True, lesson__deleted_at__isnull=True
+            ).values_list("lesson__key", flat=True)
         )
+
+    @staticmethod
+    def lesson_is_unlocked(user: NexoraUser, lesson: LearningLesson) -> bool:
+        """A lesson unlocks only after every earlier published lesson in its course is complete."""
+        prerequisite_ids = LearningLesson.objects.filter(
+            course=lesson.course,
+            is_published=True,
+            deleted_at__isnull=True,
+            sort_order__lt=lesson.sort_order,
+        ).values_list("id", flat=True)
+        completed_ids = LearningLessonCompletion.objects.filter(
+            user=user,
+            lesson_id__in=prerequisite_ids,
+            deleted_at__isnull=True,
+        ).values_list("lesson_id", flat=True)
+        return set(prerequisite_ids).issubset(set(completed_ids))
 
     @staticmethod
     def quiz(lesson_key: str):
@@ -66,7 +84,9 @@ class LearningService:
             LearningQuizQuestion.objects.filter(
                 lesson__key=lesson_key,
                 lesson__is_published=True,
+                lesson__deleted_at__isnull=True,
                 lesson__course__is_published=True,
+                lesson__course__deleted_at__isnull=True,
             ).order_by("sort_order")
         )
 
@@ -84,6 +104,8 @@ class LearningService:
         )
         if lesson is None:
             raise LearningLesson.DoesNotExist
+        if not LearningService.lesson_is_unlocked(user, lesson):
+            raise ValueError("Complete the previous lessons before taking this quiz.")
 
         questions = list(
             LearningQuizQuestion.objects.filter(
@@ -95,6 +117,15 @@ class LearningService:
 
         if len(answers) != len(questions):
             raise ValueError("Answer count does not match the quiz.")
+        for question, answer in zip(questions, answers):
+            if type(answer) is not int:
+                raise ValueError("Each answer must be an integer option index.")
+            if not isinstance(question.options, list) or not question.options:
+                raise ValueError("Quiz question has invalid options.")
+            if question.correct_option_index >= len(question.options):
+                raise ValueError("Quiz question has an invalid answer key.")
+            if answer < 0 or answer >= len(question.options):
+                raise ValueError("Answer option is outside the available choices.")
 
         correct = sum(
             1
@@ -145,6 +176,12 @@ class LearningService:
         )
         if lesson is None:
             raise LearningLesson.DoesNotExist
+        if not LearningService.lesson_is_unlocked(user, lesson):
+            raise ValueError("Complete the previous lessons before completing this lesson.")
+        if lesson.kind == LearningLesson.Kind.QUIZ and not LearningQuizAttempt.objects.filter(
+            user=user, lesson=lesson, passed=True
+        ).exists():
+            raise ValueError("Pass the quiz before completing this lesson.")
 
         completion, created = LearningLessonCompletion.objects.get_or_create(
             user=user,
