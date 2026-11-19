@@ -7,7 +7,7 @@ from rest_framework import status
 
 from apps.identity.authentication import FirebaseIdentityAuthentication
 
-from .models import LearningLesson
+from .models import LearningLesson, LearningLessonContent
 from .services import LearningService, UnifiedLearningEngine, learning_hub
 
 
@@ -66,6 +66,24 @@ class LearningProgressView(APIView):
 
     def get(self, request):
         return Response(progress_payload(LearningService.progress(request.user)))
+
+
+class LearningLessonContentView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, lesson_key: str):
+        try:
+            content = LearningService.lesson_content(request.user, lesson_key)
+        except LearningLesson.DoesNotExist:
+            return Response({"detail": "Lesson not found."}, status=status.HTTP_404_NOT_FOUND)
+        except LearningLessonContent.DoesNotExist:
+            return Response({"detail": "Published lesson content not found."}, status=status.HTTP_404_NOT_FOUND)
+        except PermissionError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_403_FORBIDDEN)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(content)
 
 
 class LearningQuizView(APIView):
