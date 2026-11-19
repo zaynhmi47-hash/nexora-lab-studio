@@ -42,7 +42,7 @@ Academic, Career, Research and AI Mentor are secondary domain destinations reach
 
 ## Implementation status
 
-This PR establishes the mobile parent shell, shared visual tokens/components, primary navigation, domain landing pages and first-pass screen experiences. Grow goal/reflection interactions are local previews only. Persistent Grow storage, learning catalogs, Career/Research workflows, AI provider integration and domain-specific API connections are intentionally not represented as complete in this foundation PR.
+This PR establishes the mobile parent shell, shared visual tokens/components, primary navigation, domain landing pages and first-pass screen experiences. The authenticated organization membership list is loaded from the Nexora organization API and can be selected as a navigation preference. This selection does not bypass server-side authorization or imply that every domain endpoint is organization-scoped. Grow goal/reflection interactions are local previews only. Persistent Grow storage, learning catalogs, Career/Research workflows, AI provider integration and domain-specific API connections are intentionally not represented as complete in this foundation PR.
 
 ## Next vertical slices
 
