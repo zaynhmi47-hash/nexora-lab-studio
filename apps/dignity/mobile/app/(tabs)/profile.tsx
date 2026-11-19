@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '@/components/dignity/Screen';
 import { SurfaceCard } from '@/components/dignity/SurfaceCard';
 import { OrganizationContextCard } from '@/components/dignity/OrganizationContextCard';
 import { useAuth } from '@/lib/auth';
+import { useDignityProfile } from '@/lib/profile/DignityProfileProvider';
 import { colors, radius, spacing } from '@/theme/tokens';
 export default function ProfileScreen() {
   const { status, identity, signOut } = useAuth();
@@ -12,10 +13,11 @@ export default function ProfileScreen() {
   return <Screen>
     <Text style={styles.eyebrow}>YOUR DIGNITY PROFILE</Text><Text style={styles.title}>A picture of your journey.</Text>
     <SurfaceCard style={styles.profileCard}>
-      <View style={styles.avatar}><Text style={styles.initials}>{initials || 'D'}</Text></View>
-      <Text style={styles.name}>{identity?.displayName ?? 'Dignity member'}</Text>
-      <Text style={styles.email}>{identity?.email ?? 'Account email unavailable'}</Text>
-      <View style={styles.identityPill}><Ionicons name="shield-checkmark-outline" size={14} color={colors.primary} /><Text style={styles.identityText}>Nexora Identity · {status}</Text></View>
+      {profile?.avatarUrl ? <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} /> : <View style={styles.avatar}><Text style={styles.initials}>{initials || 'D'}</Text></View>}
+      <Text style={styles.name}>{displayName}</Text>
+      <Text style={styles.email}>{email}</Text>
+      <View style={styles.identityPill}><Ionicons name="shield-checkmark-outline" size={14} color={colors.primary} /><Text style={styles.identityText}>Nexora Identity · {profileStatus === 'ready' ? profile?.status ?? 'verified' : profileStatus === 'loading' ? 'syncing' : authStatus}</Text></View>
+      {profileError ? <Pressable onPress={() => void refresh()} style={styles.retry}><Text style={styles.retryText}>Profile sync failed · Tap to retry</Text></Pressable> : null}
     </SurfaceCard>
     <OrganizationContextCard />
     <Text style={styles.sectionTitle}>Your profile connects</Text>
@@ -36,6 +38,9 @@ const styles = StyleSheet.create({
   title: { color: colors.ink, fontSize: 26, fontWeight: '900', letterSpacing: -0.7, marginTop: 8, marginBottom: spacing.xl },
   profileCard: { alignItems: 'center', paddingVertical: 24, marginBottom: spacing.xl },
   avatar: { width: 68, height: 68, borderRadius: radius.pill, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  avatarImage: { width: 68, height: 68, borderRadius: radius.pill, backgroundColor: colors.surfaceMuted },
+  retry: { marginTop: 8, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.roseSoft },
+  retryText: { color: colors.danger, fontSize: 10, fontWeight: '800' },
   initials: { color: colors.primaryDark, fontSize: 22, fontWeight: '900' },
   name: { color: colors.ink, fontSize: 18, fontWeight: '900', marginTop: 12 },
   email: { color: colors.muted, fontSize: 12, marginTop: 4 },
