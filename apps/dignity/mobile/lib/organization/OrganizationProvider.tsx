@@ -41,12 +41,14 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
   const { status: authStatus, identity } = useAuth();
   const identityId = identity?.id ?? null;
   const api = useNexoraApi();
-  const requestVersion = useRef(0);\n  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const requestVersion = useRef(0);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string | null>(null);
   const [status, setStatus] = useState<OrganizationLoadStatus>('idle');
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    const requestId = ++requestVersion.current;
     if (authStatus !== 'signed_in') {
       setOrganizations([]);
       setSelectedOrganizationId(null);
@@ -54,19 +56,21 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
       setError(null);
       return;
     }
+
+    setOrganizations([]);
+    setSelectedOrganizationId(null);
     setStatus('loading');
     setError(null);
     try {
       const response = await api.request<Organization[]>('/api/v1/organizations/');
+      if (requestId !== requestVersion.current) return;
+
       const nextOrganizations = Array.isArray(response.data) ? response.data : [];
       setOrganizations(nextOrganizations);
-      setSelectedOrganizationId((current) =>
-        current && nextOrganizations.some((item) => item.id === current)
-          ? current
-          : nextOrganizations[0]?.id ?? null,
-      );
+      setSelectedOrganizationId(nextOrganizations[0]?.id ?? null);
       setStatus('ready');
     } catch (cause) {
+      if (requestId !== requestVersion.current) return;
       setError(cause instanceof Error ? cause.message : 'Unable to load organizations.');
       setStatus('error');
     }
@@ -74,6 +78,9 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     void refresh();
+    return () => {
+      requestVersion.current += 1;
+    };
   }, [refresh]);
 
   const selectOrganization = useCallback((id: string) => {
