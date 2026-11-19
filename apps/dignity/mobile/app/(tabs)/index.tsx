@@ -6,6 +6,7 @@ import { SectionHeading } from '@/components/dignity/SectionHeading';
 import { SurfaceCard } from '@/components/dignity/SurfaceCard';
 import { DevelopmentCycle } from '@/components/dignity/DevelopmentCycle';
 import { PillarTile, developmentPillars } from '@/components/dignity/PillarTile';
+import { OrganizationContextCard } from '@/components/dignity/OrganizationContextCard';
 import { useAuth } from '@/lib/auth';
 import { colors, radius, spacing } from '@/theme/tokens';
 
@@ -22,6 +23,7 @@ export default function HomeScreen() {
         <Ionicons name="person-outline" size={21} color={colors.primaryDark} />
       </Pressable>
     </View>
+    <OrganizationContextCard />
     <SurfaceCard style={styles.hero}>
       <View style={styles.heroTop}><View style={styles.heroTag}><Text style={styles.heroTagText}>YOUR DEVELOPMENT JOURNEY</Text></View><Ionicons name="sparkles-outline" size={21} color="#F4D9A6" /></View>
       <Text style={styles.heroTitle}>Small steps. Meaningful growth.</Text>
