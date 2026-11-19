@@ -7,6 +7,7 @@ import { AuthProvider } from '@/lib/auth';
 import { createFirebaseAuthPort } from '@/lib/auth/firebase/authPort';
 import { createFirebaseTokenPort } from '@/lib/auth/firebase/tokenPort';
 import { OrganizationProvider } from '@/lib/organization/OrganizationProvider';
+import { DignityProfileProvider } from '@/lib/profile/DignityProfileProvider';
 
 export default function RootLayout() {
   const apiUrl = process.env.EXPO_PUBLIC_NEXORA_API_URL ?? 'http://localhost:8000';
@@ -17,14 +18,16 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <NexoraApiProvider tokenPort={tokenPort}>
         <AuthProvider port={authPort}>
-          <OrganizationProvider>
-            <StatusBar style="auto" />
-            <Stack>
+          <DignityProfileProvider>
+            <OrganizationProvider>
+              <StatusBar style="auto" />
+              <Stack>
               <Stack.Screen name="index" options={{ headerShown: false }} />
               <Stack.Screen name="sign-in" options={{ headerShown: false }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            </Stack>
-          </OrganizationProvider>
+              </Stack>
+            </OrganizationProvider>
+          </DignityProfileProvider>
         </AuthProvider>
       </NexoraApiProvider>
     </SafeAreaProvider>
