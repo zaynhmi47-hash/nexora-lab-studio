@@ -82,7 +82,7 @@ class LearningLessonContentView(APIView):
         except PermissionError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_403_FORBIDDEN)
         except ValueError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "Lesson content is invalid and cannot be displayed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         return Response(content)
 
 
