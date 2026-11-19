@@ -1,5 +1,6 @@
-from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.db.models import Q
+from rest_framework.exceptions import NotFound
 
 from apps.health.models import HealthAccessAuditEvent, HealthProfile
 from apps.health.services.access import can_access_profile
@@ -18,7 +19,7 @@ def get_accessible_profile(*, actor, profile_id, scope=PROFILE_READ_SCOPE):
     ).select_related("owner").first()
     if profile is None or not can_access_profile(actor=actor, profile=profile, scope=scope):
         # Do not reveal whether a private profile exists.
-        raise PermissionDenied("Health profile is not available.")
+        raise NotFound("Health profile is not available.")
     return profile
 
 
@@ -27,8 +28,8 @@ def get_accessible_profiles(*, actor, scope=PROFILE_READ_SCOPE):
         deleted_at__isnull=True,
         status=HealthProfile.Status.ACTIVE,
     ).filter(
-        __import__("django").db.models.Q(owner=actor)
-        | __import__("django").db.models.Q(
+        Q(owner=actor)
+        | Q(
             members__user=actor,
             members__revoked_at__isnull=True,
             members__deleted_at__isnull=True,
