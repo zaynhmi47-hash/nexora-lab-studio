@@ -1,4 +1,5 @@
 from django.core.exceptions import PermissionDenied as DjangoPermissionDenied, ValidationError as DjangoValidationError
+from django.db import transaction
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
@@ -75,6 +76,7 @@ class HealthProfileListCreateView(HealthProfileAPIView):
             record_profile_read(actor=request.user, profile=profile)
         return Response({"data": [self._serialize(profile) for profile in profiles]})
 
+    @transaction.atomic
     def post(self, request):
         serializer = HealthProfileCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
