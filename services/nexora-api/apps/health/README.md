@@ -45,3 +45,23 @@ No medical records, attachments, measurements, medication data or clinical API a
 2. Add medical-record domain models and access-scoped APIs with read/write audit.
 3. Add private document storage, malware scanning, signed download flow and retention/export controls.
 4. Add vital measurements with provenance, units, measurement time, received time and validation state.
+
+
+## Medical records foundation
+
+The medical-record slice adds typed records with explicit provenance and verification state. Supported record types include clinical notes, diagnosis entries, allergies, procedures, laboratory results, imaging, vaccinations and discharge summaries. Each record captures when the event occurred, who recorded it, and whether the source is patient-reported, a clinician document or an import.
+
+### Medical records API
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/v1/health/profiles/{profile_id}/records/` | List records with `records.read` scope |
+| POST | `/api/v1/health/profiles/{profile_id}/records/` | Create a record with `records.write` scope |
+| GET | `/api/v1/health/profiles/{profile_id}/records/{record_id}/` | Read one record |
+| PATCH | `/api/v1/health/profiles/{profile_id}/records/{record_id}/` | Update a record with `records.write` scope |
+
+Reads, creates and updates produce append-only audit events. Delegated read and write scopes are evaluated independently. Only the profile owner can set a record's verification state to verified or disputed; all records default to unverified. A patient-reported entry is not presented as a clinician-confirmed diagnosis.
+
+### Deliberate limits
+
+This stage stores structured record metadata and text only. It does not expose public document URLs or claim to provide secure binary attachment storage. Private file storage, malware scanning, signed downloads, retention/export workflows and clinical interoperability are separate follow-up work. Clinical coding dictionaries, encounter grouping and clinician credential verification also remain future work.
