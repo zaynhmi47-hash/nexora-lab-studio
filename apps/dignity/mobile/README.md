@@ -6,7 +6,7 @@ This mobile application is the parent experience for Nexora Dignity. It is inten
 
 Dignity connects six bounded domains through one privacy-aware Dignity Profile:
 
-- Learn — formal and informal learning, practice and mastery.
+- Learn — formal and informal learning, practice and mastery. The mobile Learn screen now reads the authenticated course catalog and progress endpoints, expands courses, and submits lesson completion to the existing learning API.
 - Academic — institutionally authoritative education records and workflows.
 - Grow — personal discovery, goals, habits, reflection and wellbeing practices.
 - Career — career exploration, competencies and portfolio evidence.
@@ -42,7 +42,7 @@ Academic, Career, Research and AI Mentor are secondary domain destinations reach
 
 ## Implementation status
 
-This PR establishes the mobile parent shell, shared visual tokens/components, primary navigation, domain landing pages and first-pass screen experiences. The authenticated organization membership list is loaded from the Nexora organization API and can be selected as a navigation preference. This selection does not bypass server-side authorization or imply that every domain endpoint is organization-scoped. Grow goal/reflection interactions are local previews only. The profile and organization providers handle loading/error states and ignore stale responses after identity changes. Persistent Grow storage, learning catalogs, Career/Research workflows, AI provider integration and domain-specific API connections are intentionally not represented as complete in this foundation PR.
+This PR establishes the mobile parent shell, shared visual tokens/components, primary navigation, domain landing pages and first-pass screen experiences. The authenticated organization membership list is loaded from the Nexora organization API and can be selected as a navigation preference. This selection does not bypass server-side authorization or imply that every domain endpoint is organization-scoped. Grow goal/reflection interactions are local previews only. The profile and organization providers handle loading/error states and ignore stale responses after identity changes. Grow goal/reflection persistence, quiz attempt UX, richer lesson content, Career/Research workflows, AI provider integration and domain-specific API connections are intentionally not represented as complete in this foundation PR.
 
 ## Next vertical slices
 
