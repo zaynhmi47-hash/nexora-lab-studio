@@ -161,3 +161,89 @@ def test_quiz_endpoint_only_serves_quiz_type_lessons():
 
     response = client.get(f"/api/v1/learning/lessons/{lesson.key}/quiz/")
     assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_published_lesson_content_is_available_to_unlocked_learner():
+    from apps.learning.models import LearningLessonContent
+
+    user = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="content-reader@example.com")
+    course = LearningCourse.objects.create(key="content-course", title="Content course")
+    lesson = LearningLesson.objects.create(key="content-lesson", course=course, title="Content lesson")
+    LearningLessonContent.objects.create(
+        lesson=lesson,
+        version=2,
+        estimated_minutes=8,
+        is_published=True,
+        blocks=[
+            {"type": "heading", "text": "Start here"},
+            {"type": "text", "text": "A short learning passage."},
+            {"type": "image", "url": "https://cdn.example.org/diagram.png", "alt": "A learning diagram"},
+        ],
+    )
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.get(f"/api/v1/learning/lessons/{lesson.key}/content/")
+
+    assert response.status_code == 200
+    assert response.json()["version"] == 2
+    assert response.json()["estimatedMinutes"] == 8
+    assert [block["type"] for block in response.json()["blocks"]] == ["heading", "text", "image"]
+
+
+@pytest.mark.django_db
+def test_locked_lesson_content_is_not_available():
+    from apps.learning.models import LearningLessonContent
+
+    user = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="locked-reader@example.com")
+    course = LearningCourse.objects.create(key="locked-content-course", title="Locked content")
+    LearningLesson.objects.create(key="content-prerequisite", course=course, title="First", sort_order=1)
+    lesson = LearningLesson.objects.create(key="content-locked", course=course, title="Second", sort_order=2)
+    LearningLessonContent.objects.create(
+        lesson=lesson, is_published=True, blocks=[{"type": "text", "text": "Secret until unlocked."}]
+    )
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.get(f"/api/v1/learning/lessons/{lesson.key}/content/")
+
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_unpublished_lesson_content_is_not_exposed():
+    from apps.learning.models import LearningLessonContent
+
+    user = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="draft-reader@example.com")
+    course = LearningCourse.objects.create(key="draft-content-course", title="Draft content")
+    lesson = LearningLesson.objects.create(key="draft-content-lesson", course=course, title="Draft")
+    LearningLessonContent.objects.create(
+        lesson=lesson, is_published=False, blocks=[{"type": "text", "text": "Draft material."}]
+    )
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.get(f"/api/v1/learning/lessons/{lesson.key}/content/")
+
+    assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_lesson_content_rejects_unsafe_media_url():
+    from apps.learning.models import LearningLessonContent
+
+    user = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="unsafe-content@example.com")
+    course = LearningCourse.objects.create(key="unsafe-content-course", title="Unsafe content")
+    lesson = LearningLesson.objects.create(key="unsafe-content-lesson", course=course, title="Unsafe")
+    LearningLessonContent.objects.create(
+        lesson=lesson,
+        is_published=True,
+        blocks=[{"type": "image", "url": "javascript:alert(1)", "alt": "Unsafe"}],
+    )
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.get(f"/api/v1/learning/lessons/{lesson.key}/content/")
+
+    assert response.status_code == 500
