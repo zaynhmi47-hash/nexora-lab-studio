@@ -12,13 +12,16 @@ class ImmutableAuditQuerySet(models.QuerySet):
 
 
 class HealthAccessAuditEvent(UUIDModel, TimestampedModel):
-    """Append-only record of health-profile access delegation changes."""
+    """Append-only record of health-profile access and medical-record activity."""
 
     class Action(models.TextChoices):
         ACCESS_GRANTED = "access.granted", "Access granted"
         ACCESS_REVOKED = "access.revoked", "Access revoked"
         PROFILE_READ = "profile.read", "Profile read"
         PROFILE_CREATED = "profile.created", "Profile created"
+        RECORD_READ = "record.read", "Medical record read"
+        RECORD_CREATED = "record.created", "Medical record created"
+        RECORD_UPDATED = "record.updated", "Medical record updated"
 
     objects = ImmutableAuditQuerySet.as_manager()
 
