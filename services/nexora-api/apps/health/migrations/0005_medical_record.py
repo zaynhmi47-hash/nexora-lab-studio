@@ -1,6 +1,5 @@
 import uuid
 
-from django.conf import settings
 from django.db import migrations, models
 import django.db.models.deletion
 
@@ -8,7 +7,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
     dependencies = [
         ("health", "0004_health_profile_created_audit_action"),
-        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ("identity", "0003_login_verified_event"),
     ]
 
     operations = [
@@ -29,7 +28,7 @@ class Migration(migrations.Migration):
                 ("clinician_name", models.CharField(blank=True, max_length=160)),
                 ("verification_status", models.CharField(choices=[("unverified", "Unverified"), ("verified", "Verified"), ("disputed", "Disputed")], default="unverified", max_length=16)),
                 ("profile", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name="medical_records", to="health.healthprofile")),
-                ("recorded_by", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name="medical_records_created", to=settings.AUTH_USER_MODEL)),
+                ("recorded_by", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name="medical_records_created", to="identity.nexorauser")),
             ],
             options={
                 "db_table": "health_medical_records",
