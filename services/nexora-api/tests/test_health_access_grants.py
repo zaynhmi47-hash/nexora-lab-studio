@@ -103,6 +103,11 @@ def test_expired_grant_and_invalid_scope_are_rejected():
             actor=owner, profile_id=profile.pk, grantee_id=caregiver.pk,
             scopes=["not-a-scope"], policy_version="v1",
         )
+    with pytest.raises(ValidationError):
+        grant_profile_access(
+            actor=owner, profile_id=profile.pk, grantee_id=caregiver.pk,
+            scopes=["admin.all"], policy_version="v1",
+        )
     assert HealthAccessAuditEvent.objects.count() == 0
 
 
