@@ -131,7 +131,7 @@ export default function LearningScreen() {
         </SurfaceCard>;
       })}
       {error ? <Pressable onPress={() => void loadLearning()} style={styles.errorBox}><Text style={styles.errorText}>{error} · Retry</Text></Pressable> : null}
-      {notice ? <Text accessibilityRole="status" style={styles.notice}>{notice}</Text> : null}
+      {notice ? <Text accessibilityLiveRegion="polite" style={styles.notice}>{notice}</Text> : null}
     </View>
 
     <View style={styles.section}><SectionHeading title="Learn more effectively" subtitle="Evidence-informed ways to build durable skills." />
