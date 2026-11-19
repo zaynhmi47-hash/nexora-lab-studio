@@ -7,7 +7,7 @@ This is the backend domain boundary for Nexora Health. The current implementatio
 - `HealthProfile`: health-data boundary linked to the canonical `identity.NexoraUser`.
 - `HealthProfileMember`: explicit profile-level delegation with role, registered scopes, expiry and revocation.
 - `HealthConsent`: purpose-specific, versioned consent with grant/revocation/expiry state.
-- `HealthAccessAuditEvent`: append-only events for grants, revocations and sensitive profile reads, with actor, subject, grantee, policy version, scopes and correlation ID.
+- `HealthAccessAuditEvent`: append-only events for profile creation, grants, revocations and sensitive profile reads, with actor, subject, grantee, policy version, scopes and correlation ID.
 - `can_access_profile(...)`: fail-closed authorization. Delegated access requires active membership and matching active consent.
 - `grant_profile_access(...)` / `revoke_profile_access(...)`: transactional services. Only the owner can grant; owner or grantee can revoke. Regrant supersedes earlier active consent.
 - Profile API at `/api/v1/health/profiles/`: create/list profiles, read a profile, grant access and revoke access.
@@ -22,7 +22,7 @@ This is the backend domain boundary for Nexora Health. The current implementatio
 | POST | `/api/v1/health/profiles/{profile_id}/access-grants/` | Owner grants explicit scoped access |
 | DELETE | `/api/v1/health/profiles/{profile_id}/access-grants/` | Owner or grantee revokes access |
 
-The API derives the actor from Firebase-backed Nexora authentication. It does not accept an actor/owner ID from the client. Private or inaccessible profile IDs return 404 to reduce resource enumeration. Every profile list/detail read is audited. Delegated scopes are allowlisted; arbitrary scope strings are rejected.
+The API derives the actor from Firebase-backed Nexora authentication. It does not accept an actor/owner ID from the client. Private or inaccessible profile IDs return 404 to reduce resource enumeration. Profile creation and every profile list/detail read are audited; profile creation and its audit event commit atomically. Delegated scopes are allowlisted; arbitrary scope strings are rejected.
 
 ## Security invariants
 
