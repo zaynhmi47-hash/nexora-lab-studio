@@ -83,6 +83,7 @@ class LearningService:
         return list(
             LearningQuizQuestion.objects.filter(
                 lesson__key=lesson_key,
+                lesson__kind=LearningLesson.Kind.QUIZ,
                 lesson__is_published=True,
                 lesson__deleted_at__isnull=True,
                 lesson__course__is_published=True,
@@ -98,6 +99,7 @@ class LearningService:
             LearningLesson.objects.select_for_update()
             .filter(
                 key=lesson_key,
+                kind=LearningLesson.Kind.QUIZ,
                 is_published=True,
                 course__is_published=True,
                 deleted_at__isnull=True,
