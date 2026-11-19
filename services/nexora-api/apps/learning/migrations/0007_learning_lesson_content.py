@@ -2,6 +2,7 @@
 from django.db import migrations, models
 import django.db.models.deletion
 import django.core.validators
+import uuid
 
 
 class Migration(migrations.Migration):
@@ -13,7 +14,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="LearningLessonContent",
             fields=[
-                ("id", models.UUIDField(primary_key=True, serialize=False, editable=False)),
+                ("id", models.UUIDField(default=uuid.uuid4, primary_key=True, serialize=False, editable=False)),
                 ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
                 ("deleted_at", models.DateTimeField(blank=True, db_index=True, null=True)),
