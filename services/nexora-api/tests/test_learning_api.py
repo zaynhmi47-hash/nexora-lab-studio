@@ -59,3 +59,82 @@ def test_quiz_endpoint_requires_authentication():
     response = client.get("/api/v1/learning/lessons/any-lesson/quiz/")
 
     assert response.status_code == 401
+
+
+
+@pytest.mark.django_db
+def test_locked_quiz_is_not_retrievable():
+    user = NexoraUser.objects.create(
+        status=NexoraUser.Status.ACTIVE,
+        email="locked-quiz@example.com",
+    )
+    course = LearningCourse.objects.create(key="locked-course", title="Locked")
+    LearningLesson.objects.create(
+        key="locked-prerequisite", course=course, title="Prerequisite", sort_order=1
+    )
+    lesson = LearningLesson.objects.create(
+        key="locked-quiz", course=course, title="Locked quiz",
+        kind=LearningLesson.Kind.QUIZ, sort_order=2,
+    )
+    LearningQuizQuestion.objects.create(
+        lesson=lesson, key="locked-question", prompt="Choose",
+        options=["A", "B"], correct_option_index=0,
+    )
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.get(f"/api/v1/learning/lessons/{lesson.key}/quiz/")
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_quiz_submission_rejects_out_of_range_option():
+    user = NexoraUser.objects.create(
+        status=NexoraUser.Status.ACTIVE,
+        email="range-quiz@example.com",
+    )
+    course = LearningCourse.objects.create(key="api-range-course", title="Range")
+    lesson = LearningLesson.objects.create(
+        key="api-range-quiz", course=course, title="Range quiz",
+        kind=LearningLesson.Kind.QUIZ,
+    )
+    LearningQuizQuestion.objects.create(
+        lesson=lesson, key="api-range-question", prompt="Choose",
+        options=["A", "B"], correct_option_index=1,
+    )
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.post(
+        f"/api/v1/learning/lessons/{lesson.key}/quiz/complete/",
+        {"answers": [2]},
+        format="json",
+    )
+    assert response.status_code == 400
+    assert "outside the available choices" in response.json()["detail"]
+
+
+@pytest.mark.django_db
+def test_quiz_submission_rejects_boolean_answer_indices():
+    user = NexoraUser.objects.create(
+        status=NexoraUser.Status.ACTIVE,
+        email="bool-quiz@example.com",
+    )
+    course = LearningCourse.objects.create(key="api-bool-course", title="Boolean")
+    lesson = LearningLesson.objects.create(
+        key="api-bool-quiz", course=course, title="Boolean quiz",
+        kind=LearningLesson.Kind.QUIZ,
+    )
+    LearningQuizQuestion.objects.create(
+        lesson=lesson, key="api-bool-question", prompt="Choose",
+        options=["A", "B"], correct_option_index=0,
+    )
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.post(
+        f"/api/v1/learning/lessons/{lesson.key}/quiz/complete/",
+        {"answers": [True]},
+        format="json",
+    )
+    assert response.status_code == 400
