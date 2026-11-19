@@ -51,7 +51,6 @@ export default function LearningScreen() {
   const [progress, setProgress] = useState<LearningProgress | null>(null);
   const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [busyLesson, setBusyLesson] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -76,26 +75,6 @@ export default function LearningScreen() {
   }, [api, authStatus]);
 
   useEffect(() => { void loadLearning(); }, [loadLearning]);
-
-  const completeLesson = async (lesson: LearningLesson) => {
-    setBusyLesson(lesson.id);
-    setError(null);
-    setNotice(null);
-    try {
-      const response = await api.request<LearningProgress>(`/api/v1/learning/lessons/${encodeURIComponent(lesson.id)}/complete/`, { method: 'POST' });
-      const nextProgress = payload<LearningProgress>(response);
-      setProgress(nextProgress);
-      setCourses((current) => current.map((course) => ({
-        ...course,
-        lessons: course.lessons.map((item) => item.id === lesson.id ? { ...item, status: 'completed' } : item),
-      })));
-      setNotice(`“${lesson.title}” marked complete. +${lesson.xpReward} XP`);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Unable to complete this lesson.');
-    } finally {
-      setBusyLesson(null);
-    }
-  };
 
   const totalLessons = courses.reduce((total, course) => total + course.lessons.length, 0);
   const completedLessons = progress?.completedLessonIds.length ?? courses.reduce((total, course) => total + course.lessons.filter((lesson) => lesson.status === 'completed').length, 0);
