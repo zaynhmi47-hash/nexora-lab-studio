@@ -125,3 +125,30 @@ def test_audit_events_reject_update_and_delete():
         HealthAccessAuditEvent.objects.filter(pk=event.pk).update(action="tampered")
     with pytest.raises(ValueError):
         HealthAccessAuditEvent.objects.filter(pk=event.pk).delete()
+
+
+@pytest.mark.django_db
+def test_regrant_supersedes_old_consent_and_narrows_access():
+    owner = make_user("owner@example.com")
+    caregiver = make_user("caregiver@example.com")
+    profile = HealthProfile.objects.create(owner=owner, display_name="Private Health")
+    _, first_consent = grant_profile_access(
+        actor=owner, profile_id=profile.pk, grantee_id=caregiver.pk,
+        scopes=["records.read", "vitals.read"], policy_version="v1",
+    )
+    _, second_consent = grant_profile_access(
+        actor=owner, profile_id=profile.pk, grantee_id=caregiver.pk,
+        scopes=["records.read"], policy_version="v2",
+    )
+
+    first_consent.refresh_from_db()
+    assert first_consent.status == HealthConsent.Status.REVOKED
+    assert second_consent.status == HealthConsent.Status.GRANTED
+    assert can_access_profile(actor=caregiver, profile=profile, scope="records.read")
+    assert not can_access_profile(actor=caregiver, profile=profile, scope="vitals.read")
+    assert HealthConsent.objects.filter(
+        profile=profile, grantee=caregiver, status=HealthConsent.Status.GRANTED,
+    ).count() == 1
+    assert HealthAccessAuditEvent.objects.filter(
+        profile=profile, action=HealthAccessAuditEvent.Action.ACCESS_REVOKED,
+    ).count() == 1
