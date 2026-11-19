@@ -1,4 +1,5 @@
 import pytest
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.health.models import HealthAccessAuditEvent, HealthConsent, HealthProfile, HealthProfileMember
@@ -56,14 +57,14 @@ def test_delegated_profile_read_requires_scope_and_creates_read_audit():
     owner = make_user("health-owner@example.com")
     caregiver = make_user("health-caregiver@example.com")
     profile = HealthProfile.objects.create(owner=owner, display_name="Family Health")
-    member = HealthProfileMember.objects.create(
+    HealthProfileMember.objects.create(
         profile=profile, user=caregiver, granted_by=owner, scopes=["profile.read"],
     )
     HealthConsent.objects.create(
         profile=profile, subject=owner, grantee=caregiver,
         purpose="delegated_health_access", scopes=["profile.read"],
         policy_version="v1", status=HealthConsent.Status.GRANTED,
-        granted_at=__import__("django").utils.timezone.now(),
+        granted_at=timezone.now(),
     )
 
     client = APIClient()
