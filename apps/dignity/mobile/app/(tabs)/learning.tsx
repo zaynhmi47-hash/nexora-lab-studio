@@ -125,7 +125,7 @@ export default function LearningScreen() {
           {isExpanded ? <View style={styles.lessonList}>{course.lessons.map((lesson) => <View key={lesson.id} style={styles.lessonRow}>
             <View style={styles.lessonState}><Ionicons name={lesson.status === 'completed' ? 'checkmark-circle' : lesson.status === 'locked' ? 'lock-closed' : lesson.kind === 'quiz' ? 'help-circle-outline' : 'play-circle-outline'} size={19} color={lesson.status === 'completed' ? colors.success : colors.muted} /></View>
             <View style={styles.lessonCopy}><Text style={styles.lessonTitle}>{lesson.title}</Text><Text style={styles.detail}>{lesson.kind.toUpperCase()} · {lesson.xpReward} XP</Text>{lesson.description ? <Text style={styles.lessonDescription}>{lesson.description}</Text> : null}</View>
-            {lesson.status === 'available' ? <Pressable accessibilityRole="button" disabled={busyLesson === lesson.id} onPress={() => void completeLesson(lesson)} style={[styles.completeButton, busyLesson === lesson.id && styles.disabled]}><Text style={styles.completeText}>{busyLesson === lesson.id ? '…' : 'Done'}</Text></Pressable> : null}
+            {lesson.status !== 'locked' ? <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/lesson/[lessonKey]', params: { lessonKey: lesson.id } })} style={styles.completeButton}><Text style={styles.completeText}>Open</Text></Pressable> : null}
             {lesson.status === 'completed' ? <Text style={styles.doneLabel}>Done</Text> : null}
           </View>)}</View> : null}
         </SurfaceCard>;
