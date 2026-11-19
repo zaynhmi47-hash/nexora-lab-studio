@@ -24,12 +24,12 @@ def _require_active_actor(actor: NexoraUser) -> None:
 def _normalize_scopes(scopes: Iterable[str]) -> list[str]:
     if isinstance(scopes, (str, bytes)):
         raise ValidationError({"scopes": "Provide a list of scope strings, not a single string."})
-    normalized = sorted(set(scopes))
-    if not normalized or len(normalized) > MAX_SCOPES_PER_GRANT:
+    values = list(scopes)
+    if not values or len(values) > MAX_SCOPES_PER_GRANT:
         raise ValidationError({"scopes": f"Provide between 1 and {MAX_SCOPES_PER_GRANT} scopes."})
-    if any(not isinstance(scope, str) or not scope or len(scope) > 80 or "." not in scope for scope in normalized):
+    if any(not isinstance(scope, str) or not scope or len(scope) > 80 or "." not in scope for scope in values):
         raise ValidationError({"scopes": "Each scope must be a non-empty namespaced string."})
-    return normalized
+    return sorted(set(values))
 
 
 def _record_event(*, actor, profile, grantee, action, scopes, policy_version, purpose=DELEGATED_ACCESS_PURPOSE):
@@ -134,8 +134,6 @@ def revoke_profile_access(*, actor: NexoraUser, profile_id, grantee_id) -> bool:
         return False
 
     now = timezone.now()
-    member.revoked_at = now
-    member.save(update_fields=["revoked_at", "updated_at"])
     consents = HealthConsent.objects.select_for_update().filter(
         profile=profile,
         subject_id=profile.owner_id,
@@ -145,6 +143,10 @@ def revoke_profile_access(*, actor: NexoraUser, profile_id, grantee_id) -> bool:
         revoked_at__isnull=True,
         deleted_at__isnull=True,
     )
+    latest_policy_version = consents.order_by("-granted_at").values_list("policy_version", flat=True).first() or "unknown"
+
+    member.revoked_at = now
+    member.save(update_fields=["revoked_at", "updated_at"])
     for consent in consents:
         consent.status = HealthConsent.Status.REVOKED
         consent.revoked_at = now
@@ -156,6 +158,6 @@ def revoke_profile_access(*, actor: NexoraUser, profile_id, grantee_id) -> bool:
         grantee=member.user,
         action=HealthAccessAuditEvent.Action.ACCESS_REVOKED,
         scopes=list(member.scopes),
-        policy_version=consents.order_by("-granted_at").values_list("policy_version", flat=True).first() or "unknown",
+        policy_version=latest_policy_version,
     )
     return True
