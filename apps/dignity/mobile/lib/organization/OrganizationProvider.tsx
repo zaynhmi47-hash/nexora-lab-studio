@@ -38,7 +38,8 @@ const OrganizationContext = createContext<OrganizationContextValue>({
 });
 
 export function OrganizationProvider({ children }: PropsWithChildren) {
-  const { status: authStatus } = useAuth();
+  const { status: authStatus, identity } = useAuth();
+  const identityId = identity?.id ?? null;
   const api = useNexoraApi();
   const requestVersion = useRef(0);\n  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string | null>(null);
@@ -69,7 +70,7 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
       setError(cause instanceof Error ? cause.message : 'Unable to load organizations.');
       setStatus('error');
     }
-  }, [api, authStatus]);
+  }, [api, authStatus, identityId]);
 
   useEffect(() => {
     void refresh();
