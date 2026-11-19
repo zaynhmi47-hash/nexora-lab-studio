@@ -12,6 +12,7 @@ from apps.health.services.profile_access import (
     get_accessible_profile,
     get_accessible_profiles,
     record_profile_read,
+    record_profile_created,
 )
 from apps.identity.authentication import FirebaseIdentityAuthentication
 
@@ -78,6 +79,7 @@ class HealthProfileListCreateView(HealthProfileAPIView):
         serializer = HealthProfileCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         profile = HealthProfile.objects.create(owner=request.user, **serializer.validated_data)
+        record_profile_created(actor=request.user, profile=profile)
         return Response({"data": self._serialize(profile)}, status=201)
 
 
