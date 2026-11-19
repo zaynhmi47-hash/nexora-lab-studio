@@ -1,5 +1,4 @@
 from django.core.exceptions import PermissionDenied as DjangoPermissionDenied, ValidationError as DjangoValidationError
-from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
@@ -15,7 +14,6 @@ from apps.health.services.profile_access import (
     record_profile_read,
 )
 from apps.identity.authentication import FirebaseIdentityAuthentication
-from apps.identity.models import NexoraUser
 
 
 class HealthProfileCreateSerializer(serializers.Serializer):
