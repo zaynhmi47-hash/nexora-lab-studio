@@ -1,13 +1,16 @@
 # Health domain (Django)
 
-This is the backend domain boundary for Nexora Health. The Identity & Consent stage introduces persistence for profile ownership and explicit delegated access.
+This is the backend domain boundary for Nexora Health. The Identity & Consent stage persists profile ownership, explicit delegation, purpose-specific consent and append-only access-change audit events.
 
 ## Implemented domain primitives
 
 - `HealthProfile`: health-data boundary linked to the canonical `identity.NexoraUser`; a Nexora account is not itself a health profile.
 - `HealthProfileMember`: explicit profile-level delegation with role, scopes, expiry and revocation.
 - `HealthConsent`: purpose-specific, versioned consent with grant/revocation/expiry state.
-- `can_access_profile(...)`: fail-closed profile authorization. Delegated access requires both a valid membership and matching active consent. A family relationship or membership by itself is insufficient.
+- `HealthAccessAuditEvent`: append-only event record for access grants and revocations, including actor, subject, grantee, policy version, scopes and request correlation ID.
+- `can_access_profile(...)`: fail-closed authorization. Delegated access requires both a valid membership and matching active consent.
+- `grant_profile_access(...)`: transactional owner-authorized grant service. It validates active identities, scope shape, role, policy version and expiry, then writes membership, consent and audit event together.
+- `revoke_profile_access(...)`: transactional revocation service. The owner or grantee may revoke; membership and all active consent rows for that delegation are revoked together and audited.
 
 ## Security invariants
 
@@ -15,17 +18,18 @@ This is the backend domain boundary for Nexora Health. The Identity & Consent st
 - Inactive identities and archived/deleted profiles are denied.
 - Delegated grants are scoped, revocable and time-bounded.
 - Consent must match the profile owner, grantee, purpose, scope and active time window.
-- Do not expose endpoints or use these models for clinical records until access auditing is integrated.
-- Consent and membership writes must be performed through an authorized application service; direct client CRUD is prohibited.
+- A family relationship or membership by itself is insufficient.
+- Consent and membership writes must go through the application services; direct client CRUD is prohibited.
+- Audit events reject instance updates/deletes and queryset update/delete operations at the application layer. Database administrators can still alter database contents; production requires restricted DB roles, backups and tamper-evident external retention.
 - Health data must not be used for AI training by default.
 
 ## Deliberate limitations before API exposure
 
-The current stage does not yet implement an API, grant/revoke application service, immutable access-audit event pipeline, medical-record storage, attachments, or retention/export workflows. These are required before production exposure. Do not interpret the presence of the schema as production readiness.
+No public API or clinical-record storage is included yet. The audit event pipeline currently records access delegation changes; it does not yet record every read of a health resource. Before API exposure, add request-level access audit events for sensitive reads, an API permission layer and object-scoped querysets. Also complete retention/export workflows, private attachment storage and operational monitoring.
 
 ## Next backend stages
 
-1. Add grant/revoke application services with transaction boundaries and immutable audit events.
-2. Add API serializers/views that derive actor identity from authentication and scope every query to an authorized profile.
-3. Add medical records only after private attachment storage, audit, retention and export contracts are ready.
+1. Add DRF profile endpoints that derive the actor from authentication and enforce profile-level authorization.
+2. Add request-level audit for sensitive reads and profile/consent changes.
+3. Add medical records only after private attachment storage, retention, export and deletion contracts are ready.
 4. Preserve provenance, units, measurement time, received time and validation state for future measurements.
