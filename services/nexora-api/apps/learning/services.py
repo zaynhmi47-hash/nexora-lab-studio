@@ -44,7 +44,7 @@ class LearningService:
     @staticmethod
     def courses():
         return list(
-            LearningCourse.objects.filter(is_published=True)
+            LearningCourse.objects.filter(is_published=True, deleted_at__isnull=True)
             .prefetch_related("lessons")
             .order_by("sort_order", "title")
         )
@@ -87,6 +87,7 @@ class LearningService:
                 lesson__deleted_at__isnull=True,
                 lesson__course__is_published=True,
                 lesson__course__deleted_at__isnull=True,
+                deleted_at__isnull=True,
             ).order_by("sort_order")
         )
 
@@ -99,6 +100,8 @@ class LearningService:
                 key=lesson_key,
                 is_published=True,
                 course__is_published=True,
+                deleted_at__isnull=True,
+                course__deleted_at__isnull=True,
             )
             .first()
         )
@@ -110,6 +113,7 @@ class LearningService:
         questions = list(
             LearningQuizQuestion.objects.filter(
                 lesson=lesson,
+                deleted_at__isnull=True,
             ).order_by("sort_order")
         )
         if not questions:
@@ -171,7 +175,13 @@ class LearningService:
         lesson = (
             LearningLesson.objects.select_for_update()
             .select_related("course")
-            .filter(key=lesson_key, is_published=True, course__is_published=True)
+            .filter(
+                key=lesson_key,
+                is_published=True,
+                course__is_published=True,
+                deleted_at__isnull=True,
+                course__deleted_at__isnull=True,
+            )
             .first()
         )
         if lesson is None:
@@ -179,7 +189,7 @@ class LearningService:
         if not LearningService.lesson_is_unlocked(user, lesson):
             raise ValueError("Complete the previous lessons before completing this lesson.")
         if lesson.kind == LearningLesson.Kind.QUIZ and not LearningQuizAttempt.objects.filter(
-            user=user, lesson=lesson, passed=True
+            user=user, lesson=lesson, passed=True, deleted_at__isnull=True
         ).exists():
             raise ValueError("Pass the quiz before completing this lesson.")
 
