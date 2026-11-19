@@ -41,7 +41,8 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
   const { status: authStatus, identity } = useAuth();
   const identityId = identity?.id ?? null;
   const api = useNexoraApi();
-  const requestVersion = useRef(0);\n  const lastIdentityId = useRef<string | null>(null);
+  const requestVersion = useRef(0);
+  const lastIdentityId = useRef<string | null>(null);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string | null>(null);
   const [status, setStatus] = useState<OrganizationLoadStatus>('idle');
@@ -59,7 +60,11 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
       return;
     }
 
-    if (identityChanged) {\n      setOrganizations([]);\n      setSelectedOrganizationId(null);\n    }\n    setStatus('loading');
+    if (identityChanged) {
+      setOrganizations([]);
+      setSelectedOrganizationId(null);
+    }
+    setStatus('loading');
     setError(null);
     try {
       const response = await api.request<Organization[]>('/api/v1/organizations/');
@@ -67,7 +72,11 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
 
       const nextOrganizations = Array.isArray(response.data) ? response.data : [];
       setOrganizations(nextOrganizations);
-      setSelectedOrganizationId((current) =>\n        current && nextOrganizations.some((item) => item.id === current)\n          ? current\n          : nextOrganizations[0]?.id ?? null,\n      );
+      setSelectedOrganizationId((current) =>
+        current && nextOrganizations.some((item) => item.id === current)
+          ? current
+          : nextOrganizations[0]?.id ?? null,
+      );
       setStatus('ready');
     } catch (cause) {
       if (requestId !== requestVersion.current) return;
