@@ -138,3 +138,26 @@ def test_quiz_submission_rejects_boolean_answer_indices():
         format="json",
     )
     assert response.status_code == 400
+
+
+
+@pytest.mark.django_db
+def test_quiz_endpoint_only_serves_quiz_type_lessons():
+    user = NexoraUser.objects.create(
+        status=NexoraUser.Status.ACTIVE,
+        email="lesson-not-quiz@example.com",
+    )
+    course = LearningCourse.objects.create(key="not-quiz-course", title="Not a quiz")
+    lesson = LearningLesson.objects.create(
+        key="not-a-quiz", course=course, title="Regular lesson",
+        kind=LearningLesson.Kind.LESSON,
+    )
+    LearningQuizQuestion.objects.create(
+        lesson=lesson, key="not-quiz-question", prompt="Choose",
+        options=["A", "B"], correct_option_index=0,
+    )
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.get(f"/api/v1/learning/lessons/{lesson.key}/quiz/")
+    assert response.status_code == 404
