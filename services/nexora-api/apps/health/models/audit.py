@@ -18,6 +18,7 @@ class HealthAccessAuditEvent(UUIDModel, TimestampedModel):
         ACCESS_GRANTED = "access.granted", "Access granted"
         ACCESS_REVOKED = "access.revoked", "Access revoked"
         PROFILE_READ = "profile.read", "Profile read"
+        PROFILE_CREATED = "profile.created", "Profile created"
 
     objects = ImmutableAuditQuerySet.as_manager()
 
