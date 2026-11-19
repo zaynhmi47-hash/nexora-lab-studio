@@ -75,7 +75,7 @@ class MedicalRecordListCreateView(HealthMedicalRecordAPIView):
 
     def post(self, request, profile_id):
         profile = get_accessible_profile(actor=request.user, profile_id=profile_id, scope="records.write")
-        if request.data.get("verification_status") in {"verified", "disputed"} and profile.owner_id != request.user.pk:
+        if "verification_status" in request.data and profile.owner_id != request.user.pk:
             raise PermissionDenied("Only the profile owner may change verification status.")
         serializer = MedicalRecordSerializer(data=request.data, context={"request": request, "profile": profile})
         serializer.is_valid(raise_exception=True)
