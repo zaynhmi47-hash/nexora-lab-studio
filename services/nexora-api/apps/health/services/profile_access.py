@@ -4,7 +4,6 @@ from rest_framework.exceptions import NotFound
 
 from apps.health.models import HealthAccessAuditEvent, HealthProfile
 from apps.health.services.access import can_access_profile
-from apps.health.services.access_grants import DELEGATED_ACCESS_PURPOSE
 from apps.core.context import get_request_context
 
 
@@ -48,7 +47,7 @@ def record_profile_read(*, actor, profile):
         subject=profile.owner,
         grantee=actor,
         action=HealthAccessAuditEvent.Action.PROFILE_READ,
-        purpose=DELEGATED_ACCESS_PURPOSE,
+        purpose="health_profile_access",
         scopes=[PROFILE_READ_SCOPE],
         policy_version="health-access-policy-v1",
         correlation_id=context.correlation_id or "",
