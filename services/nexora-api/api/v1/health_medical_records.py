@@ -30,15 +30,6 @@ class MedicalRecordSerializer(serializers.Serializer):
         choices=MedicalRecord.VerificationStatus.choices, required=False,
     )
 
-    def validate_verification_status(self, value):
-        request = self.context["request"]
-        # Only the record owner may mark a record verified or disputed.
-        if value != MedicalRecord.VerificationStatus.UNVERIFIED:
-            profile = self.context.get("profile")
-            if profile is not None and profile.owner_id != request.user.pk:
-                raise serializers.ValidationError("Only the profile owner may change verification status.")
-        return value
-
 
 class HealthMedicalRecordAPIView(APIView):
     authentication_classes = [FirebaseIdentityAuthentication]
@@ -84,6 +75,8 @@ class MedicalRecordListCreateView(HealthMedicalRecordAPIView):
 
     def post(self, request, profile_id):
         profile = get_accessible_profile(actor=request.user, profile_id=profile_id, scope="records.write")
+        if request.data.get("verification_status") in {"verified", "disputed"} and profile.owner_id != request.user.pk:
+            raise PermissionDenied("Only the profile owner may change verification status.")
         serializer = MedicalRecordSerializer(data=request.data, context={"request": request, "profile": profile})
         serializer.is_valid(raise_exception=True)
         try:
