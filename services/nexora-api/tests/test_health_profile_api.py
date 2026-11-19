@@ -23,6 +23,11 @@ def test_profile_owner_can_create_list_and_read_profile_with_audit():
     )
     assert created.status_code == 201
     profile_id = created.data["data"]["id"]
+    assert HealthAccessAuditEvent.objects.filter(
+        profile_id=profile_id,
+        action=HealthAccessAuditEvent.Action.PROFILE_CREATED,
+        actor=owner,
+    ).count() == 1
 
     detail = client.get(f"/api/v1/health/profiles/{profile_id}/")
     assert detail.status_code == 200
