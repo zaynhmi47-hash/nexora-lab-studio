@@ -8,8 +8,11 @@ import { useAuth } from '@/lib/auth';
 import { useDignityProfile } from '@/lib/profile/DignityProfileProvider';
 import { colors, radius, spacing } from '@/theme/tokens';
 export default function ProfileScreen() {
-  const { status, identity, signOut } = useAuth();
-  const initials = (identity?.displayName ?? 'D').split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('');
+  const { status: authStatus, identity, signOut } = useAuth();
+  const { profile, status: profileStatus, error: profileError, refresh } = useDignityProfile();
+  const displayName = profile?.displayName ?? identity?.displayName ?? 'Dignity member';
+  const email = profile?.email ?? identity?.email ?? 'Account email unavailable';
+  const initials = displayName.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('');
   return <Screen>
     <Text style={styles.eyebrow}>YOUR DIGNITY PROFILE</Text><Text style={styles.title}>A picture of your journey.</Text>
     <SurfaceCard style={styles.profileCard}>
