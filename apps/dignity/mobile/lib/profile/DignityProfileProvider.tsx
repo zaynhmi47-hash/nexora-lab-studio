@@ -52,7 +52,11 @@ export function DignityProfileProvider({ children }: PropsWithChildren) {
     try {
       const response = await api.request<DignityProfile>('/api/v1/identity/me/');
       if (requestId !== requestVersion.current) return;
-      setProfile(response.data);
+      // The legacy identity endpoint returns a raw object, unlike the standard API envelope.
+      const payload = response as unknown as DignityProfile & { data?: DignityProfile };
+      const nextProfile = payload.data ?? payload;
+      if (!nextProfile.id) throw new Error('The identity endpoint returned an invalid profile.');
+      setProfile(nextProfile);
       setStatus('ready');
     } catch (cause) {
       if (requestId !== requestVersion.current) return;
