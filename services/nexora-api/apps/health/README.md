@@ -1,16 +1,28 @@
 # Health domain (Django)
 
-This is the backend domain boundary for Nexora Health. The Identity & Consent stage persists profile ownership, explicit delegation, purpose-specific consent and append-only access-change audit events.
+This is the backend domain boundary for Nexora Health. The current implementation includes profile ownership, explicit delegation, versioned consent, append-only access-change auditing and authenticated profile APIs.
 
 ## Implemented domain primitives
 
-- `HealthProfile`: health-data boundary linked to the canonical `identity.NexoraUser`; a Nexora account is not itself a health profile.
-- `HealthProfileMember`: explicit profile-level delegation with role, scopes, expiry and revocation.
+- `HealthProfile`: health-data boundary linked to the canonical `identity.NexoraUser`.
+- `HealthProfileMember`: explicit profile-level delegation with role, registered scopes, expiry and revocation.
 - `HealthConsent`: purpose-specific, versioned consent with grant/revocation/expiry state.
-- `HealthAccessAuditEvent`: append-only event record for access grants and revocations, including actor, subject, grantee, policy version, scopes and request correlation ID.
-- `can_access_profile(...)`: fail-closed authorization. Delegated access requires both a valid membership and matching active consent.
-- `grant_profile_access(...)`: transactional owner-authorized grant service. It validates active identities, scope shape, role, policy version and expiry, then writes membership, consent and audit event together.
-- `revoke_profile_access(...)`: transactional revocation service. The owner or grantee may revoke; membership and all active consent rows for that delegation are revoked together and audited.
+- `HealthAccessAuditEvent`: append-only events for grants, revocations and sensitive profile reads, with actor, subject, grantee, policy version, scopes and correlation ID.
+- `can_access_profile(...)`: fail-closed authorization. Delegated access requires active membership and matching active consent.
+- `grant_profile_access(...)` / `revoke_profile_access(...)`: transactional services. Only the owner can grant; owner or grantee can revoke. Regrant supersedes earlier active consent.
+- Profile API at `/api/v1/health/profiles/`: create/list profiles, read a profile, grant access and revoke access.
+
+## API contract
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/v1/health/profiles/` | List profiles accessible to the authenticated identity |
+| POST | `/api/v1/health/profiles/` | Create a profile owned by the authenticated identity |
+| GET | `/api/v1/health/profiles/{profile_id}/` | Read one authorized profile |
+| POST | `/api/v1/health/profiles/{profile_id}/access-grants/` | Owner grants explicit scoped access |
+| DELETE | `/api/v1/health/profiles/{profile_id}/access-grants/` | Owner or grantee revokes access |
+
+The API derives the actor from Firebase-backed Nexora authentication. It does not accept an actor/owner ID from the client. Private or inaccessible profile IDs return 404 to reduce resource enumeration. Every profile list/detail read is audited. Delegated scopes are allowlisted; arbitrary scope strings are rejected.
 
 ## Security invariants
 
@@ -18,18 +30,18 @@ This is the backend domain boundary for Nexora Health. The Identity & Consent st
 - Inactive identities and archived/deleted profiles are denied.
 - Delegated grants are scoped, revocable and time-bounded.
 - Consent must match the profile owner, grantee, purpose, scope and active time window.
-- A family relationship or membership by itself is insufficient.
-- Consent and membership writes must go through the application services; direct client CRUD is prohibited.
-- Audit events reject instance updates/deletes and queryset update/delete operations at the application layer. Database administrators can still alter database contents; production requires restricted DB roles, backups and tamper-evident external retention.
-- Health data must not be used for AI training by default.
+- Family relationship or membership alone is insufficient.
+- Consent and membership writes go through application services; direct client CRUD is prohibited.
+- Audit events reject instance updates/deletes and queryset update/delete operations at the application layer. Production still requires restricted database roles and tamper-evident external retention.
+- Health data is not used for AI training by default.
 
-## Deliberate limitations before API exposure
+## Deliberate limitations before clinical data
 
-No public API or clinical-record storage is included yet. The audit event pipeline currently records access delegation changes; it does not yet record every read of a health resource. Before API exposure, add request-level access audit events for sensitive reads, an API permission layer and object-scoped querysets. Also complete retention/export workflows, private attachment storage and operational monitoring.
+No medical records, attachments, measurements, medication data or clinical API are included yet. The audit pipeline currently covers profile reads and access delegation changes; each future sensitive resource read/write must add equivalent audit coverage. Before production launch, complete consent UX/legal review, private attachment storage, retention/export/deletion, monitoring, rate limits and threat modeling.
 
 ## Next backend stages
 
-1. Add DRF profile endpoints that derive the actor from authentication and enforce profile-level authorization.
-2. Add request-level audit for sensitive reads and profile/consent changes.
-3. Add medical records only after private attachment storage, retention, export and deletion contracts are ready.
-4. Preserve provenance, units, measurement time, received time and validation state for future measurements.
+1. Harden profile API validation, pagination, rate limits and operational audit monitoring.
+2. Add medical-record domain models and access-scoped APIs with read/write audit.
+3. Add private document storage, malware scanning, signed download flow and retention/export controls.
+4. Add vital measurements with provenance, units, measurement time, received time and validation state.
