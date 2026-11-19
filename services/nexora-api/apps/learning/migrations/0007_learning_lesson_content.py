@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
             name="LearningLessonContent",
             fields=[
                 ("id", models.UUIDField(default=uuid.uuid4, primary_key=True, serialize=False, editable=False)),
-                ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
                 ("deleted_at", models.DateTimeField(blank=True, db_index=True, null=True)),
                 ("version", models.PositiveIntegerField(default=1, validators=[django.core.validators.MinValueValidator(1)])),
