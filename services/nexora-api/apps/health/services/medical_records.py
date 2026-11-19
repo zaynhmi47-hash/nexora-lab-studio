@@ -1,5 +1,4 @@
 from django.db import transaction
-from django.db.models import Q
 from rest_framework.exceptions import NotFound, PermissionDenied
 
 from apps.core.context import get_request_context
