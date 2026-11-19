@@ -121,6 +121,13 @@ def test_only_profile_owner_can_mark_record_verified():
 
     caregiver_client = APIClient()
     caregiver_client.force_authenticate(user=caregiver)
+    create_with_status = caregiver_client.post(
+        f"/api/v1/health/profiles/{profile.pk}/records/",
+        record_payload(verification_status="unverified"),
+        format="json",
+    )
+    assert create_with_status.status_code == 403
+
     response = caregiver_client.patch(
         f"/api/v1/health/profiles/{profile.pk}/records/{record_id}/",
         {"verification_status": "verified"},
