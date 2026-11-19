@@ -75,6 +75,7 @@ class LearningQuizView(APIView):
     def get(self, request, lesson_key: str):
         lesson = LearningLesson.objects.filter(
             key=lesson_key,
+            kind=LearningLesson.Kind.QUIZ,
             is_published=True,
             deleted_at__isnull=True,
             course__is_published=True,
