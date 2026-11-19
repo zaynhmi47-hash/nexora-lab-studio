@@ -14,6 +14,17 @@ from apps.identity.models import NexoraUser
 
 DELEGATED_ACCESS_PURPOSE = "delegated_health_access"
 MAX_SCOPES_PER_GRANT = 20
+ALLOWED_DELEGATED_SCOPES = frozenset({
+    "profile.read",
+    "records.read",
+    "records.write",
+    "vitals.read",
+    "vitals.write",
+    "medications.read",
+    "medications.write",
+    "appointments.read",
+    "appointments.write",
+})
 
 
 def _require_active_actor(actor: NexoraUser) -> None:
@@ -27,8 +38,11 @@ def _normalize_scopes(scopes: Iterable[str]) -> list[str]:
     values = list(scopes)
     if not values or len(values) > MAX_SCOPES_PER_GRANT:
         raise ValidationError({"scopes": f"Provide between 1 and {MAX_SCOPES_PER_GRANT} scopes."})
-    if any(not isinstance(scope, str) or not scope or len(scope) > 80 or "." not in scope for scope in values):
-        raise ValidationError({"scopes": "Each scope must be a non-empty namespaced string."})
+    if any(not isinstance(scope, str) or not scope or len(scope) > 80 for scope in values):
+        raise ValidationError({"scopes": "Each scope must be a non-empty string of at most 80 characters."})
+    unknown = sorted(set(values) - ALLOWED_DELEGATED_SCOPES)
+    if unknown:
+        raise ValidationError({"scopes": f"Unsupported health access scopes: {', '.join(unknown)}."})
     return sorted(set(values))
 
 
