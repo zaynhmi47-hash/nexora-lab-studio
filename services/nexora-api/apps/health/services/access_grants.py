@@ -105,7 +105,7 @@ def grant_profile_access(
         status=HealthConsent.Status.GRANTED,
         revoked_at__isnull=True,
         deleted_at__isnull=True,
-    ))
+    ).order_by("-granted_at", "-created_at"))
     if previous_consents:
         previous_scopes = sorted({scope for previous in previous_consents for scope in previous.scopes})
         previous_policy_version = previous_consents[-1].policy_version
