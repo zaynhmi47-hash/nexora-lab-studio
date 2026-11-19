@@ -43,6 +43,26 @@ class LearningLesson(AuditableBaseModel):
         ]
 
 
+class LearningLessonContent(AuditableBaseModel):
+    """Versioned, provider-neutral lesson body represented as safe typed blocks."""
+
+    lesson = models.OneToOneField(
+        LearningLesson,
+        on_delete=models.PROTECT,
+        related_name="content",
+    )
+    version = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
+    estimated_minutes = models.PositiveIntegerField(default=0)
+    blocks = models.JSONField(default=list)
+    is_published = models.BooleanField(default=False, db_index=True)
+
+    class Meta:
+        db_table = "learning_lesson_contents"
+        constraints = [
+            models.CheckConstraint(condition=models.Q(version__gte=1), name="learning_content_version_gte_one"),
+        ]
+
+
 class LearningProgress(AuditableBaseModel):
     user = models.OneToOneField(NexoraUser, on_delete=models.CASCADE, related_name="learning_progress")
     xp = models.PositiveIntegerField(default=0)
