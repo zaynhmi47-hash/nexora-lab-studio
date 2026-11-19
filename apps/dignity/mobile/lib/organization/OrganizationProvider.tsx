@@ -1,4 +1,4 @@
-import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useNexoraApi } from '@/lib/api/NexoraApiProvider';
 
@@ -40,7 +40,7 @@ const OrganizationContext = createContext<OrganizationContextValue>({
 export function OrganizationProvider({ children }: PropsWithChildren) {
   const { status: authStatus } = useAuth();
   const api = useNexoraApi();
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const requestVersion = useRef(0);\n  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string | null>(null);
   const [status, setStatus] = useState<OrganizationLoadStatus>('idle');
   const [error, setError] = useState<string | null>(null);
