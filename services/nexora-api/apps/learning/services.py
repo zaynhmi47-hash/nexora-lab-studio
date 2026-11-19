@@ -14,6 +14,7 @@ from apps.arabic.models import ArabicLessonCompletion
 
 from .models import (
     LearningCourse,
+    LearningLessonContent,
     LearningLesson,
     LearningLessonCompletion,
     LearningProgress,
@@ -77,6 +78,68 @@ class LearningService:
             deleted_at__isnull=True,
         ).values_list("lesson_id", flat=True)
         return set(prerequisite_ids).issubset(set(completed_ids))
+
+    @staticmethod
+    def lesson_content(user: NexoraUser, lesson_key: str) -> dict:
+        """Return published typed blocks only when the learner can access the lesson."""
+        from urllib.parse import urlsplit
+
+        lesson = LearningLesson.objects.filter(
+            key=lesson_key,
+            is_published=True,
+            deleted_at__isnull=True,
+            course__is_published=True,
+            course__deleted_at__isnull=True,
+        ).select_related("course").first()
+        if lesson is None:
+            raise LearningLesson.DoesNotExist
+        if not LearningService.lesson_is_unlocked(user, lesson):
+            raise PermissionError("Complete the previous lessons before opening this lesson.")
+
+        try:
+            content = lesson.content
+        except LearningLessonContent.DoesNotExist as exc:
+            raise LearningLessonContent.DoesNotExist from exc
+        if not content.is_published or content.deleted_at is not None:
+            raise LearningLessonContent.DoesNotExist
+        if not isinstance(content.blocks, list) or not content.blocks:
+            raise ValueError("Published lesson content must contain at least one block.")
+
+        allowed_types = {"heading", "text", "image", "video", "document", "link", "callout", "prompt"}
+        normalized_blocks = []
+        for position, block in enumerate(content.blocks):
+            if not isinstance(block, dict) or block.get("type") not in allowed_types:
+                raise ValueError(f"Invalid lesson content block at position {position}.")
+            block_type = block["type"]
+            safe_block = {"type": block_type}
+            for field in ("id", "title", "text", "alt", "caption", "language"):
+                value = block.get(field)
+                if value is not None:
+                    if not isinstance(value, str):
+                        raise ValueError(f"Invalid {field} in lesson content block {position}.")
+                    safe_block[field] = value
+            if block_type in {"heading", "text", "callout", "prompt"} and not safe_block.get("text"):
+                raise ValueError(f"Lesson content block {position} requires text.")
+            if block_type in {"image", "video", "document", "link"}:
+                url = block.get("url")
+                parsed = urlsplit(url) if isinstance(url, str) else None
+                if parsed is None or parsed.scheme != "https" or not parsed.netloc:
+                    raise ValueError(f"Lesson content block {position} requires a valid HTTPS URL.")
+                safe_block["url"] = url
+                if block_type == "image" and not safe_block.get("alt"):
+                    raise ValueError(f"Image block {position} requires alternative text.")
+            normalized_blocks.append(safe_block)
+
+        return {
+            "lessonId": lesson.key,
+            "courseId": lesson.course.key,
+            "title": lesson.title,
+            "description": lesson.description,
+            "kind": lesson.kind,
+            "version": content.version,
+            "estimatedMinutes": content.estimated_minutes,
+            "blocks": normalized_blocks,
+        }
 
     @staticmethod
     def quiz(lesson_key: str):
