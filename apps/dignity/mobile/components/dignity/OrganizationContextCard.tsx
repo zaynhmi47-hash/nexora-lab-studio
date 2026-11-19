@@ -13,17 +13,17 @@ export function OrganizationContextCard() {
   return <View style={styles.card}>
     <View style={styles.icon}><Ionicons name="layers-outline" size={19} color={colors.primaryDark} /></View>
     <View style={styles.copy}>
-      <Text style={styles.eyebrow}>YOUR CURRENT SPACE</Text>
+      <Text style={styles.eyebrow}>ORGANIZATION CONTEXT</Text>
       <Text style={styles.name}>{status === 'loading' ? 'Loading your spaces…' : organization?.name ?? 'Personal space'}</Text>
       <Text style={styles.detail}>
         {status === 'error' ? 'Organization list could not be loaded.' :
           organizations.length > 0 ? `${organizations.length} active organization membership${organizations.length === 1 ? '' : 's'}` :
-          status === 'ready' ? 'Your personal development space' : 'Organization context is not available yet'}
+          status === 'ready' ? 'Personal Dignity space' : 'Organization membership context is not available yet'}
       </Text>
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
     </View>
-    {organizations.length > 1 ? <Pressable accessibilityRole="button" accessibilityLabel="Switch organization space" onPress={cycleOrganization} style={styles.switch}>
-      <Ionicons name="swap-horizontal" size={17} color={colors.primary} /><Text style={styles.switchText}>Switch</Text>
+    {organizations.length > 1 ? <Pressable accessibilityRole="button" accessibilityLabel="Select organization" onPress={cycleOrganization} style={styles.switch}>
+      <Ionicons name="swap-horizontal" size={17} color={colors.primary} /><Text style={styles.switchText}>Change</Text>
     </Pressable> : null}
   </View>;
 }
