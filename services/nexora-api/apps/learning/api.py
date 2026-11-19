@@ -44,10 +44,12 @@ class LearningCoursesView(APIView):
         courses = []
         for course in LearningService.courses():
             lessons = list(course.lessons.filter(is_published=True))
-            course_lessons = [lesson_payload(lesson, completed) for lesson in lessons]
-            for index, lesson in enumerate(course_lessons):
-                if lesson["status"] != "completed" and index > 0 and course_lessons[index - 1]["status"] != "completed":
-                    lesson["status"] = "locked"
+            course_lessons = []
+            for lesson in lessons:
+                payload = lesson_payload(lesson, completed)
+                if payload["status"] != "completed" and not LearningService.lesson_is_unlocked(request.user, lesson):
+                    payload["status"] = "locked"
+                course_lessons.append(payload)
             courses.append({
                 "id": course.key,
                 "title": course.title,
@@ -71,6 +73,17 @@ class LearningQuizView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, lesson_key: str):
+        lesson = LearningLesson.objects.filter(
+            key=lesson_key,
+            is_published=True,
+            deleted_at__isnull=True,
+            course__is_published=True,
+            course__deleted_at__isnull=True,
+        ).first()
+        if lesson is None:
+            return Response({"detail": "Quiz not found."}, status=status.HTTP_404_NOT_FOUND)
+        if not LearningService.lesson_is_unlocked(request.user, lesson):
+            return Response({"detail": "Complete the previous lessons before opening this quiz."}, status=status.HTTP_403_FORBIDDEN)
         questions = LearningService.quiz(lesson_key)
         if not questions:
             return Response({"detail": "Quiz not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -96,6 +109,8 @@ class LearningCompleteLessonView(APIView):
             progress = LearningService.complete_lesson(request.user, lesson_key)
         except LearningLesson.DoesNotExist:
             return Response({"detail": "Lesson not found."}, status=status.HTTP_404_NOT_FOUND)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(progress_payload(progress))
 
 
@@ -105,7 +120,7 @@ class LearningCompleteQuizView(APIView):
 
     def post(self, request, lesson_key: str):
         answers = request.data.get("answers")
-        if not isinstance(answers, list) or not all(isinstance(answer, int) for answer in answers):
+        if not isinstance(answers, list) or not all(type(answer) is int for answer in answers):
             return Response({"detail": "answers must be an array of integers."}, status=status.HTTP_400_BAD_REQUEST)
         try:
             result = LearningService.complete_quiz(request.user, lesson_key, answers)
