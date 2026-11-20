@@ -6,6 +6,7 @@ import { Screen } from '@/components/dignity/Screen';
 import { SectionHeading } from '@/components/dignity/SectionHeading';
 import { SurfaceCard } from '@/components/dignity/SurfaceCard';
 import { useNexoraApi } from '@/lib/api/NexoraApiProvider';
+import { useOrganization } from '@/lib/organization/OrganizationProvider';
 import { colors, radius, spacing } from '@/theme/tokens';
 
 interface SkillOutcome {
@@ -34,6 +35,7 @@ interface EvidenceItem {
   title: string;
   status: 'pending' | 'verified' | 'rejected';
   submittedAt: string;
+  sharedOrganizations?: { id: string; name: string; sharedAt: string }[];
 }
 function payload<T>(response: unknown): T {
   if (response && typeof response === 'object' && 'data' in response) {
@@ -44,6 +46,7 @@ function payload<T>(response: unknown): T {
 
 export default function SkillsScreen() {
   const api = useNexoraApi();
+  const { organization } = useOrganization();
   const [skills, setSkills] = useState<SkillOutcome[]>([]);
   const [catalog, setCatalog] = useState<CompetencyCatalog[]>([]);
   const [evidence, setEvidence] = useState<EvidenceItem[]>([]);
@@ -54,6 +57,7 @@ export default function SkillsScreen() {
   const [artifactUrl, setArtifactUrl] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sharingEvidenceId, setSharingEvidenceId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -89,6 +93,29 @@ export default function SkillsScreen() {
   }, [api]);
 
   useEffect(() => { void load(); }, [load]);
+
+  const toggleEvidenceShare = useCallback(async (item: EvidenceItem) => {
+    if (!organization) return;
+    const alreadyShared = item.sharedOrganizations?.some((shared) => shared.id === organization.id) ?? false;
+    setSharingEvidenceId(item.id);
+    setError(null);
+    setNotice(null);
+    try {
+      await api.request('/api/v1/learning/evidence/shares/', {
+        method: alreadyShared ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ evidenceId: item.id, organizationId: organization.id }),
+      });
+      setNotice(alreadyShared
+        ? `Access revoked for ${organization.name}.`
+        : `Evidence shared with ${organization.name}. You can revoke access at any time.`);
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to update evidence sharing.');
+    } finally {
+      setSharingEvidenceId(null);
+    }
+  }, [api, load, organization]);
 
   const submitEvidence = useCallback(async () => {
     if (!selectedOutcome || !title.trim()) return;
@@ -178,10 +205,23 @@ export default function SkillsScreen() {
 
     <View style={styles.section}>
       <SectionHeading title="Your evidence portfolio" subtitle="Only your own submissions are shown here." />
-      {evidence.length === 0 ? <SurfaceCard><Text style={styles.detail}>No evidence submitted yet.</Text></SurfaceCard> : evidence.map((item) => <SurfaceCard key={item.id} style={styles.evidenceCard}>
-        <View style={styles.evidenceTop}><Text style={styles.cardTitle}>{item.title}</Text><Text style={[styles.evidenceStatus, item.status === 'verified' ? styles.verified : item.status === 'rejected' ? styles.rejected : styles.pending]}>{item.status}</Text></View>
-        <Text style={styles.detail}>{item.outcomeTitle} · {item.type}</Text>
-      </SurfaceCard>)}
+      {evidence.length === 0 ? <SurfaceCard><Text style={styles.detail}>No evidence submitted yet.</Text></SurfaceCard> : evidence.map((item) => {
+        const isShared = item.sharedOrganizations?.some((shared) => shared.id === organization?.id) ?? false;
+        return <SurfaceCard key={item.id} style={styles.evidenceCard}>
+          <View style={styles.evidenceTop}><Text style={styles.cardTitle}>{item.title}</Text><Text style={[styles.evidenceStatus, item.status === 'verified' ? styles.verified : item.status === 'rejected' ? styles.rejected : styles.pending]}>{item.status}</Text></View>
+          <Text style={styles.detail}>{item.outcomeTitle} · {item.type}</Text>
+          {item.sharedOrganizations?.length ? <Text style={styles.sharedLabel}>Shared with: {item.sharedOrganizations.map((shared) => shared.name).join(', ')}</Text> : <Text style={styles.detail}>Private to your account</Text>}
+          <Pressable
+            accessibilityRole="button"
+            disabled={!organization || sharingEvidenceId === item.id}
+            onPress={() => void toggleEvidenceShare(item)}
+            style={[styles.shareButton, (!organization || sharingEvidenceId === item.id) && styles.disabled]}
+          >
+            <Ionicons name={isShared ? 'lock-closed-outline' : 'share-social-outline'} size={14} color={colors.primaryDark} />
+            <Text style={styles.shareButtonText}>{sharingEvidenceId === item.id ? 'Updating…' : !organization ? 'No organization selected' : isShared ? `Revoke access · ${organization.name}` : `Share with ${organization.name}`}</Text>
+          </Pressable>
+        </SurfaceCard>;
+      })}
     </View>
     {error ? <Pressable onPress={() => void load()} style={styles.errorBox}><Text style={styles.errorText}>{error} · Retry</Text></Pressable> : null}
     {notice ? <Text accessibilityLiveRegion="polite" style={styles.notice}>{notice}</Text> : null}
@@ -232,6 +272,9 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.4 },
   privacy: { color: colors.muted, fontSize: 9, lineHeight: 14 },
   evidenceCard: { padding: spacing.md, marginBottom: spacing.sm },
+  sharedLabel: { color: colors.primaryDark, fontSize: 9, fontWeight: '800', marginTop: 7 },
+  shareButton: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 7, paddingHorizontal: 11, paddingVertical: 8, borderRadius: radius.pill, backgroundColor: colors.primarySoft, marginTop: 10 },
+  shareButtonText: { color: colors.primaryDark, fontSize: 9, fontWeight: '900' },
   evidenceTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   evidenceStatus: { fontSize: 9, fontWeight: '900', textTransform: 'uppercase' },
   verified: { color: colors.success },
