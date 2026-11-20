@@ -1,5 +1,11 @@
 from django.urls import path
 
+from .evidence_api import (
+    LearningCompetencyCatalogView,
+    LearningEvidencePortfolioView,
+    LearningSkillProfileView,
+)
+
 from .api import (
     LearningCompleteLessonView,
     LearningCompleteQuizView,
@@ -12,6 +18,9 @@ from .api import (
 )
 
 urlpatterns = [
+    path("competencies/", LearningCompetencyCatalogView.as_view(), name="learning-competencies"),
+    path("evidence/", LearningEvidencePortfolioView.as_view(), name="learning-evidence"),
+    path("skills/", LearningSkillProfileView.as_view(), name="learning-skills"),
     path("courses/", LearningCoursesView.as_view(), name="learning-courses"),
     path("progress/", LearningProgressView.as_view(), name="learning-progress"),
     path("hub/", LearningHubView.as_view(), name="learning-hub"),
