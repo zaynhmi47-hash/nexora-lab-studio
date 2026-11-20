@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from apps.identity.authentication import FirebaseIdentityAuthentication
 
 from .evidence import LearningEvidenceService
-from .models import LearningEvidence, LearningOutcome
+from .models import LearningOutcome
 
 
 class LearningCompetencyCatalogView(APIView):
