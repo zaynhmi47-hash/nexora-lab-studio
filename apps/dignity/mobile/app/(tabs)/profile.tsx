@@ -23,6 +23,11 @@ export default function ProfileScreen() {
       {profileError ? <Pressable onPress={() => void refresh()} style={styles.retry}><Text style={styles.retryText}>Profile sync failed · Tap to retry</Text></Pressable> : null}
     </SurfaceCard>
     <OrganizationContextCard />
+    <Pressable onPress={() => router.push('/skills')} style={styles.settings}>
+      <Ionicons name="ribbon-outline" size={18} color={colors.primary} />
+      <View style={{ flex: 1 }}><Text style={styles.settingsText}>Skill profile & evidence</Text><Text style={styles.rowDetail}>Competencies, portfolio and assessed mastery</Text></View>
+      <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+    </Pressable>
     <Text style={styles.sectionTitle}>Your profile connects</Text>
     <ProfileRow icon="school-outline" title="Learning evidence" detail="Courses, practice and demonstrated skills" />
     <ProfileRow icon="leaf-outline" title="Personal growth" detail="Goals, habits and reflections — private by default" />
