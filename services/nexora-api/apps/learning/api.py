@@ -81,7 +81,7 @@ class LearningLessonContentView(APIView):
             return Response({"detail": "Published lesson content not found."}, status=status.HTTP_404_NOT_FOUND)
         except PermissionError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_403_FORBIDDEN)
-        except ValueError as exc:
+        except ValueError:
             return Response({"detail": "Lesson content is invalid and cannot be displayed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         return Response(content)
 
@@ -108,15 +108,19 @@ class LearningQuizView(APIView):
             return Response({"detail": "Quiz not found."}, status=status.HTTP_404_NOT_FOUND)
         # Never send answer keys or explanations before an attempt is submitted.
         # Keeping this response intentionally limited protects quiz integrity.
-        return Response([
-            {
-                "id": question.key,
-                "lessonId": lesson_key,
-                "prompt": question.prompt,
-                "options": question.options,
-            }
-            for question in questions
-        ])
+        return Response({
+            "lessonId": lesson_key,
+            "title": lesson.title,
+            "passingScorePercent": 70,
+            "questions": [
+                {
+                    "id": question.key,
+                    "prompt": question.prompt,
+                    "options": question.options,
+                }
+                for question in questions
+            ],
+        })
 
 
 class LearningCompleteLessonView(APIView):
