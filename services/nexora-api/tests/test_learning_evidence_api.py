@@ -93,7 +93,7 @@ def test_learner_can_submit_private_pending_evidence_but_cannot_self_verify():
     assert payload["artifactUrl"] == "https://portfolio.example.org/research"
     evidence = LearningEvidence.objects.get(id=payload["id"])
     assert evidence.user_id == user.id
-    assert evidence.verified_by is None
+    assert evidence.reviewed_by is None
     assert evidence.verified_at is None
 
 
@@ -137,7 +137,7 @@ def test_skill_profile_does_not_infer_mastery_from_submitted_or_verified_evidenc
         evidence_type=LearningEvidence.EvidenceType.CERTIFICATE,
         title="Certificate reviewed by an authorized reviewer",
         status=LearningEvidence.Status.VERIFIED,
-        verified_by=reviewer,
+        reviewed_by=reviewer,
         verified_at=timezone.now(),
     )
     client = APIClient()
@@ -296,7 +296,7 @@ def test_only_authorized_organization_reviewer_can_review_explicitly_shared_evid
     assert reviewed.status_code == 200
     evidence.refresh_from_db()
     assert evidence.status == LearningEvidence.Status.VERIFIED
-    assert evidence.verified_by_id == reviewer.id
+    assert evidence.reviewed_by_id == reviewer.id
     assert evidence.verified_at is not None
     assert evidence.review_note == "Demonstration reviewed."
 
