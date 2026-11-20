@@ -102,7 +102,7 @@ class LearningEvidenceService:
                 "sourceReference": item.source_reference,
                 "status": item.status,
                 "submittedAt": item.created_at.isoformat(),
-                "verifiedAt": item.verified_at.isoformat() if item.verified_at else None,
+                "verifiedAt": item.reviewed_at.isoformat() if item.reviewed_at else None,
                 "reviewNote": item.review_note,
                 "sharedOrganizations": [
                     {
