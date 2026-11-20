@@ -45,6 +45,8 @@ class LearningEvidenceShareView(APIView):
         )
 
     def delete(self, request):
+        if not isinstance(request.data, dict):
+            return Response({"detail": "Request body must be a JSON object."}, status=status.HTTP_400_BAD_REQUEST)
         evidence_id = request.data.get("evidenceId")
         organization_id = request.data.get("organizationId")
         if not isinstance(evidence_id, str) or not isinstance(organization_id, str):
