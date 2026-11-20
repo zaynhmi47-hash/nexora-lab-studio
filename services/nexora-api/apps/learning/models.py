@@ -144,3 +144,171 @@ class LearningUserAchievement(AuditableBaseModel):
         constraints = [
             models.UniqueConstraint(fields=("user", "achievement"), name="learning_user_achievement_unique"),
         ]
+
+
+class LearningCompetency(AuditableBaseModel):
+    """A versionable skill area in the learner-facing competency taxonomy."""
+
+    key = models.SlugField(max_length=120, unique=True)
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    domain = models.CharField(max_length=80, db_index=True)
+    parent = models.ForeignKey(
+        "self",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="children",
+    )
+    sort_order = models.PositiveIntegerField(default=0)
+    is_published = models.BooleanField(default=False, db_index=True)
+
+    class Meta:
+        db_table = "learning_competencies"
+        ordering = ("domain", "sort_order", "title")
+
+
+class LearningOutcome(AuditableBaseModel):
+    """A measurable outcome that contributes to one competency."""
+
+    key = models.SlugField(max_length=140, unique=True)
+    competency = models.ForeignKey(
+        LearningCompetency,
+        on_delete=models.PROTECT,
+        related_name="outcomes",
+    )
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    success_criteria = models.JSONField(default=list, blank=True)
+    proficiency_level = models.PositiveSmallIntegerField(default=1)
+    sort_order = models.PositiveIntegerField(default=0)
+    is_published = models.BooleanField(default=False, db_index=True)
+
+    class Meta:
+        db_table = "learning_outcomes"
+        ordering = ("competency__domain", "competency__sort_order", "sort_order", "title")
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(proficiency_level__gte=1, proficiency_level__lte=5),
+                name="learning_outcome_level_1_5",
+            ),
+        ]
+
+
+class LearningEvidence(AuditableBaseModel):
+    """Learner-owned evidence; submission never implies verified mastery."""
+
+    class EvidenceType(models.TextChoices):
+        PROJECT = "project", "Project"
+        ASSIGNMENT = "assignment", "Assignment"
+        CERTIFICATE = "certificate", "Certificate"
+        PRACTICE = "practice", "Practical demonstration"
+        REFLECTION = "reflection", "Reflection"
+        OTHER = "other", "Other"
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending review"
+        VERIFIED = "verified", "Verified"
+        REJECTED = "rejected", "Needs revision"
+
+    class SourceType(models.TextChoices):
+        SELF_REPORTED = "self_reported", "Self reported"
+        LEARNING = "learning", "Dignity Learn"
+        ACADEMIC = "academic", "Academic"
+        CAREER = "career", "Career"
+        EXTERNAL = "external", "External"
+
+    user = models.ForeignKey(
+        "identity.NexoraUser",
+        on_delete=models.CASCADE,
+        related_name="learning_evidence",
+    )
+    outcome = models.ForeignKey(
+        LearningOutcome,
+        on_delete=models.PROTECT,
+        related_name="evidence",
+    )
+    evidence_type = models.CharField(max_length=20, choices=EvidenceType.choices)
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    artifact_url = models.URLField(max_length=1000, blank=True)
+    source_type = models.CharField(
+        max_length=20,
+        choices=SourceType.choices,
+        default=SourceType.SELF_REPORTED,
+    )
+    source_reference = models.CharField(max_length=255, blank=True)
+    status = models.CharField(
+        max_length=12,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
+    verified_by = models.ForeignKey(
+        "identity.NexoraUser",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="verified_learning_evidence",
+    )
+    verified_at = models.DateTimeField(null=True, blank=True)
+    review_note = models.TextField(blank=True)
+
+    class Meta:
+        db_table = "learning_evidence"
+        ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=("user", "status"), name="learning_evidence_user_status_idx"),
+            models.Index(fields=("outcome", "status"), name="learning_evidence_outcome_status_idx"),
+        ]
+
+
+class LearningMastery(AuditableBaseModel):
+    """An explicit assessment record; never inferred from course completion."""
+
+    class Status(models.TextChoices):
+        UNASSESSED = "unassessed", "Unassessed"
+        PROVISIONAL = "provisional", "Provisional"
+        VERIFIED = "verified", "Verified"
+
+    user = models.ForeignKey(
+        "identity.NexoraUser",
+        on_delete=models.CASCADE,
+        related_name="learning_mastery",
+    )
+    outcome = models.ForeignKey(
+        LearningOutcome,
+        on_delete=models.PROTECT,
+        related_name="mastery_records",
+    )
+    level = models.PositiveSmallIntegerField(default=0)
+    status = models.CharField(
+        max_length=12,
+        choices=Status.choices,
+        default=Status.UNASSESSED,
+        db_index=True,
+    )
+    assessment_method = models.CharField(max_length=80, blank=True)
+    rationale = models.TextField(blank=True)
+    assessed_by = models.ForeignKey(
+        "identity.NexoraUser",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assessed_learning_mastery",
+    )
+    assessed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "learning_mastery"
+        constraints = [
+            models.UniqueConstraint(
+                fields=("user", "outcome"),
+                condition=models.Q(deleted_at__isnull=True),
+                name="learning_user_outcome_mastery_unique",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(level__gte=0, level__lte=5),
+                name="learning_mastery_level_0_5",
+            ),
+        ]
