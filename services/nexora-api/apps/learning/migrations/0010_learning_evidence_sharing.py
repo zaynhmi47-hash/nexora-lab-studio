@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="learningevidenceshare",
             constraint=models.UniqueConstraint(
-                condition=models.Q(("revoked_at__isnull", True), ("deleted_at__isnull", True)),
+                condition=models.Q(("deleted_at__isnull", True), ("revoked_at__isnull", True)),
                 fields=("evidence", "organization"),
                 name="learn_evidence_active_share_unique",
             ),
