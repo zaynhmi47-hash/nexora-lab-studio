@@ -244,14 +244,14 @@ class LearningEvidence(AuditableBaseModel):
         default=Status.PENDING,
         db_index=True,
     )
-    verified_by = models.ForeignKey(
+    reviewed_by = models.ForeignKey(
         "identity.NexoraUser",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="verified_learning_evidence",
     )
-    verified_at = models.DateTimeField(null=True, blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
     review_note = models.TextField(blank=True)
 
     class Meta:
@@ -265,7 +265,7 @@ class LearningEvidence(AuditableBaseModel):
             models.CheckConstraint(
                 condition=(
                     ~models.Q(status__in=("verified", "rejected"))
-                    | (models.Q(verified_by__isnull=False) & models.Q(verified_at__isnull=False))
+                    | (models.Q(reviewed_by__isnull=False) & models.Q(reviewed_at__isnull=False))
                 ),
                 name="learn_evidence_review_audit_ck",
             ),
