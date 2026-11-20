@@ -41,16 +41,17 @@ def test_quiz_endpoint_does_not_expose_answer_key_or_explanation():
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload == [
+    assert payload["lessonId"] == "quiz-security-lesson"
+    assert payload["passingScorePercent"] == 70
+    assert payload["questions"] == [
         {
             "id": "quiz-security-question",
-            "lessonId": "quiz-security-lesson",
             "prompt": "Which option is correct?",
             "options": ["Option A", "Option B", "Option C"],
         }
     ]
-    assert "correctOptionIndex" not in payload[0]
-    assert "explanation" not in payload[0]
+    assert "correctOptionIndex" not in payload["questions"][0]
+    assert "explanation" not in payload["questions"][0]
 
 @pytest.mark.django_db
 def test_quiz_endpoint_requires_authentication():
@@ -247,3 +248,46 @@ def test_lesson_content_rejects_unsafe_media_url():
     response = client.get(f"/api/v1/learning/lessons/{lesson.key}/content/")
 
     assert response.status_code == 500
+
+
+@pytest.mark.django_db
+def test_quiz_submission_returns_feedback_only_after_submission():
+    user = NexoraUser.objects.create(
+        status=NexoraUser.Status.ACTIVE,
+        email="quiz-feedback@example.com",
+    )
+    course = LearningCourse.objects.create(key="feedback-course", title="Feedback")
+    lesson = LearningLesson.objects.create(
+        key="feedback-quiz", course=course, title="Feedback quiz",
+        kind=LearningLesson.Kind.QUIZ,
+    )
+    LearningQuizQuestion.objects.create(
+        lesson=lesson, key="feedback-question", prompt="Choose",
+        options=["A", "B"], correct_option_index=1,
+        explanation="B is correct because it matches the concept.",
+    )
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    before = client.get(f"/api/v1/learning/lessons/{lesson.key}/quiz/")
+    assert before.status_code == 200
+    assert "correctOptionIndex" not in before.json()["questions"][0]
+    assert "explanation" not in before.json()["questions"][0]
+
+    submitted = client.post(
+        f"/api/v1/learning/lessons/{lesson.key}/quiz/complete/",
+        {"answers": [1]},
+        format="json",
+    )
+    assert submitted.status_code == 200
+    result = submitted.json()
+    assert result["passed"] is True
+    assert result["questionResults"] == [
+        {
+            "questionId": "feedback-question",
+            "selectedOptionIndex": 1,
+            "correctOptionIndex": 1,
+            "isCorrect": True,
+            "explanation": "B is correct because it matches the concept.",
+        }
+    ]
