@@ -27,6 +27,7 @@ export default function RootLayout() {
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="lesson/[lessonKey]" options={{ title: "Learning reader", headerBackTitle: "Learn" }} />
               <Stack.Screen name="quiz/[lessonKey]" options={{ title: "Knowledge check", headerBackTitle: "Lesson" }} />
+              <Stack.Screen name="skills" options={{ title: "Skill profile", headerShown: false }} />
               </Stack>
             </OrganizationProvider>
           </DignityProfileProvider>
