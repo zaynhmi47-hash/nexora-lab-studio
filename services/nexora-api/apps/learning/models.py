@@ -328,3 +328,37 @@ class LearningMastery(AuditableBaseModel):
                 name="learn_mastery_assessment_ck",
             ),
         ]
+
+
+class LearningEvidenceShare(AuditableBaseModel):
+    """Explicit, revocable consent to let one organization review one evidence item."""
+
+    evidence = models.ForeignKey(
+        LearningEvidence,
+        on_delete=models.CASCADE,
+        related_name="organization_shares",
+    )
+    organization = models.ForeignKey(
+        "organizations.Organization",
+        on_delete=models.PROTECT,
+        related_name="learning_evidence_shares",
+    )
+    shared_by = models.ForeignKey(
+        "identity.NexoraUser",
+        on_delete=models.PROTECT,
+        related_name="shared_learning_evidence",
+    )
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "learning_evidence_shares"
+        constraints = [
+            models.UniqueConstraint(
+                fields=("evidence", "organization"),
+                condition=models.Q(revoked_at__isnull=True, deleted_at__isnull=True),
+                name="learn_evidence_active_share_unique",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=("organization", "revoked_at"), name="learn_ev_share_org_idx"),
+        ]
