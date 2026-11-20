@@ -320,4 +320,11 @@ class LearningMastery(AuditableBaseModel):
                 condition=models.Q(level__gte=0, level__lte=5),
                 name="learning_mastery_level_0_5",
             ),
+            models.CheckConstraint(
+                condition=(
+                    ~models.Q(status__in=("provisional", "verified"))
+                    | (models.Q(assessed_by__isnull=False) & models.Q(assessed_at__isnull=False))
+                ),
+                name="learn_mastery_assessment_ck",
+            ),
         ]
