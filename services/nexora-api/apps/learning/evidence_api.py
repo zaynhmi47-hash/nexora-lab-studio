@@ -25,6 +25,11 @@ class LearningEvidencePortfolioView(APIView):
         return Response(LearningEvidenceService.portfolio(request.user))
 
     def post(self, request):
+        if not isinstance(request.data, dict):
+            return Response(
+                {"detail": "Request body must be a JSON object."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         outcome_key = request.data.get("outcomeKey")
         evidence_type = request.data.get("type")
         title = request.data.get("title")
