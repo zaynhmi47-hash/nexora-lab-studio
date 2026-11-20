@@ -111,7 +111,7 @@ class LearningQuizView(APIView):
         return Response({
             "lessonId": lesson_key,
             "title": lesson.title,
-            "passingScorePercent": 70,
+            "passingScorePercent": LearningService.QUIZ_PASSING_SCORE_PERCENT,
             "questions": [
                 {
                     "id": question.key,
