@@ -1,4 +1,5 @@
 import pytest
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.identity.models import NexoraUser
@@ -123,13 +124,18 @@ def test_evidence_portfolio_is_scoped_to_authenticated_owner():
 def test_skill_profile_does_not_infer_mastery_from_submitted_or_verified_evidence():
     _, outcome = create_learning_outcome()
     user = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="skill-profile@example.com")
+    reviewer = NexoraUser.objects.create(
+        status=NexoraUser.Status.ACTIVE,
+        email="evidence-reviewer@example.com",
+    )
     LearningEvidence.objects.create(
         user=user,
         outcome=outcome,
         evidence_type=LearningEvidence.EvidenceType.CERTIFICATE,
-        title="Certificate submitted by learner",
+        title="Certificate reviewed by an authorized reviewer",
         status=LearningEvidence.Status.VERIFIED,
-        verified_at=None,
+        verified_by=reviewer,
+        verified_at=timezone.now(),
     )
     client = APIClient()
     client.force_authenticate(user=user)
