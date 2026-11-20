@@ -258,8 +258,8 @@ class LearningEvidence(AuditableBaseModel):
         db_table = "learning_evidence"
         ordering = ("-created_at",)
         indexes = [
-            models.Index(fields=("user", "status"), name="learning_evidence_user_status_idx"),
-            models.Index(fields=("outcome", "status"), name="learning_evidence_outcome_status_idx"),
+            models.Index(fields=("user", "status"), name="learn_ev_user_status_idx"),
+            models.Index(fields=("outcome", "status"), name="learn_ev_out_status_idx"),
         ]
 
 
