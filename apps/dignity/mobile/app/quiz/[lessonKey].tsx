@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   wrongLabel: { color: colors.danger, fontSize: 9, fontWeight: '900' },
   correctLabel: { color: colors.success, fontSize: 9, fontWeight: '900' },
   feedback: { borderRadius: radius.medium, padding: 11, marginTop: spacing.md },
-  feedbackCorrect: { backgroundColor: colors.successSoft },
+  feedbackCorrect: { backgroundColor: colors.primarySoft },
   feedbackWrong: { backgroundColor: colors.roseSoft },
   feedbackTitle: { color: colors.ink, fontSize: 11, fontWeight: '900', marginBottom: 4 },
   feedbackText: { color: colors.ink, fontSize: 11, lineHeight: 17 },
