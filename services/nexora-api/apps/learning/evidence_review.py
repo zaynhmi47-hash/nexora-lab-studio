@@ -136,12 +136,12 @@ class LearningEvidenceReviewService:
             raise ValueError("Only pending evidence can be reviewed.")
         evidence.status = decision
         evidence.reviewed_by = reviewer
-        evidence.verified_at = timezone.now()
+        evidence.reviewed_at = timezone.now()
         evidence.review_note = review_note.strip()
         evidence.save(update_fields=(
             "status",
             "reviewed_by",
-            "verified_at",
+            "reviewed_at",
             "review_note",
             "updated_at",
         ))
