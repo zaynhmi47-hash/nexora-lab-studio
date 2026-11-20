@@ -5,7 +5,6 @@ from rest_framework.views import APIView
 
 from apps.core.exceptions import PermissionDeniedException
 from apps.identity.authentication import FirebaseIdentityAuthentication
-from apps.organizations.services import MembershipService
 
 from .evidence_review import LearningEvidenceReviewService
 from .models import LearningEvidence, LearningEvidenceShare
@@ -16,6 +15,8 @@ class LearningEvidenceShareView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        if not isinstance(request.data, dict):
+            return Response({"detail": "Request body must be a JSON object."}, status=status.HTTP_400_BAD_REQUEST)
         evidence_id = request.data.get("evidenceId")
         organization_id = request.data.get("organizationId")
         if not isinstance(evidence_id, str) or not isinstance(organization_id, str):
@@ -33,8 +34,6 @@ class LearningEvidenceShareView(APIView):
             return Response({"detail": "Evidence not found in your portfolio."}, status=status.HTTP_404_NOT_FOUND)
         except PermissionDeniedException:
             return Response({"detail": "Active organization membership is required."}, status=status.HTTP_403_FORBIDDEN)
-        except MembershipService.get_active_membership.__annotations__.get("return", Exception):
-            return Response({"detail": "Unable to share evidence."}, status=status.HTTP_403_FORBIDDEN)
         return Response(
             {
                 "evidenceId": str(share.evidence_id),
