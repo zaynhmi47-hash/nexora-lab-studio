@@ -94,7 +94,7 @@ def test_learner_can_submit_private_pending_evidence_but_cannot_self_verify():
     evidence = LearningEvidence.objects.get(id=payload["id"])
     assert evidence.user_id == user.id
     assert evidence.reviewed_by is None
-    assert evidence.verified_at is None
+    assert evidence.reviewed_at is None
 
 
 @pytest.mark.django_db
@@ -138,7 +138,7 @@ def test_skill_profile_does_not_infer_mastery_from_submitted_or_verified_evidenc
         title="Certificate reviewed by an authorized reviewer",
         status=LearningEvidence.Status.VERIFIED,
         reviewed_by=reviewer,
-        verified_at=timezone.now(),
+        reviewed_at=timezone.now(),
     )
     client = APIClient()
     client.force_authenticate(user=user)
@@ -297,7 +297,7 @@ def test_only_authorized_organization_reviewer_can_review_explicitly_shared_evid
     evidence.refresh_from_db()
     assert evidence.status == LearningEvidence.Status.VERIFIED
     assert evidence.reviewed_by_id == reviewer.id
-    assert evidence.verified_at is not None
+    assert evidence.reviewed_at is not None
     assert evidence.review_note == "Demonstration reviewed."
 
 
