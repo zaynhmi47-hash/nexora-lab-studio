@@ -153,6 +153,10 @@ def test_skill_profile_does_not_infer_mastery_from_submitted_or_verified_evidenc
 def test_skill_profile_uses_explicit_mastery_record_not_course_progress():
     _, outcome = create_learning_outcome()
     user = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="assessed-profile@example.com")
+    assessor = NexoraUser.objects.create(
+        status=NexoraUser.Status.ACTIVE,
+        email="mastery-assessor@example.com",
+    )
     LearningMastery.objects.create(
         user=user,
         outcome=outcome,
@@ -160,6 +164,8 @@ def test_skill_profile_uses_explicit_mastery_record_not_course_progress():
         status=LearningMastery.Status.PROVISIONAL,
         assessment_method="reviewed_portfolio",
         rationale="Evidence demonstrates independent application.",
+        assessed_by=assessor,
+        assessed_at=timezone.now(),
     )
     client = APIClient()
     client.force_authenticate(user=user)
