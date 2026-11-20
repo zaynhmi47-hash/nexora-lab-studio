@@ -2,12 +2,15 @@ import pytest
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from apps.access.services import assign_role
 from apps.identity.models import NexoraUser
+from apps.organizations.services import MembershipService, OrganizationService
 from apps.learning.models import (
     LearningCompetency,
     LearningEvidence,
     LearningMastery,
     LearningOutcome,
+    LearningEvidenceShare,
 )
 
 
@@ -217,3 +220,146 @@ def test_learning_evidence_endpoints_require_authentication():
     assert client.get("/api/v1/learning/competencies/").status_code == 401
     assert client.get("/api/v1/learning/evidence/").status_code == 401
     assert client.get("/api/v1/learning/skills/").status_code == 401
+
+
+@pytest.mark.django_db
+def test_evidence_is_private_until_learner_explicitly_shares_with_organization():
+    learner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="sharing-learner@example.com")
+    outsider = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="sharing-outsider@example.com")
+    organization = OrganizationService.create_organization(name="Evidence Review Org", created_by=learner)
+    _, outcome = create_learning_outcome(key="private-evidence")
+    evidence = LearningEvidence.objects.create(
+        user=learner,
+        outcome=outcome,
+        evidence_type=LearningEvidence.EvidenceType.PROJECT,
+        title="Private project",
+    )
+    client = APIClient()
+    client.force_authenticate(user=outsider)
+
+    denied = client.get(f"/api/v1/learning/organizations/{organization.id}/evidence/review/")
+    assert denied.status_code == 403
+    assert LearningEvidenceShare.objects.count() == 0
+
+    client.force_authenticate(user=learner)
+    shared = client.post(
+        "/api/v1/learning/evidence/shares/",
+        {"evidenceId": str(evidence.id), "organizationId": str(organization.id)},
+        format="json",
+    )
+    assert shared.status_code == 201
+    assert LearningEvidenceShare.objects.filter(
+        evidence=evidence,
+        organization=organization,
+        revoked_at__isnull=True,
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_only_authorized_organization_reviewer_can_review_explicitly_shared_evidence():
+    learner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="review-learner@example.com")
+    reviewer = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="review-admin@example.com")
+    organization = OrganizationService.create_organization(name="Authorized Review Org", created_by=learner)
+    reviewer_membership = MembershipService.add_user(user=reviewer, organization_id=organization.id)
+    assign_role(
+        actor=learner,
+        membership=reviewer_membership,
+        role=organization.roles.get(slug="admin"),
+    )
+    _, outcome = create_learning_outcome(key="reviewable-evidence")
+    evidence = LearningEvidence.objects.create(
+        user=learner,
+        outcome=outcome,
+        evidence_type=LearningEvidence.EvidenceType.PRACTICE,
+        title="Practical demonstration",
+    )
+    learner_client = APIClient()
+    learner_client.force_authenticate(user=learner)
+    share_response = learner_client.post(
+        "/api/v1/learning/evidence/shares/",
+        {"evidenceId": str(evidence.id), "organizationId": str(organization.id)},
+        format="json",
+    )
+    assert share_response.status_code == 201
+
+    reviewer_client = APIClient()
+    reviewer_client.force_authenticate(user=reviewer)
+    queue = reviewer_client.get(f"/api/v1/learning/organizations/{organization.id}/evidence/review/")
+    assert queue.status_code == 200
+    assert [item["evidenceId"] for item in queue.json()] == [str(evidence.id)]
+
+    reviewed = reviewer_client.post(
+        f"/api/v1/learning/organizations/{organization.id}/evidence/{evidence.id}/review/",
+        {"decision": "verified", "reviewNote": "Demonstration reviewed."},
+        format="json",
+    )
+    assert reviewed.status_code == 200
+    evidence.refresh_from_db()
+    assert evidence.status == LearningEvidence.Status.VERIFIED
+    assert evidence.verified_by_id == reviewer.id
+    assert evidence.verified_at is not None
+    assert evidence.review_note == "Demonstration reviewed."
+
+
+@pytest.mark.django_db
+def test_learner_can_revoke_organization_access_to_evidence():
+    learner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="revoke-learner@example.com")
+    organization = OrganizationService.create_organization(name="Revocable Review Org", created_by=learner)
+    _, outcome = create_learning_outcome(key="revocable-evidence")
+    evidence = LearningEvidence.objects.create(
+        user=learner,
+        outcome=outcome,
+        evidence_type=LearningEvidence.EvidenceType.PROJECT,
+        title="Shared then revoked",
+    )
+    client = APIClient()
+    client.force_authenticate(user=learner)
+    shared = client.post(
+        "/api/v1/learning/evidence/shares/",
+        {"evidenceId": str(evidence.id), "organizationId": str(organization.id)},
+        format="json",
+    )
+    assert shared.status_code == 201
+
+    revoked = client.delete(
+        "/api/v1/learning/evidence/shares/",
+        {"evidenceId": str(evidence.id), "organizationId": str(organization.id)},
+        format="json",
+    )
+    assert revoked.status_code == 204
+    assert LearningEvidenceShare.objects.filter(
+        evidence=evidence,
+        organization=organization,
+        revoked_at__isnull=True,
+        deleted_at__isnull=True,
+    ).count() == 0
+
+
+@pytest.mark.django_db
+def test_reviewer_cannot_review_their_own_evidence_even_as_organization_owner():
+    learner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="self-review-owner@example.com")
+    organization = OrganizationService.create_organization(name="No Self Review Org", created_by=learner)
+    _, outcome = create_learning_outcome(key="self-review-evidence")
+    evidence = LearningEvidence.objects.create(
+        user=learner,
+        outcome=outcome,
+        evidence_type=LearningEvidence.EvidenceType.REFLECTION,
+        title="Personal reflection",
+    )
+    client = APIClient()
+    client.force_authenticate(user=learner)
+    share = client.post(
+        "/api/v1/learning/evidence/shares/",
+        {"evidenceId": str(evidence.id), "organizationId": str(organization.id)},
+        format="json",
+    )
+    assert share.status_code == 201
+
+    response = client.post(
+        f"/api/v1/learning/organizations/{organization.id}/evidence/{evidence.id}/review/",
+        {"decision": "verified"},
+        format="json",
+    )
+    assert response.status_code == 403
+    evidence.refresh_from_db()
+    assert evidence.status == LearningEvidence.Status.PENDING
