@@ -109,7 +109,7 @@ class OrganizationEvidenceReviewView(APIView):
             {
                 "evidenceId": str(evidence.id),
                 "status": evidence.status,
-                "reviewedAt": evidence.verified_at.isoformat(),
+                "reviewedAt": evidence.reviewed_at.isoformat(),
                 "reviewNote": evidence.review_note,
             }
         )
