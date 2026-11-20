@@ -300,6 +300,25 @@ def test_only_authorized_organization_reviewer_can_review_explicitly_shared_evid
     assert evidence.reviewed_at is not None
     assert evidence.review_note == "Demonstration reviewed."
 
+    assessed = reviewer_client.post(
+        f"/api/v1/learning/organizations/{organization.id}/mastery/assess/",
+        {
+            "learnerId": str(learner.id),
+            "outcomeKey": outcome.key,
+            "level": 3,
+            "status": LearningMastery.Status.PROVISIONAL,
+            "assessmentMethod": "reviewed_portfolio",
+            "rationale": "Verified project evidence demonstrates independent application.",
+        },
+        format="json",
+    )
+    assert assessed.status_code == 200
+    assert assessed.json()["level"] == 3
+    assert assessed.json()["status"] == LearningMastery.Status.PROVISIONAL
+    mastery = LearningMastery.objects.get(user=learner, outcome=outcome)
+    assert mastery.assessed_by_id == reviewer.id
+    assert mastery.assessed_at is not None
+
 
 @pytest.mark.django_db
 def test_learner_can_revoke_organization_access_to_evidence():
