@@ -74,6 +74,10 @@ class LearningEvidenceReviewService:
             revoked_at__isnull=True,
             deleted_at__isnull=True,
             evidence__deleted_at__isnull=True,
+            evidence__outcome__deleted_at__isnull=True,
+            evidence__outcome__is_published=True,
+            evidence__outcome__competency__deleted_at__isnull=True,
+            evidence__outcome__competency__is_published=True,
             evidence__status=LearningEvidence.Status.PENDING,
         ).select_related("evidence", "evidence__user", "evidence__outcome")
         return [
