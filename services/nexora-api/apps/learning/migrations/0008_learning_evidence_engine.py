@@ -98,6 +98,16 @@ class Migration(migrations.Migration):
             index=models.Index(fields=["outcome", "status"], name="learn_ev_out_status_idx"),
         ),
         migrations.AddConstraint(
+            model_name="learningevidence",
+            constraint=models.CheckConstraint(
+                condition=(
+                    ~models.Q(("status__in", ("verified", "rejected")))
+                    | (models.Q(("verified_by__isnull", False)) & models.Q(("verified_at__isnull", False)))
+                ),
+                name="learn_evidence_review_audit_ck",
+            ),
+        ),
+        migrations.AddConstraint(
             model_name="learningmastery",
             constraint=models.UniqueConstraint(condition=models.Q(("deleted_at__isnull", True)), fields=("user", "outcome"), name="learning_user_outcome_mastery_unique"),
         ),
