@@ -231,6 +231,16 @@ class LearningService:
             "passed": passed,
             "xpEarned": xp_earned,
             "completedAt": completed_at.isoformat(),
+            "questionResults": [
+                {
+                    "questionId": question.key,
+                    "selectedOptionIndex": answer,
+                    "correctOptionIndex": question.correct_option_index,
+                    "isCorrect": answer == question.correct_option_index,
+                    "explanation": question.explanation,
+                }
+                for question, answer in zip(questions, answers)
+            ],
         }
 
 
