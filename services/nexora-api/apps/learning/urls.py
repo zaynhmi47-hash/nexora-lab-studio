@@ -5,6 +5,11 @@ from .evidence_api import (
     LearningEvidencePortfolioView,
     LearningSkillProfileView,
 )
+from .evidence_review_api import (
+    LearningEvidenceShareView,
+    OrganizationEvidenceReviewQueueView,
+    OrganizationEvidenceReviewView,
+)
 
 from .api import (
     LearningCompleteLessonView,
@@ -21,6 +26,9 @@ urlpatterns = [
     path("competencies/", LearningCompetencyCatalogView.as_view(), name="learning-competencies"),
     path("evidence/", LearningEvidencePortfolioView.as_view(), name="learning-evidence"),
     path("skills/", LearningSkillProfileView.as_view(), name="learning-skills"),
+    path("evidence/shares/", LearningEvidenceShareView.as_view(), name="learning-evidence-shares"),
+    path("organizations/<uuid:organization_id>/evidence/review/", OrganizationEvidenceReviewQueueView.as_view(), name="learning-evidence-review-queue"),
+    path("organizations/<uuid:organization_id>/evidence/<uuid:evidence_id>/review/", OrganizationEvidenceReviewView.as_view(), name="learning-evidence-review"),
     path("courses/", LearningCoursesView.as_view(), name="learning-courses"),
     path("progress/", LearningProgressView.as_view(), name="learning-progress"),
     path("hub/", LearningHubView.as_view(), name="learning-hub"),
