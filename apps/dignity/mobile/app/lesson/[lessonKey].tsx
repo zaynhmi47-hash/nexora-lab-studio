@@ -109,7 +109,7 @@ export default function LessonReaderScreen() {
         })}
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {notice ? <Text accessibilityLiveRegion="polite" style={styles.success}>{notice}</Text> : null}
-        {content.kind === 'quiz' ? <SurfaceCard style={styles.callout}><Text style={styles.calloutLabel}>ASSESSMENT</Text><Text style={styles.body}>This lesson is an assessment. Complete it through the quiz experience; it cannot be marked complete from the reader.</Text></SurfaceCard> : <Pressable accessibilityRole="button" disabled={busy} onPress={() => void completeLesson()} style={[styles.complete, busy && styles.disabled]}><Text style={styles.completeText}>{busy ? 'Saving…' : 'Mark lesson complete'}</Text></Pressable>}
+        {content.kind === 'quiz' ? <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/quiz/[lessonKey]', params: { lessonKey } })} style={styles.complete}><Text style={styles.completeText}>Start assessment</Text></Pressable> : <Pressable accessibilityRole="button" disabled={busy} onPress={() => void completeLesson()} style={[styles.complete, busy && styles.disabled]}><Text style={styles.completeText}>{busy ? 'Saving…' : 'Mark lesson complete'}</Text></Pressable>}
       </> : null}
       <Pressable onPress={() => router.back()} style={styles.back}><Text style={styles.action}>Back to learning catalog</Text></Pressable>
     </Screen>
