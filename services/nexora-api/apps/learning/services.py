@@ -42,6 +42,7 @@ def _streak_after_completion(progress: LearningProgress, now):
 
 
 class LearningService:
+    QUIZ_PASSING_SCORE_PERCENT = 70
     @staticmethod
     def courses():
         return list(
@@ -203,7 +204,7 @@ class LearningService:
         )
         total = len(questions)
         score = round((correct / total) * 100)
-        passed = score >= 70
+        passed = score >= LearningService.QUIZ_PASSING_SCORE_PERCENT
         completed_at = timezone.now()
         attempt = LearningQuizAttempt.objects.create(
             user=user,
