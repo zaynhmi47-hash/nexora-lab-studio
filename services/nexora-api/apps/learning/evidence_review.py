@@ -7,7 +7,7 @@ from apps.access.services import authorize
 from apps.core.exceptions import PermissionDeniedException
 from apps.organizations.services import MembershipService
 
-from .models import LearningEvidence, LearningEvidenceShare
+from .models import LearningEvidence, LearningEvidenceShare, LearningMastery, LearningOutcome
 
 
 class LearningEvidenceReviewService:
@@ -150,3 +150,81 @@ class LearningEvidenceReviewService:
             "updated_at",
         ))
         return evidence
+
+
+    @staticmethod
+    @transaction.atomic
+    def assess_mastery(
+        *,
+        assessor,
+        organization_id,
+        learner_id,
+        outcome_key: str,
+        level: int,
+        status: str,
+        assessment_method: str,
+        rationale: str,
+    ) -> LearningMastery:
+        from apps.organizations.models import Organization
+
+        organization = Organization.objects.active().filter(
+            id=organization_id,
+            status=Organization.Status.ACTIVE,
+        ).first()
+        if organization is None:
+            raise LearningEvidenceShare.DoesNotExist
+        authorization = authorize(
+            user=assessor,
+            organization=organization,
+            permission_code="learning.mastery.assess",
+        )
+        if not authorization.allowed:
+            raise PermissionDeniedException("Mastery assessment permission is required.")
+        if type(level) is not int or not 1 <= level <= 5:
+            raise ValueError("Mastery level must be an integer from 1 to 5.")
+        if status not in (LearningMastery.Status.PROVISIONAL, LearningMastery.Status.VERIFIED):
+            raise ValueError("Mastery status must be provisional or verified.")
+        if not assessment_method.strip() or not rationale.strip():
+            raise ValueError("Assessment method and rationale are required.")
+        outcome = LearningOutcome.objects.filter(
+            key=outcome_key,
+            is_published=True,
+            deleted_at__isnull=True,
+            competency__is_published=True,
+            competency__deleted_at__isnull=True,
+        ).first()
+        if outcome is None:
+            raise LearningOutcome.DoesNotExist
+        if str(assessor.id) == str(learner_id):
+            raise PermissionDeniedException("Assessors cannot assess their own mastery.")
+        has_verified_shared_evidence = LearningEvidence.objects.filter(
+            user_id=learner_id,
+            outcome=outcome,
+            status=LearningEvidence.Status.VERIFIED,
+            reviewed_by__isnull=False,
+            reviewed_at__isnull=False,
+            deleted_at__isnull=True,
+            organization_shares__organization=organization,
+            organization_shares__revoked_at__isnull=True,
+            organization_shares__deleted_at__isnull=True,
+        ).exists()
+        if not has_verified_shared_evidence:
+            raise ValueError("At least one verified evidence item shared with this organization is required.")
+        mastery = LearningMastery.objects.select_for_update().filter(
+            user_id=learner_id,
+            outcome=outcome,
+            deleted_at__isnull=True,
+        ).first()
+        if mastery is None:
+            mastery = LearningMastery(
+                user_id=learner_id,
+                outcome=outcome,
+            )
+        mastery.level = level
+        mastery.status = status
+        mastery.assessment_method = assessment_method.strip()
+        mastery.rationale = rationale.strip()
+        mastery.assessed_by = assessor
+        mastery.assessed_at = timezone.now()
+        mastery.save()
+        return mastery
