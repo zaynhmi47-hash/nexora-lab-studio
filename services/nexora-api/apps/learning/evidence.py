@@ -3,7 +3,6 @@ from __future__ import annotations
 from urllib.parse import urlsplit
 
 from django.db import transaction
-from django.utils import timezone
 
 from .models import LearningCompetency, LearningEvidence, LearningMastery, LearningOutcome
 
@@ -86,6 +85,7 @@ class LearningEvidenceService:
             outcome__deleted_at__isnull=True,
             outcome__is_published=True,
             outcome__competency__is_published=True,
+            outcome__competency__deleted_at__isnull=True,
         ).select_related("outcome", "outcome__competency").order_by("-created_at")
         return [
             {
@@ -128,6 +128,7 @@ class LearningEvidenceService:
                 deleted_at__isnull=True,
                 outcome__is_published=True,
                 outcome__competency__is_published=True,
+                outcome__competency__deleted_at__isnull=True,
             )
         }
         evidence_counts = {}
@@ -136,6 +137,7 @@ class LearningEvidenceService:
             deleted_at__isnull=True,
             outcome__is_published=True,
             outcome__competency__is_published=True,
+            outcome__competency__deleted_at__isnull=True,
         ).values_list("outcome_id", "status")
         for outcome_id, status in rows:
             counts = evidence_counts.setdefault(outcome_id, {"pending": 0, "verified": 0, "rejected": 0})
