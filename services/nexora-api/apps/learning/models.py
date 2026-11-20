@@ -261,6 +261,15 @@ class LearningEvidence(AuditableBaseModel):
             models.Index(fields=("user", "status"), name="learn_ev_user_status_idx"),
             models.Index(fields=("outcome", "status"), name="learn_ev_out_status_idx"),
         ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    ~models.Q(status__in=("verified", "rejected"))
+                    | (models.Q(verified_by__isnull=False) & models.Q(verified_at__isnull=False))
+                ),
+                name="learn_evidence_review_audit_ck",
+            ),
+        ]
 
 
 class LearningMastery(AuditableBaseModel):
