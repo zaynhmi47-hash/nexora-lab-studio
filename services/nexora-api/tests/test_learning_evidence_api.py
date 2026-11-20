@@ -288,6 +288,20 @@ def test_only_authorized_organization_reviewer_can_review_explicitly_shared_evid
     assert queue.status_code == 200
     assert [item["evidenceId"] for item in queue.json()] == [str(evidence.id)]
 
+    premature_assessment = reviewer_client.post(
+        f"/api/v1/learning/organizations/{organization.id}/mastery/assess/",
+        {
+            "learnerId": str(learner.id),
+            "outcomeKey": outcome.key,
+            "level": 3,
+            "status": LearningMastery.Status.PROVISIONAL,
+            "assessmentMethod": "reviewed_portfolio",
+            "rationale": "Attempt before evidence verification.",
+        },
+        format="json",
+    )
+    assert premature_assessment.status_code == 400
+
     reviewed = reviewer_client.post(
         f"/api/v1/learning/organizations/{organization.id}/evidence/{evidence.id}/review/",
         {"decision": "verified", "reviewNote": "Demonstration reviewed."},
