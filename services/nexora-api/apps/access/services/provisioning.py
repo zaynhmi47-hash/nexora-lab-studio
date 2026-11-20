@@ -14,6 +14,7 @@ DEFAULT_PERMISSIONS = {
     "academic.read": ("Academic read", "Read academic terms, programs, and classrooms."),
     "academic.manage": ("Academic manage", "Manage academic structure and enrollments."),
     "academic.grade": ("Academic grade", "Record and publish grades for assigned classrooms."),
+    "learning.evidence.review": ("Review learning evidence", "Review evidence explicitly shared with this organization."),
 }
 
 ROLE_PERMISSIONS = {
@@ -29,6 +30,7 @@ ROLE_PERMISSIONS = {
         "academic.read",
         "academic.manage",
         "academic.grade",
+        "learning.evidence.review",
     },
     "member": {"organization.read", "finance.read", "academic.read", "academic.grade"},
 }
