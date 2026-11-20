@@ -86,7 +86,7 @@ class LearningEvidenceService:
             outcome__is_published=True,
             outcome__competency__is_published=True,
             outcome__competency__deleted_at__isnull=True,
-        ).select_related("outcome", "outcome__competency").order_by("-created_at")
+        ).select_related("outcome", "outcome__competency").prefetch_related("organization_shares__organization").order_by("-created_at")
         return [
             {
                 "id": str(item.id),
@@ -104,6 +104,18 @@ class LearningEvidenceService:
                 "submittedAt": item.created_at.isoformat(),
                 "verifiedAt": item.verified_at.isoformat() if item.verified_at else None,
                 "reviewNote": item.review_note,
+                "sharedOrganizations": [
+                    {
+                        "id": str(share.organization_id),
+                        "name": share.organization.name,
+                        "sharedAt": share.created_at.isoformat(),
+                    }
+                    for share in item.organization_shares.filter(
+                        revoked_at__isnull=True,
+                        deleted_at__isnull=True,
+                        organization__deleted_at__isnull=True,
+                    )
+                ],
             }
             for item in evidence_items
         ]
