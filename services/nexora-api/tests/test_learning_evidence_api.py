@@ -396,3 +396,53 @@ def test_reviewer_cannot_review_their_own_evidence_even_as_organization_owner():
     assert response.status_code == 403
     evidence.refresh_from_db()
     assert evidence.status == LearningEvidence.Status.PENDING
+
+
+@pytest.mark.django_db
+def test_revoked_share_removes_evidence_from_organization_review_access():
+    learner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="revoked-review-learner@example.com")
+    reviewer = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="revoked-review-admin@example.com")
+    organization = OrganizationService.create_organization(name="Revoked Access Org", created_by=learner)
+    reviewer_membership = MembershipService.add_user(user=reviewer, organization_id=organization.id)
+    assign_role(
+        actor=learner,
+        membership=reviewer_membership,
+        role=organization.roles.get(slug="admin"),
+    )
+    _, outcome = create_learning_outcome(key="revoked-review-outcome")
+    evidence = LearningEvidence.objects.create(
+        user=learner,
+        outcome=outcome,
+        evidence_type=LearningEvidence.EvidenceType.PROJECT,
+        title="Evidence with revoked consent",
+    )
+    learner_client = APIClient()
+    learner_client.force_authenticate(user=learner)
+    shared = learner_client.post(
+        "/api/v1/learning/evidence/shares/",
+        {"evidenceId": str(evidence.id), "organizationId": str(organization.id)},
+        format="json",
+    )
+    assert shared.status_code == 201
+    revoked = learner_client.delete(
+        "/api/v1/learning/evidence/shares/",
+        {"evidenceId": str(evidence.id), "organizationId": str(organization.id)},
+        format="json",
+    )
+    assert revoked.status_code == 204
+
+    reviewer_client = APIClient()
+    reviewer_client.force_authenticate(user=reviewer)
+    queue = reviewer_client.get(f"/api/v1/learning/organizations/{organization.id}/evidence/review/")
+    assert queue.status_code == 200
+    assert queue.json() == []
+    review = reviewer_client.post(
+        f"/api/v1/learning/organizations/{organization.id}/evidence/{evidence.id}/review/",
+        {"decision": "verified"},
+        format="json",
+    )
+    assert review.status_code == 404
+    evidence.refresh_from_db()
+    assert evidence.status == LearningEvidence.Status.PENDING
+    assert evidence.reviewed_by is None
+    assert evidence.reviewed_at is None
