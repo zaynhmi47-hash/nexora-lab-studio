@@ -25,6 +25,13 @@ class GrowthGoalSerializer(serializers.ModelSerializer):
         return value
 
 
+class GrowthGoalUpdateSerializer(GrowthGoalSerializer):
+    status = serializers.ChoiceField(choices=GrowthGoal.Status.choices, required=False)
+
+    class Meta(GrowthGoalSerializer.Meta):
+        read_only_fields = ("id", "completed_at", "created_at", "updated_at")
+
+
 class GrowthJournalEntrySerializer(serializers.ModelSerializer):
     class Meta:
         model = GrowthJournalEntry
@@ -68,7 +75,7 @@ class GrowthGoalDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, goal_id):
-        serializer = GrowthGoalSerializer(data=request.data, partial=True)
+        serializer = GrowthGoalUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         try:
             goal = GrowthService.update_goal(user=request.user, goal_id=goal_id, **serializer.validated_data)
