@@ -19,6 +19,10 @@ class LearningEvidenceReviewService:
             id=evidence_id,
             user=user,
             deleted_at__isnull=True,
+            outcome__deleted_at__isnull=True,
+            outcome__is_published=True,
+            outcome__competency__deleted_at__isnull=True,
+            outcome__competency__is_published=True,
         ).first()
         if evidence is None:
             raise LearningEvidence.DoesNotExist
@@ -130,6 +134,10 @@ class LearningEvidenceReviewService:
             revoked_at__isnull=True,
             deleted_at__isnull=True,
             evidence__deleted_at__isnull=True,
+            evidence__outcome__deleted_at__isnull=True,
+            evidence__outcome__is_published=True,
+            evidence__outcome__competency__deleted_at__isnull=True,
+            evidence__outcome__competency__is_published=True,
         ).select_related("evidence").first()
         if share is None:
             raise LearningEvidenceShare.DoesNotExist
