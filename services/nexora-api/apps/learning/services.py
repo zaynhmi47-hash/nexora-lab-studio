@@ -14,6 +14,7 @@ from apps.arabic.models import ArabicLessonCompletion
 
 from .models import (
     LearningCourse,
+    LearningLessonContent,
     LearningLesson,
     LearningLessonCompletion,
     LearningProgress,
@@ -41,10 +42,11 @@ def _streak_after_completion(progress: LearningProgress, now):
 
 
 class LearningService:
+    QUIZ_PASSING_SCORE_PERCENT = 70
     @staticmethod
     def courses():
         return list(
-            LearningCourse.objects.filter(is_published=True)
+            LearningCourse.objects.filter(is_published=True, deleted_at__isnull=True)
             .prefetch_related("lessons")
             .order_by("sort_order", "title")
         )
@@ -57,16 +59,100 @@ class LearningService:
     @staticmethod
     def completed_lesson_ids(user: NexoraUser) -> list[str]:
         return list(
-            LearningLessonCompletion.objects.filter(user=user).values_list("lesson__key", flat=True)
+            LearningLessonCompletion.objects.filter(
+                user=user, deleted_at__isnull=True, lesson__deleted_at__isnull=True
+            ).values_list("lesson__key", flat=True)
         )
+
+    @staticmethod
+    def lesson_is_unlocked(user: NexoraUser, lesson: LearningLesson) -> bool:
+        """A lesson unlocks only after every earlier published lesson in its course is complete."""
+        prerequisite_ids = LearningLesson.objects.filter(
+            course=lesson.course,
+            is_published=True,
+            deleted_at__isnull=True,
+            sort_order__lt=lesson.sort_order,
+        ).values_list("id", flat=True)
+        completed_ids = LearningLessonCompletion.objects.filter(
+            user=user,
+            lesson_id__in=prerequisite_ids,
+            deleted_at__isnull=True,
+        ).values_list("lesson_id", flat=True)
+        return set(prerequisite_ids).issubset(set(completed_ids))
+
+    @staticmethod
+    def lesson_content(user: NexoraUser, lesson_key: str) -> dict:
+        """Return published typed blocks only when the learner can access the lesson."""
+        from urllib.parse import urlsplit
+
+        lesson = LearningLesson.objects.filter(
+            key=lesson_key,
+            is_published=True,
+            deleted_at__isnull=True,
+            course__is_published=True,
+            course__deleted_at__isnull=True,
+        ).select_related("course").first()
+        if lesson is None:
+            raise LearningLesson.DoesNotExist
+        if not LearningService.lesson_is_unlocked(user, lesson):
+            raise PermissionError("Complete the previous lessons before opening this lesson.")
+
+        try:
+            content = lesson.content
+        except LearningLessonContent.DoesNotExist as exc:
+            raise LearningLessonContent.DoesNotExist from exc
+        if not content.is_published or content.deleted_at is not None:
+            raise LearningLessonContent.DoesNotExist
+        if not isinstance(content.blocks, list) or not content.blocks:
+            raise ValueError("Published lesson content must contain at least one block.")
+
+        allowed_types = {"heading", "text", "image", "video", "document", "link", "callout", "prompt"}
+        normalized_blocks = []
+        for position, block in enumerate(content.blocks):
+            if not isinstance(block, dict) or block.get("type") not in allowed_types:
+                raise ValueError(f"Invalid lesson content block at position {position}.")
+            block_type = block["type"]
+            safe_block = {"type": block_type}
+            for field in ("id", "title", "text", "alt", "caption", "language"):
+                value = block.get(field)
+                if value is not None:
+                    if not isinstance(value, str):
+                        raise ValueError(f"Invalid {field} in lesson content block {position}.")
+                    safe_block[field] = value
+            if block_type in {"heading", "text", "callout", "prompt"} and not safe_block.get("text"):
+                raise ValueError(f"Lesson content block {position} requires text.")
+            if block_type in {"image", "video", "document", "link"}:
+                url = block.get("url")
+                parsed = urlsplit(url) if isinstance(url, str) else None
+                if parsed is None or parsed.scheme != "https" or not parsed.netloc:
+                    raise ValueError(f"Lesson content block {position} requires a valid HTTPS URL.")
+                safe_block["url"] = url
+                if block_type == "image" and not safe_block.get("alt"):
+                    raise ValueError(f"Image block {position} requires alternative text.")
+            normalized_blocks.append(safe_block)
+
+        return {
+            "lessonId": lesson.key,
+            "courseId": lesson.course.key,
+            "title": lesson.title,
+            "description": lesson.description,
+            "kind": lesson.kind,
+            "version": content.version,
+            "estimatedMinutes": content.estimated_minutes,
+            "blocks": normalized_blocks,
+        }
 
     @staticmethod
     def quiz(lesson_key: str):
         return list(
             LearningQuizQuestion.objects.filter(
                 lesson__key=lesson_key,
+                lesson__kind=LearningLesson.Kind.QUIZ,
                 lesson__is_published=True,
+                lesson__deleted_at__isnull=True,
                 lesson__course__is_published=True,
+                lesson__course__deleted_at__isnull=True,
+                deleted_at__isnull=True,
             ).order_by("sort_order")
         )
 
@@ -77,17 +163,23 @@ class LearningService:
             LearningLesson.objects.select_for_update()
             .filter(
                 key=lesson_key,
+                kind=LearningLesson.Kind.QUIZ,
                 is_published=True,
                 course__is_published=True,
+                deleted_at__isnull=True,
+                course__deleted_at__isnull=True,
             )
             .first()
         )
         if lesson is None:
             raise LearningLesson.DoesNotExist
+        if not LearningService.lesson_is_unlocked(user, lesson):
+            raise ValueError("Complete the previous lessons before taking this quiz.")
 
         questions = list(
             LearningQuizQuestion.objects.filter(
                 lesson=lesson,
+                deleted_at__isnull=True,
             ).order_by("sort_order")
         )
         if not questions:
@@ -95,6 +187,15 @@ class LearningService:
 
         if len(answers) != len(questions):
             raise ValueError("Answer count does not match the quiz.")
+        for question, answer in zip(questions, answers):
+            if type(answer) is not int:
+                raise ValueError("Each answer must be an integer option index.")
+            if not isinstance(question.options, list) or not question.options:
+                raise ValueError("Quiz question has invalid options.")
+            if question.correct_option_index >= len(question.options):
+                raise ValueError("Quiz question has an invalid answer key.")
+            if answer < 0 or answer >= len(question.options):
+                raise ValueError("Answer option is outside the available choices.")
 
         correct = sum(
             1
@@ -103,7 +204,7 @@ class LearningService:
         )
         total = len(questions)
         score = round((correct / total) * 100)
-        passed = score >= 70
+        passed = score >= LearningService.QUIZ_PASSING_SCORE_PERCENT
         completed_at = timezone.now()
         attempt = LearningQuizAttempt.objects.create(
             user=user,
@@ -131,6 +232,16 @@ class LearningService:
             "passed": passed,
             "xpEarned": xp_earned,
             "completedAt": completed_at.isoformat(),
+            "questionResults": [
+                {
+                    "questionId": question.key,
+                    "selectedOptionIndex": answer,
+                    "correctOptionIndex": question.correct_option_index,
+                    "isCorrect": answer == question.correct_option_index,
+                    "explanation": question.explanation,
+                }
+                for question, answer in zip(questions, answers)
+            ],
         }
 
 
@@ -140,11 +251,23 @@ class LearningService:
         lesson = (
             LearningLesson.objects.select_for_update()
             .select_related("course")
-            .filter(key=lesson_key, is_published=True, course__is_published=True)
+            .filter(
+                key=lesson_key,
+                is_published=True,
+                course__is_published=True,
+                deleted_at__isnull=True,
+                course__deleted_at__isnull=True,
+            )
             .first()
         )
         if lesson is None:
             raise LearningLesson.DoesNotExist
+        if not LearningService.lesson_is_unlocked(user, lesson):
+            raise ValueError("Complete the previous lessons before completing this lesson.")
+        if lesson.kind == LearningLesson.Kind.QUIZ and not LearningQuizAttempt.objects.filter(
+            user=user, lesson=lesson, passed=True, deleted_at__isnull=True
+        ).exists():
+            raise ValueError("Pass the quiz before completing this lesson.")
 
         completion, created = LearningLessonCompletion.objects.get_or_create(
             user=user,

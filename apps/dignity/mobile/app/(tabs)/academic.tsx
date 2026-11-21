@@ -1,16 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
-
+import { DomainLanding } from '@/components/dignity/DomainLanding';
 export default function AcademicScreen() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Academic</Text>
-      <Text style={styles.body}>SIAKAD, KRS, grades, and attendance will be implemented as isolated feature modules.</Text>
-    </View>
-  );
+  return <DomainLanding eyebrow="DIGNITY ACADEMIC" title="Formal education, with integrity." description="Institutional learning operations for students, educators and academic teams — with clear authority, lifecycle and audit." icon="school-outline" features={['Programs, curriculum versions and academic terms','Classrooms, course offerings and schedules','Enrollment, study plans and KRS workflows','Attendance, grade publication and controlled revisions','GPA, transcripts, academic progress and reporting']} boundary="Academic records are institutionally authoritative. Personal growth and informal learning never become official academic credit without an explicit institutional process." />;
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 24 },
-  title: { fontSize: 28, fontWeight: '700' },
-  body: { marginTop: 8, fontSize: 16, lineHeight: 24 },
-});

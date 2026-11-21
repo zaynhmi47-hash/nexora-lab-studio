@@ -7,6 +7,7 @@ import { AuthProvider } from '@/lib/auth';
 import { createFirebaseAuthPort } from '@/lib/auth/firebase/authPort';
 import { createFirebaseTokenPort } from '@/lib/auth/firebase/tokenPort';
 import { OrganizationProvider } from '@/lib/organization/OrganizationProvider';
+import { DignityProfileProvider } from '@/lib/profile/DignityProfileProvider';
 
 export default function RootLayout() {
   const apiUrl = process.env.EXPO_PUBLIC_NEXORA_API_URL ?? 'http://localhost:8000';
@@ -17,14 +18,20 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <NexoraApiProvider tokenPort={tokenPort}>
         <AuthProvider port={authPort}>
-          <OrganizationProvider>
-            <StatusBar style="auto" />
-            <Stack>
+          <DignityProfileProvider>
+            <OrganizationProvider>
+              <StatusBar style="auto" />
+              <Stack>
               <Stack.Screen name="index" options={{ headerShown: false }} />
               <Stack.Screen name="sign-in" options={{ headerShown: false }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            </Stack>
-          </OrganizationProvider>
+              <Stack.Screen name="lesson/[lessonKey]" options={{ title: "Learning reader", headerBackTitle: "Learn" }} />
+              <Stack.Screen name="quiz/[lessonKey]" options={{ title: "Knowledge check", headerBackTitle: "Lesson" }} />
+              <Stack.Screen name="skills" options={{ title: "Skill profile", headerShown: false }} />
+              <Stack.Screen name="evidence-review" options={{ title: "Evidence review", headerShown: false }} />
+              </Stack>
+            </OrganizationProvider>
+          </DignityProfileProvider>
         </AuthProvider>
       </NexoraApiProvider>
     </SafeAreaProvider>
