@@ -93,3 +93,55 @@ def test_research_project_completion_requires_date_and_owner_only_detail():
 def test_research_api_requires_authentication():
     client = APIClient()
     assert client.get("/api/v1/research/projects/").status_code == 401
+
+
+@pytest.mark.django_db
+def test_research_output_update_and_soft_delete_are_owner_scoped():
+    owner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="research-output-crud@example.com")
+    other = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="research-output-crud-other@example.com")
+    project = ResearchProject.objects.create(owner=owner, title="Owner project")
+    foreign_project = ResearchProject.objects.create(owner=other, title="Foreign project")
+    output = ResearchOutput.objects.create(project=project, title="Draft output")
+    foreign_output = ResearchOutput.objects.create(project=foreign_project, title="Foreign output")
+    client = APIClient()
+    client.force_authenticate(user=owner)
+
+    updated = client.patch(
+        f"/api/v1/research/projects/{project.id}/outputs/{output.id}/",
+        {"title": "Revised draft"},
+        format="json",
+    )
+    assert updated.status_code == 200
+    assert updated.json()["title"] == "Revised draft"
+
+    denied = client.delete(
+        f"/api/v1/research/projects/{foreign_project.id}/outputs/{foreign_output.id}/",
+    )
+    assert denied.status_code == 404
+    deleted = client.delete(f"/api/v1/research/projects/{project.id}/outputs/{output.id}/")
+    assert deleted.status_code == 204
+    output.refresh_from_db()
+    assert output.deleted_at is not None
+
+
+@pytest.mark.django_db
+def test_research_contribution_update_and_soft_delete_are_owner_scoped():
+    from apps.research.models import ResearchContribution
+
+    user = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="research-contribution-crud@example.com")
+    project = ResearchProject.objects.create(owner=user, title="Contribution project")
+    item = ResearchContribution.objects.create(project=project, contributor_name="Initial name")
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    updated = client.patch(
+        f"/api/v1/research/projects/{project.id}/contributions/{item.id}/",
+        {"role": "Methodology"},
+        format="json",
+    )
+    assert updated.status_code == 200
+    assert updated.json()["role"] == "Methodology"
+    deleted = client.delete(f"/api/v1/research/projects/{project.id}/contributions/{item.id}/")
+    assert deleted.status_code == 204
+    item.refresh_from_db()
+    assert item.deleted_at is not None
