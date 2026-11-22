@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from django.db.models import Count, Q
 from django.utils import timezone
 
-from .models import GrowthGoal, GrowthHabit, GrowthHabitCheckIn, GrowthJournalEntry
+from .models import GrowthEvidenceEvent, GrowthGoal, GrowthHabit, GrowthHabitCheckIn, GrowthJournalEntry
 
 
 class GrowthInsightsService:
@@ -143,11 +143,62 @@ class GrowthTimelineService:
         start_at = timezone.make_aware(datetime.combine(start_date, time.min), user_timezone)
         end_at = timezone.make_aware(datetime.combine(today + timedelta(days=1), time.min), user_timezone)
         events = []
+        ledger_events = GrowthEvidenceEvent.objects.filter(
+            user=user, occurred_at__gte=start_at, occurred_at__lt=end_at,
+        ).order_by("-occurred_at", "-id")
+        ledger_goal_ids = set()
+        ledger_check_in_ids = set()
+        for event in ledger_events:
+            description = None
+            related_goal_id = None
+            title = "Growth activity recorded"
+            if event.subject_type == "goal":
+                goal = GrowthGoal.objects.filter(
+                    id=event.subject_id, user=user, deleted_at__isnull=True,
+                ).only("id", "title").first()
+                if goal is not None:
+                    description = goal.title
+                    related_goal_id = str(goal.id)
+                ledger_goal_ids.add(event.subject_id)
+                title = (
+                    "Goal created" if event.event_type == GrowthEvidenceEvent.EventType.GOAL_CREATED
+                    else "Goal completed" if event.metadata.get("new_status") == GrowthGoal.Status.COMPLETED
+                    else "Goal status updated"
+                )
+            elif event.subject_type == "habit":
+                habit = GrowthHabit.objects.filter(
+                    id=event.subject_id, user=user, deleted_at__isnull=True,
+                ).only("id", "title", "goal_id").first()
+                if habit is not None:
+                    description = habit.title
+                    related_goal_id = str(habit.goal_id) if habit.goal_id else None
+                title = "Habit created"
+            elif event.subject_type == "habit_check_in":
+                check_in = GrowthHabitCheckIn.objects.filter(
+                    id=event.subject_id, habit__user=user, deleted_at__isnull=True,
+                ).select_related("habit").only("id", "habit__title", "habit__goal_id").first()
+                if check_in is not None:
+                    description = check_in.habit.title
+                    related_goal_id = str(check_in.habit.goal_id) if check_in.habit.goal_id else None
+                ledger_check_in_ids.add(event.subject_id)
+                title = (
+                    "Habit completed" if event.metadata.get("new_status") == GrowthHabitCheckIn.Status.COMPLETED
+                    else "Habit skipped"
+                )
+            events.append({
+                "id": str(event.id),
+                "date": timezone.localtime(event.occurred_at, user_timezone).date().isoformat(),
+                "type": event.event_type.replace(".", "_"),
+                "title": title,
+                "description": description,
+                "evidence": {"kind": event.subject_type, "id": event.subject_id},
+                "relatedGoalId": related_goal_id,
+            })
 
         goals = GrowthGoal.objects.filter(
             user=user, deleted_at__isnull=True,
             created_at__gte=start_at, created_at__lt=end_at,
-        ).only("id", "title", "created_at")
+        ).exclude(id__in=ledger_goal_ids).only("id", "title", "created_at")
         for goal in goals:
             events.append({
                 "id": f"goal-created:{goal.id}",
@@ -163,7 +214,7 @@ class GrowthTimelineService:
             user=user, deleted_at__isnull=True,
             status=GrowthGoal.Status.COMPLETED,
             completed_at__gte=start_at, completed_at__lt=end_at,
-        ).only("id", "title", "completed_at")
+        ).exclude(id__in=ledger_goal_ids).only("id", "title", "completed_at")
         for goal in completed_goals:
             events.append({
                 "id": f"goal-completed:{goal.id}",
@@ -179,7 +230,7 @@ class GrowthTimelineService:
             habit__user=user, habit__deleted_at__isnull=True,
             deleted_at__isnull=True,
             entry_date__range=(start_date, today),
-        ).select_related("habit").only(
+        ).exclude(id__in=ledger_check_in_ids).select_related("habit").only(
             "id", "entry_date", "status", "habit__id", "habit__title", "habit__goal_id",
         )
         for item in check_ins:
