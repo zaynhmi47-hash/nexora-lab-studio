@@ -177,6 +177,60 @@ class LearningEvidenceService:
                 "relatedMilestones": [],
             })
 
+        from apps.research.models import ResearchOutput, ResearchProject
+
+        research_projects = ResearchProject.objects.filter(
+            owner=user, deleted_at__isnull=True,
+            created_at__gte=start_at, created_at__lte=now,
+        ).order_by("-created_at")
+        for project in research_projects:
+            items.append({
+                "id": f"research-project:{project.id}",
+                "occurredAt": project.created_at.isoformat(),
+                "domain": "research",
+                "kind": "research_project",
+                "title": project.title,
+                "description": "Research project record",
+                "source": {
+                    "type": "self_reported_research_project",
+                    "fieldOfStudy": project.field_of_study,
+                    "methodology": project.methodology,
+                    "projectStatus": project.status,
+                    "visibility": project.visibility,
+                },
+                "competency": None,
+                "status": "self_reported",
+                "mastery": None,
+                "relatedMilestones": [],
+            })
+
+        research_outputs = ResearchOutput.objects.filter(
+            project__owner=user, project__deleted_at__isnull=True,
+            project__owner__deleted_at__isnull=True, deleted_at__isnull=True,
+            created_at__gte=start_at, created_at__lte=now,
+        ).select_related("project").order_by("-created_at")
+        for output in research_outputs:
+            items.append({
+                "id": f"research-output:{output.id}",
+                "occurredAt": output.created_at.isoformat(),
+                "domain": "research",
+                "kind": "research_output",
+                "title": output.title,
+                "description": output.get_output_type_display(),
+                "source": {
+                    "type": "self_reported_research_output",
+                    "outputType": output.output_type,
+                    "publicationStatus": output.status,
+                    "provenanceStatus": output.provenance_status,
+                    "hasDoi": bool(output.doi),
+                    "hasResourceUrl": bool(output.resource_url),
+                },
+                "competency": None,
+                "status": output.provenance_status,
+                "mastery": None,
+                "relatedMilestones": [],
+            })
+
         mastery_items = LearningMastery.objects.filter(
             user=user,
             assessed_at__gte=start_at,
@@ -309,6 +363,8 @@ class LearningEvidenceService:
                 "organizationAccessGranted": False,
                 "careerRecordsIncluded": True,
                 "careerRecordsShared": False,
+                "researchRecordsIncluded": True,
+                "researchRecordsShared": False,
             },
             "limitations": [
                 "Activity records describe recorded evidence, not a complete measure of personal development.",
