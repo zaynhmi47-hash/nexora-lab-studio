@@ -41,7 +41,7 @@ def test_development_journey_combines_learning_and_growth_with_provenance():
         source_type=LearningEvidence.SourceType.LEARNING,
         source_reference="lesson_completion:123:outcome:456",
     )
-    goal = GrowthService.create_goal(user=user, title="Practice public speaking")
+    goal = GrowthService.create_goal(user=user, title="Practice public speaking", start_date=timezone.localdate())
     milestone = GrowthMilestone.objects.create(
         user=user,
         title="Deliver a short presentation",
@@ -89,7 +89,7 @@ def test_development_journey_is_private_to_authenticated_owner():
         evidence_type=LearningEvidence.EvidenceType.PROJECT,
         title="Other person's private project",
     )
-    GrowthService.create_goal(user=other, title="Other person's private goal")
+    GrowthService.create_goal(user=other, title="Other person's private goal", start_date=timezone.localdate())
 
     client = APIClient()
     client.force_authenticate(user=owner)
