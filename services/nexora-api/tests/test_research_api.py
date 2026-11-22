@@ -145,3 +145,118 @@ def test_research_contribution_update_and_soft_delete_are_owner_scoped():
     assert deleted.status_code == 204
     item.refresh_from_db()
     assert item.deleted_at is not None
+
+
+@pytest.mark.django_db
+def test_research_evidence_verification_requires_explicit_consent_and_active_membership():
+    from apps.organizations.models import Membership, Organization
+    from apps.access.models import Role
+
+    owner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="verification-owner@example.com")
+    project = ResearchProject.objects.create(owner=owner, title="Evidence study")
+    output = ResearchOutput.objects.create(project=project, title="Evidence report")
+    organization = Organization.objects.create(name="Review Institute", slug="review-institute")
+    role = Role.objects.create(organization=organization, name="Member", slug="member")
+    Membership.objects.create(user=owner, organization=organization, role=role)
+    client = APIClient()
+    client.force_authenticate(user=owner)
+    url = f"/api/v1/research/projects/{project.id}/outputs/{output.id}/verification/"
+
+    no_consent = client.post(url, {"organization_id": str(organization.id), "consent": False}, format="json")
+    assert no_consent.status_code == 400
+    submitted = client.post(url, {"organization_id": str(organization.id), "consent": True}, format="json")
+    assert submitted.status_code == 201
+    assert submitted.json()["status"] == "submitted"
+    assert submitted.json()["events"][0]["to_status"] == "submitted"
+
+
+@pytest.mark.django_db
+def test_research_evidence_verification_uses_org_permission_and_audited_transitions():
+    from django.core.exceptions import ValidationError as DjangoValidationError
+    from apps.access.models import Permission, Role, RolePermission
+    from apps.organizations.models import Membership, Organization
+    from apps.research.models import ResearchEvidenceVerificationEvent
+
+    owner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="verification-flow-owner@example.com")
+    reviewer = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="verification-flow-reviewer@example.com")
+    project = ResearchProject.objects.create(owner=owner, title="Verification workflow")
+    output = ResearchOutput.objects.create(project=project, title="Workflow report")
+    organization = Organization.objects.create(name="Evidence Review Board", slug="evidence-review-board")
+    owner_role = Role.objects.create(organization=organization, name="Member", slug="member")
+    reviewer_role = Role.objects.create(organization=organization, name="Evidence reviewer", slug="evidence-reviewer")
+    Membership.objects.create(user=owner, organization=organization, role=owner_role)
+    Membership.objects.create(user=reviewer, organization=organization, role=reviewer_role)
+    permission = Permission.objects.create(code="research.evidence.verify", name="Verify research evidence")
+    RolePermission.objects.create(role=reviewer_role, permission=permission)
+
+    owner_client = APIClient()
+    owner_client.force_authenticate(user=owner)
+    base_url = f"/api/v1/research/projects/{project.id}/outputs/{output.id}/verification/"
+    submitted = owner_client.post(
+        base_url, {"organization_id": str(organization.id), "consent": True}, format="json",
+    )
+    assert submitted.status_code == 201
+    case_id = submitted.json()["id"]
+    transition_url = f"{base_url}{case_id}/transition/"
+
+    owner_attempt = owner_client.post(transition_url, {"status": "under_review"}, format="json")
+    assert owner_attempt.status_code == 403
+
+    reviewer_client = APIClient()
+    reviewer_client.force_authenticate(user=reviewer)
+    started = reviewer_client.post(transition_url, {"status": "under_review"}, format="json")
+    assert started.status_code == 200
+    assert started.json()["reviewer_id"] == str(reviewer.id)
+
+    verified = reviewer_client.post(transition_url, {"status": "verified"}, format="json")
+    assert verified.status_code == 200
+    assert verified.json()["status"] == "verified"
+    output.refresh_from_db()
+    assert output.provenance_status == "self_reported"
+
+    missing_reason = reviewer_client.post(transition_url, {"status": "revoked"}, format="json")
+    assert missing_reason.status_code == 400
+    revoked = reviewer_client.post(
+        transition_url, {"status": "revoked", "reason": "Publisher retracted the evidence."}, format="json",
+    )
+    assert revoked.status_code == 200
+    assert revoked.json()["status"] == "revoked"
+
+    events = ResearchEvidenceVerificationEvent.objects.filter(verification_id=case_id)
+    assert list(events.values_list("to_status", flat=True)) == ["submitted", "under_review", "verified", "revoked"]
+    event = events.first()
+    event.reason = "tampered"
+    with pytest.raises(DjangoValidationError):
+        event.save()
+    with pytest.raises(DjangoValidationError):
+        event.delete()
+
+
+@pytest.mark.django_db
+def test_research_evidence_reviewer_without_permission_is_denied():
+    from apps.access.models import Role
+    from apps.organizations.models import Membership, Organization
+
+    owner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="verification-no-permission-owner@example.com")
+    reviewer = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="verification-no-permission-reviewer@example.com")
+    project = ResearchProject.objects.create(owner=owner, title="Permission study")
+    output = ResearchOutput.objects.create(project=project, title="Permission report")
+    organization = Organization.objects.create(name="No Permission Institute", slug="no-permission-institute")
+    owner_role = Role.objects.create(organization=organization, name="Member", slug="member")
+    reviewer_role = Role.objects.create(organization=organization, name="Observer", slug="observer")
+    Membership.objects.create(user=owner, organization=organization, role=owner_role)
+    Membership.objects.create(user=reviewer, organization=organization, role=reviewer_role)
+
+    owner_client = APIClient()
+    owner_client.force_authenticate(user=owner)
+    base_url = f"/api/v1/research/projects/{project.id}/outputs/{output.id}/verification/"
+    submitted = owner_client.post(
+        base_url, {"organization_id": str(organization.id), "consent": True}, format="json",
+    )
+    assert submitted.status_code == 201
+
+    reviewer_client = APIClient()
+    reviewer_client.force_authenticate(user=reviewer)
+    transition_url = f"{base_url}{submitted.json()['id']}/transition/"
+    denied = reviewer_client.post(transition_url, {"status": "under_review"}, format="json")
+    assert denied.status_code == 403
