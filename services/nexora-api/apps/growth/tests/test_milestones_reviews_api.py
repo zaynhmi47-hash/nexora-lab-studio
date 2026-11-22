@@ -144,6 +144,20 @@ def test_development_review_snapshots_activity_without_scoring_the_person(milest
     assert "score" not in data
     assert data["reflection"] == "I became more comfortable presenting."
 
+    GrowthService.create_goal(
+        user=owner,
+        title="Read one technical chapter",
+        start_date=today,
+    )
+    refreshed = client.post(
+        "/api/v1/growth/reviews/",
+        {"period": GrowthDevelopmentReview.Period.WEEKLY},
+        format="json",
+    )
+    assert refreshed.status_code == 200
+    assert refreshed.json()["evidenceCount"] == 2
+    assert refreshed.json()["reflection"] == "I became more comfortable presenting."
+
     listing = client.get("/api/v1/growth/reviews/")
     assert listing.status_code == 200
     assert len(listing.json()) == 1
