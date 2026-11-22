@@ -116,7 +116,7 @@ class GrowthMilestoneEvidenceView(APIView):
                 "evidenceEventId": str(link.evidence_event_id),
                 "createdAt": link.created_at.isoformat(),
             },
-            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+            status=status.HTTP_201_CREATED,
         )
 
 
@@ -167,5 +167,5 @@ class GrowthDevelopmentReviewView(APIView):
                 "nextSteps": review.next_steps,
                 "generatedAt": review.generated_at.isoformat(),
             },
-            status=status.HTTP_201_CREATED,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
