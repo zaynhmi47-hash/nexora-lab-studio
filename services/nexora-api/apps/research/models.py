@@ -106,3 +106,75 @@ class ResearchOutput(AuditableBaseModel):
         super().clean()
         if self.status == self.Status.PUBLISHED and not (self.published_on or self.doi or self.resource_url):
             raise ValidationError("Published outputs require a publication date, DOI or resource URL.")
+
+
+class ResearchEvidenceVerification(AuditableBaseModel):
+    """A consented, organization-scoped review of an owner-submitted research output."""
+
+    class Status(models.TextChoices):
+        SUBMITTED = "submitted", "Submitted"
+        UNDER_REVIEW = "under_review", "Under review"
+        VERIFIED = "verified", "Verified"
+        REJECTED = "rejected", "Rejected"
+        REVOKED = "revoked", "Revoked"
+
+    output = models.ForeignKey(
+        ResearchOutput, on_delete=models.PROTECT, related_name="verification_cases",
+    )
+    organization = models.ForeignKey(
+        "organizations.Organization", on_delete=models.PROTECT, related_name="research_verifications",
+    )
+    submitted_by = models.ForeignKey(
+        NexoraUser, on_delete=models.PROTECT, related_name="submitted_research_verifications",
+    )
+    reviewer = models.ForeignKey(
+        NexoraUser, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="reviewed_research_verifications",
+    )
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.SUBMITTED, db_index=True)
+    consented_at = models.DateTimeField()
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    decision_reason = models.TextField(blank=True)
+
+    class Meta:
+        db_table = "research_evidence_verifications"
+        ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=("organization", "status"), name="research_verify_org_status_idx"),
+            models.Index(fields=("output", "status"), name="research_verify_output_status_idx"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.output_id and self.submitted_by_id and self.output.project.owner_id != self.submitted_by_id:
+            raise ValidationError({"submitted_by": "Only the research output owner can submit it for verification."})
+        if self.reviewer_id and self.reviewer_id == self.submitted_by_id:
+            raise ValidationError({"reviewer": "The submitter cannot review their own evidence."})
+
+
+class ResearchEvidenceVerificationEvent(AuditableBaseModel):
+    """Append-only application-level audit record for verification state transitions."""
+
+    verification = models.ForeignKey(
+        ResearchEvidenceVerification, on_delete=models.PROTECT, related_name="events",
+    )
+    actor = models.ForeignKey(NexoraUser, on_delete=models.PROTECT, related_name="research_verification_events")
+    from_status = models.CharField(max_length=16, blank=True)
+    to_status = models.CharField(max_length=16, choices=ResearchEvidenceVerification.Status.choices)
+    reason = models.TextField(blank=True)
+
+    class Meta:
+        db_table = "research_evidence_verification_events"
+        ordering = ("created_at",)
+        indexes = [models.Index(fields=("verification", "created_at"), name="research_verify_event_idx")]
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise ValidationError("Verification audit events are immutable.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Verification audit events cannot be deleted.")
+
+    def soft_delete(self):
+        raise ValidationError("Verification audit events cannot be deleted.")
