@@ -156,9 +156,10 @@ class GrowthTimelineService:
                 goal = GrowthGoal.objects.filter(
                     id=event.subject_id, user=user, deleted_at__isnull=True,
                 ).only("id", "title").first()
-                if goal is not None:
-                    description = goal.title
-                    related_goal_id = str(goal.id)
+                if goal is None:
+                    continue
+                description = goal.title
+                related_goal_id = str(goal.id)
                 ledger_goal_ids.add(event.subject_id)
                 title = (
                     "Goal created" if event.event_type == GrowthEvidenceEvent.EventType.GOAL_CREATED
@@ -169,17 +170,20 @@ class GrowthTimelineService:
                 habit = GrowthHabit.objects.filter(
                     id=event.subject_id, user=user, deleted_at__isnull=True,
                 ).only("id", "title", "goal_id").first()
-                if habit is not None:
-                    description = habit.title
-                    related_goal_id = str(habit.goal_id) if habit.goal_id else None
+                if habit is None:
+                    continue
+                description = habit.title
+                related_goal_id = str(habit.goal_id) if habit.goal_id else None
                 title = "Habit created"
             elif event.subject_type == "habit_check_in":
                 check_in = GrowthHabitCheckIn.objects.filter(
-                    id=event.subject_id, habit__user=user, deleted_at__isnull=True,
+                    id=event.subject_id, habit__user=user, habit__deleted_at__isnull=True,
+                    deleted_at__isnull=True,
                 ).select_related("habit").only("id", "habit__title", "habit__goal_id").first()
-                if check_in is not None:
-                    description = check_in.habit.title
-                    related_goal_id = str(check_in.habit.goal_id) if check_in.habit.goal_id else None
+                if check_in is None:
+                    continue
+                description = check_in.habit.title
+                related_goal_id = str(check_in.habit.goal_id) if check_in.habit.goal_id else None
                 ledger_check_in_ids.add(event.subject_id)
                 title = (
                     "Habit completed" if event.metadata.get("new_status") == GrowthHabitCheckIn.Status.COMPLETED
