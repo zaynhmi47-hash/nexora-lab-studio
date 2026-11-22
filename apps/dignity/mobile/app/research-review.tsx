@@ -30,6 +30,7 @@ type QueueItem = {
   submitter_name: string;
   submitted_by_id: string;
   reviewer_id: string | null;
+  consented_at: string;
   events: VerificationEvent[];
 };
 function payload<T>(response: unknown): T {
