@@ -1,8 +1,9 @@
+from datetime import timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
-from datetime import timedelta
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .models import GrowthGoal, GrowthHabit, GrowthHabitCheckIn, GrowthJournalEntry
 
@@ -151,7 +152,11 @@ class GrowthHabitService:
 
     @staticmethod
     def habit_summary(*, user, habit, today=None):
-        today = today or timezone.localdate()
+        try:
+            user_timezone = ZoneInfo(user.timezone)
+        except ZoneInfoNotFoundError:
+            user_timezone = timezone.get_default_timezone()
+        today = today or timezone.localdate(timezone=user_timezone)
         week_start = today - timedelta(days=today.weekday())
         week_end = week_start + timedelta(days=6)
         check_ins = GrowthHabitCheckIn.objects.filter(
