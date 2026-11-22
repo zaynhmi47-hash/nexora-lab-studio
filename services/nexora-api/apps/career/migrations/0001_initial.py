@@ -46,7 +46,7 @@ class Migration(migrations.Migration):
                 ("started_at", models.DateField(blank=True, null=True)),
                 ("completed_at", models.DateField(blank=True, null=True)),
                 ("status", models.CharField(choices=[("planning", "Planning"), ("in_progress", "In progress"), ("completed", "Completed"), ("on_hold", "On hold")], default="planning", max_length=16)),
-                ("visibility", models.CharField(choices=[("private", "Private"), ("unlisted", "Unlisted"), ("public", "Public")], default="private", max_length=12)),
+                ("visibility", models.CharField(choices=[("private", "Private"), ("unlisted", "Unlisted")], default="private", max_length=12)),
                 ("user", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="career_projects", to="identity.nexorauser")),
             ],
             options={"db_table": "career_projects", "ordering": ("-updated_at", "-created_at")},
