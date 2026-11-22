@@ -69,7 +69,9 @@ def test_career_project_defaults_to_private_and_is_owner_scoped():
     }, format="json")
     assert created.status_code == 201
     assert created.json()["visibility"] == "private"
-    assert client.get("/api/v1/career/projects/").json() == []
+    listed = client.get("/api/v1/career/projects/")
+    assert listed.status_code == 200
+    assert [item["title"] for item in listed.json()] == ["Personal portfolio"]
 
 
 @pytest.mark.django_db
