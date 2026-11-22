@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.db.models import Count, Q
@@ -25,11 +25,11 @@ class GrowthInsightsService:
         today = today or timezone.localdate(timezone=user_timezone)
         start_date = today - timedelta(days=window_days - 1)
         start_at = timezone.make_aware(
-            timezone.datetime.combine(start_date, timezone.datetime.min.time()),
+            datetime.combine(start_date, time.min),
             user_timezone,
         )
         end_at = timezone.make_aware(
-            timezone.datetime.combine(today + timedelta(days=1), timezone.datetime.min.time()),
+            datetime.combine(today + timedelta(days=1), time.min),
             user_timezone,
         )
 
