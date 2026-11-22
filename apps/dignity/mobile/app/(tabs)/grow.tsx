@@ -305,6 +305,96 @@ export default function GrowScreen() {
     }
   }, [api, load]);
 
+
+  const createMilestone = useCallback(async () => {
+    if (!milestoneTitle.trim()) return;
+    setSavingMilestone(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await api.request('/api/v1/growth/milestones/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: milestoneTitle.trim(),
+          description: '',
+          pillar: milestonePillar,
+          success_criteria: [],
+          target_date: null,
+        }),
+      });
+      setMilestoneTitle('');
+      setNotice('Milestone saved. You can attach evidence as you make progress.');
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to save this milestone.');
+    } finally {
+      setSavingMilestone(false);
+    }
+  }, [api, load, milestonePillar, milestoneTitle]);
+
+  const updateMilestone = useCallback(async (milestone: GrowthMilestone) => {
+    setBusyMilestoneId(milestone.id);
+    setError(null);
+    try {
+      const nextStatus = milestone.status === 'achieved' ? 'in_progress' : 'achieved';
+      await api.request(`/api/v1/growth/milestones/${milestone.id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      setNotice(nextStatus === 'achieved' ? 'Milestone marked as achieved.' : 'Milestone reopened for further work.');
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to update this milestone.');
+    } finally {
+      setBusyMilestoneId(null);
+    }
+  }, [api, load]);
+
+  const linkEvidence = useCallback(async (milestone: GrowthMilestone, item: GrowthTimelineItem) => {
+    if (!/^[0-9a-f-]{36}$/i.test(item.id) || item.type === 'reflection_recorded') return;
+    const key = `${milestone.id}:${item.id}`;
+    setBusyEvidenceKey(key);
+    setError(null);
+    try {
+      await api.request(`/api/v1/growth/milestones/${milestone.id}/evidence/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ evidence_event_id: item.id }),
+      });
+      setNotice('Evidence linked to this milestone.');
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to link this evidence.');
+    } finally {
+      setBusyEvidenceKey(null);
+    }
+  }, [api, load]);
+
+  const createReview = useCallback(async (period: 'weekly' | 'monthly') => {
+    setSavingReview(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await api.request('/api/v1/growth/reviews/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          period,
+          reflection: reviewReflection.trim(),
+          next_steps: reviewNextSteps.split('\n').map((item) => item.trim()).filter(Boolean),
+        }),
+      });
+      setNotice(`${period === 'weekly' ? 'Weekly' : 'Monthly'} development review saved.`);
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to save this development review.');
+    } finally {
+      setSavingReview(false);
+    }
+  }, [api, load, reviewNextSteps, reviewReflection]);
+
   return <Screen>
     <Text style={styles.eyebrow}>DIGNITY GROW</Text>
     <Text style={styles.title}>Develop with intention.</Text>
