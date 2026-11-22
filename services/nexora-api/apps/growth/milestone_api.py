@@ -57,10 +57,10 @@ class GrowthMilestoneListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        milestones = GrowthMilestone.objects.filter(user=request.user, deleted_at__isnull=True)
+        milestones = GrowthMilestone.objects.filter(user=request.user, deleted_at__isnull=True).prefetch_related("evidence_links")
         data = GrowthMilestoneSerializer(milestones, many=True).data
         for item, milestone in zip(data, milestones):
-            item["evidenceCount"] = milestone.evidence_links.count()
+            item["evidenceCount"] = len(milestone.evidence_links.all())
         return Response(data)
 
     def post(self, request):
