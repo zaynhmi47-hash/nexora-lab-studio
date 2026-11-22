@@ -8,6 +8,35 @@ from django.utils import timezone
 from .models import GrowthGoal, GrowthHabit, GrowthHabitCheckIn, GrowthJournalEntry
 
 
+
+
+class GrowthEvidenceLedger:
+    """Persist minimal activity facts atomically with their source mutation."""
+
+    ALLOWED_METADATA_KEYS = {
+        "previous_status", "new_status", "entry_date", "frequency", "weekly_target",
+    }
+
+    @classmethod
+    def record(cls, *, user, event_type, subject_type, subject_id, event_key, metadata=None, occurred_at=None):
+        from .models import GrowthEvidenceEvent
+
+        safe_metadata = metadata or {}
+        if not isinstance(safe_metadata, dict) or set(safe_metadata) - cls.ALLOWED_METADATA_KEYS:
+            raise ValidationError({"metadata": "Unsupported evidence metadata."})
+        return GrowthEvidenceEvent.objects.get_or_create(
+            event_key=event_key,
+            defaults={
+                "user": user,
+                "event_type": event_type,
+                "subject_type": subject_type,
+                "subject_id": str(subject_id),
+                "occurred_at": occurred_at or timezone.now(),
+                "metadata": safe_metadata,
+            },
+        )[0]
+
+
 class GrowthService:
     @staticmethod
     @transaction.atomic
@@ -15,6 +44,10 @@ class GrowthService:
         goal = GrowthGoal(user=user, **data)
         goal.full_clean()
         goal.save()
+        GrowthEvidenceLedger.record(
+            user=user, event_type="goal.created", subject_type="goal", subject_id=goal.id,
+            event_key=f"goal:{goal.id}:created",
+        )
         return goal
 
     @staticmethod
@@ -29,6 +62,7 @@ class GrowthService:
             raise GrowthGoal.DoesNotExist
         if goal.status == GrowthGoal.Status.ARCHIVED:
             raise ValidationError("Archived goals cannot be edited.")
+        previous_status = goal.status
         if changes.get("status") == GrowthGoal.Status.COMPLETED:
             changes["completed_at"] = timezone.now()
         elif changes.get("status") in (GrowthGoal.Status.ACTIVE, GrowthGoal.Status.PAUSED):
@@ -37,6 +71,13 @@ class GrowthService:
             setattr(goal, field, value)
         goal.full_clean()
         goal.save()
+        if goal.status != previous_status:
+            GrowthEvidenceLedger.record(
+                user=user, event_type="goal.status_changed", subject_type="goal", subject_id=goal.id,
+                event_key=f"goal:{goal.id}:status:{goal.updated_at.isoformat()}",
+                metadata={"previous_status": previous_status, "new_status": goal.status},
+                occurred_at=goal.updated_at,
+            )
         return goal
 
     @staticmethod
@@ -86,6 +127,11 @@ class GrowthHabitService:
         habit = GrowthHabit(user=user, **data)
         habit.full_clean()
         habit.save()
+        GrowthEvidenceLedger.record(
+            user=user, event_type="habit.created", subject_type="habit", subject_id=habit.id,
+            event_key=f"habit:{habit.id}:created",
+            metadata={"frequency": habit.frequency, "weekly_target": habit.weekly_target},
+        )
         return habit
 
     @staticmethod
@@ -136,6 +182,7 @@ class GrowthHabitService:
             entry_date=entry_date,
             deleted_at__isnull=True,
         ).first()
+        previous_status = check_in.status if check_in is not None else None
         if check_in is None:
             check_in = GrowthHabitCheckIn(
                 habit=habit,
@@ -148,6 +195,20 @@ class GrowthHabitService:
             check_in.note = note
         check_in.full_clean()
         check_in.save()
+        if previous_status != check_in.status:
+            event_type = (
+                "habit.check_in_recorded" if previous_status is None else "habit.check_in_changed"
+            )
+            GrowthEvidenceLedger.record(
+                user=user, event_type=event_type, subject_type="habit_check_in", subject_id=check_in.id,
+                event_key=f"habit-check-in:{check_in.id}:updated:{check_in.updated_at.isoformat()}",
+                metadata={
+                    **({"previous_status": previous_status} if previous_status else {}),
+                    "new_status": check_in.status,
+                    "entry_date": check_in.entry_date.isoformat(),
+                },
+                occurred_at=check_in.updated_at,
+            )
         return check_in
 
     @staticmethod
