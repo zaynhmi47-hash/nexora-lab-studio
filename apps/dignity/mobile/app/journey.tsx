@@ -15,7 +15,7 @@ type JourneyItem = {
   kind: string;
   title: string;
   description: string | null;
-  source: { type: string; evidenceType?: string; assessmentMethod?: string };
+  source: { type: string; reference?: string; evidenceType?: string; assessmentMethod?: string; contributionType?: string; verifierAttributed?: boolean };
   competency: { key: string; title: string; outcomeKey: string; outcomeTitle: string } | null;
   status: string | null;
   mastery: { level: number; status: string } | null;
@@ -108,7 +108,7 @@ export default function DevelopmentJourneyScreen() {
     </Pressable>
     <Text style={styles.eyebrow}>DIGNITY · DEVELOPMENT JOURNEY</Text>
     <Text style={styles.title}>Your progress, with its context.</Text>
-    <Text style={styles.subtitle}>A chronological view of learning evidence, personal growth activity and explicit competency assessments.</Text>
+    <Text style={styles.subtitle}>A chronological view of learning evidence, verified formal course completions, personal growth activity and explicit competency assessments.</Text>
 
     <SurfaceCard style={styles.privacyCard}>
       <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
@@ -156,6 +156,9 @@ export default function DevelopmentJourneyScreen() {
             {item.status ? <Text style={styles.status}>Status · {domainLabel(item.status)}</Text> : null}
             {item.mastery ? <Text style={styles.status}>Assessed level · {item.mastery.level}/5 · {domainLabel(item.mastery.status)}</Text> : null}
             {item.source.evidenceType ? <Text style={styles.source}>Evidence type · {domainLabel(item.source.evidenceType)}</Text> : null}
+            {item.domain === 'academic' ? <Text style={styles.source}>Formal record · Verified completion{item.source.contributionType ? ` · ${domainLabel(item.source.contributionType)}` : ''}</Text> : null}
+            {item.domain === 'academic' && item.source.verifierAttributed ? <Text style={styles.source}>Verification · Attributed to an institutional verifier</Text> : null}
+            {item.domain === 'academic' && !item.competency ? <Text style={styles.source}>Competency mapping has not yet been configured for this course.</Text> : null}
             {item.relatedMilestones.map((milestone) => (
               <View key={milestone.id} style={styles.milestone}>
                 <Ionicons name="flag-outline" size={13} color={colors.primaryDark} />
