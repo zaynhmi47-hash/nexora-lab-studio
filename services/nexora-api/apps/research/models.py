@@ -169,7 +169,7 @@ class ResearchEvidenceVerificationEvent(AuditableBaseModel):
         indexes = [models.Index(fields=("verification", "created_at"), name="research_verify_event_idx")]
 
     def save(self, *args, **kwargs):
-        if self.pk:
+        if not self._state.adding:
             raise ValidationError("Verification audit events are immutable.")
         return super().save(*args, **kwargs)
 
