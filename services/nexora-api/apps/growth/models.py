@@ -104,3 +104,86 @@ class GrowthJournalEntry(AuditableBaseModel):
 
     def __str__(self):
         return self.title or f"Private reflection {self.entry_date}"
+
+
+class GrowthHabit(AuditableBaseModel):
+    class Frequency(models.TextChoices):
+        DAILY = "daily", "Daily"
+        WEEKLY = "weekly", "Weekly"
+
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        PAUSED = "paused", "Paused"
+        ARCHIVED = "archived", "Archived"
+
+    user = models.ForeignKey(NexoraUser, on_delete=models.CASCADE, related_name="growth_habits")
+    goal = models.ForeignKey(
+        GrowthGoal,
+        on_delete=models.SET_NULL,
+        related_name="habits",
+        null=True,
+        blank=True,
+    )
+    title = models.CharField(max_length=180)
+    description = models.TextField(blank=True)
+    frequency = models.CharField(max_length=8, choices=Frequency.choices, default=Frequency.DAILY)
+    weekly_target = models.PositiveSmallIntegerField(default=7)
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=8, choices=Status.choices, default=Status.ACTIVE)
+
+    class Meta:
+        db_table = "growth_habits"
+        ordering = ("status", "start_date", "title")
+        indexes = [
+            models.Index(fields=("user", "status"), name="growth_habit_user_status_idx"),
+            models.Index(fields=("user", "start_date"), name="growth_habit_user_start_idx"),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(weekly_target__gte=1) & models.Q(weekly_target__lte=7),
+                name="growth_habit_weekly_target_ck",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(end_date__isnull=True) | models.Q(end_date__gte=models.F("start_date")),
+                name="growth_habit_end_after_start_ck",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.frequency == self.Frequency.DAILY and self.weekly_target != 7:
+            raise ValidationError({"weekly_target": "Daily habits use a seven-day target."})
+        if self.goal_id and self.goal.user_id != self.user_id:
+            raise ValidationError({"goal": "A habit can only link to one of your own goals."})
+
+    def __str__(self):
+        return self.title
+
+
+class GrowthHabitCheckIn(AuditableBaseModel):
+    class Status(models.TextChoices):
+        COMPLETED = "completed", "Completed"
+        SKIPPED = "skipped", "Skipped"
+
+    habit = models.ForeignKey(GrowthHabit, on_delete=models.CASCADE, related_name="check_ins")
+    entry_date = models.DateField()
+    status = models.CharField(max_length=12, choices=Status.choices)
+    note = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        db_table = "growth_habit_check_ins"
+        ordering = ("-entry_date", "-created_at")
+        indexes = [
+            models.Index(fields=("habit", "-entry_date"), name="growth_checkin_habit_date_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("habit", "entry_date"),
+                condition=models.Q(deleted_at__isnull=True),
+                name="growth_checkin_habit_date_uniq",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.habit.title} · {self.entry_date} · {self.status}"
