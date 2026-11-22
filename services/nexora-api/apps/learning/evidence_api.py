@@ -80,3 +80,23 @@ class LearningSkillProfileView(APIView):
 
     def get(self, request):
         return Response(LearningEvidenceService.skill_profile(request.user))
+
+
+class LearningDevelopmentJourneyView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        raw_window = request.query_params.get("window", "30")
+        raw_limit = request.query_params.get("limit", "100")
+        try:
+            window_days = int(raw_window)
+            limit = int(raw_limit)
+            journey = LearningEvidenceService.development_journey(
+                user=request.user,
+                window_days=window_days,
+                limit=limit,
+            )
+        except (TypeError, ValueError) as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(journey)
