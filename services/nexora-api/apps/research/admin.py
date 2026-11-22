@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from .models import ResearchContribution, ResearchOutput, ResearchProject
+from .models import (
+    ResearchContribution,
+    ResearchEvidenceVerification,
+    ResearchEvidenceVerificationEvent,
+    ResearchOutput,
+    ResearchProject,
+)
 
 
 class ResearchContributionInline(admin.TabularInline):
@@ -33,3 +39,34 @@ class ResearchContributionAdmin(admin.ModelAdmin):
     list_display = ("contributor_name", "project", "contribution_type", "attribution_status")
     list_filter = ("contribution_type", "attribution_status")
     search_fields = ("contributor_name", "project__title")
+
+
+class ResearchEvidenceVerificationEventInline(admin.TabularInline):
+    model = ResearchEvidenceVerificationEvent
+    extra = 0
+    can_delete = False
+    readonly_fields = ("actor", "from_status", "to_status", "reason", "created_at")
+
+
+@admin.register(ResearchEvidenceVerification)
+class ResearchEvidenceVerificationAdmin(admin.ModelAdmin):
+    list_display = ("output", "organization", "submitted_by", "reviewer", "status", "created_at")
+    list_filter = ("status", "organization")
+    search_fields = ("output__title", "submitted_by__email", "reviewer__email")
+    readonly_fields = ("submitted_by", "reviewer", "consented_at", "reviewed_at", "decision_reason")
+    inlines = (ResearchEvidenceVerificationEventInline)
+
+
+@admin.register(ResearchEvidenceVerificationEvent)
+class ResearchEvidenceVerificationEventAdmin(admin.ModelAdmin):
+    list_display = ("verification", "actor", "from_status", "to_status", "created_at")
+    readonly_fields = ("verification", "actor", "from_status", "to_status", "reason", "created_at")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
