@@ -25,6 +25,12 @@ type LessonContent = {
   version: number;
   estimatedMinutes: number;
   blocks: ContentBlock[];
+  learningOutcomes: {
+    key: string;
+    title: string;
+    competencyTitle: string;
+    contributionType: 'introduced' | 'practiced' | 'assessed';
+  }[];
 };
 type LearningProgress = {
   xp: number;
@@ -98,6 +104,23 @@ export default function LessonReaderScreen() {
         <Text style={styles.title}>{content.title}</Text>
         {content.description ? <Text style={styles.description}>{content.description}</Text> : null}
         <Text style={styles.meta}>Version {content.version}{content.estimatedMinutes ? ` · ${content.estimatedMinutes} min read` : ''}</Text>
+        {content.learningOutcomes.length ? (
+          <SurfaceCard style={styles.outcomes}>
+            <Text style={styles.outcomesLabel}>COMPETENCIES THIS LESSON SUPPORTS</Text>
+            {content.learningOutcomes.map((outcome) => (
+              <View key={outcome.key} style={styles.outcomeRow}>
+                <View style={styles.outcomeCopy}>
+                  <Text style={styles.outcomeTitle}>{outcome.title}</Text>
+                  <Text style={styles.outcomeMeta}>{outcome.competencyTitle}</Text>
+                </View>
+                <Text style={styles.outcomeType}>
+                  {outcome.contributionType === 'introduced' ? 'INTRODUCES' : outcome.contributionType === 'practiced' ? 'PRACTICES' : 'ASSESSES'}
+                </Text>
+              </View>
+            ))}
+            <Text style={styles.outcomeNote}>Learning activity is recorded as evidence; it does not automatically establish mastery.</Text>
+          </SurfaceCard>
+        ) : null}
         {content.blocks.map((block, index) => {
           const key = block.id ?? `${block.type}-${index}`;
           if (block.type === 'heading') return <Text key={key} style={styles.heading}>{block.text}</Text>;
