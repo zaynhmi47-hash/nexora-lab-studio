@@ -46,6 +46,50 @@ def _streak_after_completion(progress: LearningProgress, now):
 class LearningService:
     QUIZ_PASSING_SCORE_PERCENT = 70
     @staticmethod
+    def _record_outcome_learning_evidence(*, user, lesson, completion):
+        """Record source-attributed learning activity without asserting mastery."""
+        mappings = LearningOutcomeLessonMapping.objects.filter(
+            lesson=lesson,
+            is_active=True,
+            deleted_at__isnull=True,
+            outcome__is_published=True,
+            outcome__deleted_at__isnull=True,
+            outcome__competency__is_published=True,
+            outcome__competency__deleted_at__isnull=True,
+        ).select_related("outcome")
+        for mapping in mappings:
+            if lesson.kind == LearningLesson.Kind.QUIZ:
+                if mapping.contribution_type != LearningOutcomeLessonMapping.ContributionType.ASSESSED:
+                    continue
+                passed = LearningQuizAttempt.objects.filter(
+                    user=user,
+                    lesson=lesson,
+                    passed=True,
+                    deleted_at__isnull=True,
+                ).exists()
+                if not passed:
+                    continue
+            elif mapping.contribution_type == LearningOutcomeLessonMapping.ContributionType.ASSESSED:
+                continue
+
+            source_reference = f"lesson_completion:{completion.id}:outcome:{mapping.outcome_id}"
+            LearningEvidence.objects.get_or_create(
+                user=user,
+                source_type=LearningEvidence.SourceType.LEARNING,
+                source_reference=source_reference,
+                defaults={
+                    "outcome": mapping.outcome,
+                    "evidence_type": LearningEvidence.EvidenceType.LEARNING_ACTIVITY,
+                    "title": f"Completed learning activity: {lesson.title}",
+                    "description": (
+                        f"Recorded from the completed lesson '{lesson.title}'. "
+                        "This is evidence of learning activity, not a mastery decision."
+                    ),
+                    "status": LearningEvidence.Status.PENDING,
+                },
+            )
+
+    @staticmethod
     def courses():
         return list(
             LearningCourse.objects.filter(is_published=True, deleted_at__isnull=True)
@@ -285,6 +329,10 @@ class LearningService:
         progress = LearningProgress.objects.select_for_update().get_or_create(user=user)[0]
         if not created:
             return progress
+
+        LearningService._record_outcome_learning_evidence(
+            user=user, lesson=lesson, completion=completion,
+        )
 
         now = completion.completed_at
         progress.xp += lesson.xp_reward
