@@ -51,7 +51,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="researchevidenceverification",
-            index=models.Index(fields=["output", "status"], name="research_verify_output_status_idx"),
+            index=models.Index(fields=["output", "status"], name="research_ver_out_stat_idx"),
         ),
         migrations.AddIndex(
             model_name="researchevidenceverificationevent",
