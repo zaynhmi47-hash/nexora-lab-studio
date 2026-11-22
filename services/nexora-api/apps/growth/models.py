@@ -187,3 +187,48 @@ class GrowthHabitCheckIn(AuditableBaseModel):
 
     def __str__(self):
         return f"{self.habit.title} · {self.entry_date} · {self.status}"
+
+class GrowthEvidenceEvent(models.Model):
+    """Minimal, append-only index of non-sensitive growth activity."""
+
+    class EventType(models.TextChoices):
+        GOAL_CREATED = "goal.created", "Goal created"
+        GOAL_STATUS_CHANGED = "goal.status_changed", "Goal status changed"
+        HABIT_CREATED = "habit.created", "Habit created"
+        HABIT_CHECK_IN_RECORDED = "habit.check_in_recorded", "Habit check-in recorded"
+        HABIT_CHECK_IN_CHANGED = "habit.check_in_changed", "Habit check-in changed"
+
+    id = models.UUIDField(primary_key=True, default=__import__("uuid").uuid4, editable=False)
+    user = models.ForeignKey(
+        NexoraUser,
+        on_delete=models.CASCADE,
+        related_name="growth_evidence_events",
+    )
+    event_type = models.CharField(max_length=40, choices=EventType.choices)
+    subject_type = models.CharField(max_length=32)
+    subject_id = models.CharField(max_length=64)
+    event_key = models.CharField(max_length=180, unique=True)
+    occurred_at = models.DateTimeField()
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "growth_evidence_events"
+        ordering = ("-occurred_at", "-id")
+        indexes = [
+            models.Index(fields=("user", "-occurred_at"), name="growth_event_user_time_idx"),
+            models.Index(fields=("subject_type", "subject_id"), name="growth_event_subject_idx"),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError("Growth evidence events are immutable.")
+        if not isinstance(self.metadata, dict):
+            raise ValidationError({"metadata": "Event metadata must be an object."})
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Growth evidence events cannot be deleted through the model API.")
+
+    def __str__(self):
+        return f"{self.event_type}:{self.subject_type}:{self.subject_id}"
