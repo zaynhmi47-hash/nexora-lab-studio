@@ -122,3 +122,109 @@ class GrowthInsightsService:
                 "No journal body, gratitude text, mood value, or habit note is included.",
             ],
         }
+
+
+class GrowthTimelineService:
+    """Return a chronological, owner-only index of recorded growth evidence."""
+
+    @classmethod
+    def build_timeline(cls, *, user, window_days=30, limit=50, today=None):
+        if window_days not in GrowthInsightsService.ALLOWED_WINDOWS:
+            raise ValueError("window_days must be 7 or 30.")
+        if not 1 <= limit <= 100:
+            raise ValueError("limit must be between 1 and 100.")
+
+        try:
+            user_timezone = ZoneInfo(user.timezone)
+        except (ZoneInfoNotFoundError, TypeError, ValueError):
+            user_timezone = timezone.get_default_timezone()
+        today = today or timezone.localdate(timezone=user_timezone)
+        start_date = today - timedelta(days=window_days - 1)
+        events = []
+
+        goals = GrowthGoal.objects.filter(
+            user=user, deleted_at__isnull=True,
+            created_at__date__gte=start_date, created_at__date__lte=today,
+        ).only("id", "title", "created_at")
+        for goal in goals:
+            events.append({
+                "id": f"goal-created:{goal.id}",
+                "date": timezone.localtime(goal.created_at, user_timezone).date().isoformat(),
+                "type": "goal_created",
+                "title": "Goal created",
+                "description": goal.title,
+                "evidence": {"kind": "goal", "id": str(goal.id)},
+                "relatedGoalId": str(goal.id),
+            })
+
+        completed_goals = GrowthGoal.objects.filter(
+            user=user, deleted_at__isnull=True,
+            status=GrowthGoal.Status.COMPLETED,
+            completed_at__date__gte=start_date, completed_at__date__lte=today,
+        ).only("id", "title", "completed_at")
+        for goal in completed_goals:
+            events.append({
+                "id": f"goal-completed:{goal.id}",
+                "date": timezone.localtime(goal.completed_at, user_timezone).date().isoformat(),
+                "type": "goal_completed",
+                "title": "Goal completed",
+                "description": goal.title,
+                "evidence": {"kind": "goal", "id": str(goal.id)},
+                "relatedGoalId": str(goal.id),
+            })
+
+        check_ins = GrowthHabitCheckIn.objects.filter(
+            habit__user=user, habit__deleted_at__isnull=True,
+            deleted_at__isnull=True,
+            entry_date__range=(start_date, today),
+        ).select_related("habit").only(
+            "id", "entry_date", "status", "habit__id", "habit__title", "habit__goal_id",
+        )
+        for item in check_ins:
+            events.append({
+                "id": f"habit-checkin:{item.id}",
+                "date": item.entry_date.isoformat(),
+                "type": f"habit_{item.status}",
+                "title": "Habit completed" if item.status == GrowthHabitCheckIn.Status.COMPLETED else "Habit skipped",
+                "description": item.habit.title,
+                "evidence": {"kind": "habit_check_in", "id": str(item.id)},
+                "relatedGoalId": str(item.habit.goal_id) if item.habit.goal_id else None,
+            })
+
+        journal_entries = GrowthJournalEntry.objects.filter(
+            user=user, deleted_at__isnull=True,
+            entry_date__range=(start_date, today),
+        ).only("id", "entry_date")
+        for entry in journal_entries:
+            events.append({
+                "id": f"journal:{entry.id}",
+                "date": entry.entry_date.isoformat(),
+                "type": "reflection_recorded",
+                "title": "Private reflection recorded",
+                "description": None,
+                "evidence": {"kind": "journal_entry", "id": str(entry.id)},
+                "relatedGoalId": None,
+            })
+
+        events.sort(key=lambda event: (event["date"], event["id"]), reverse=True)
+        return {
+            "window": {
+                "days": window_days,
+                "startDate": start_date.isoformat(),
+                "endDate": today.isoformat(),
+            },
+            "generatedAt": timezone.now().isoformat(),
+            "items": events[:limit],
+            "total": len(events),
+            "hasMore": len(events) > limit,
+            "privacy": {
+                "journalContentIncluded": False,
+                "habitNotesIncluded": False,
+                "moodIncluded": False,
+            },
+            "limitations": [
+                "Timeline entries represent recorded events, not a complete measure of personal development.",
+                "A goal's current title is shown for its recorded creation and completion events.",
+                "Private reflection content and habit notes are never included.",
+            ],
+        }
