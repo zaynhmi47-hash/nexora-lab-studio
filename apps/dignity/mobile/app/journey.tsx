@@ -15,7 +15,7 @@ type JourneyItem = {
   kind: string;
   title: string;
   description: string | null;
-  source: { type: string; reference?: string; evidenceType?: string; assessmentMethod?: string; contributionType?: string; verifierAttributed?: boolean; employmentType?: string; startDate?: string; endDate?: string | null; isCurrent?: boolean; role?: string; skills?: string[]; artifactUrl?: string | null; visibility?: string; projectStatus?: string };
+  source: { type: string; reference?: string; evidenceType?: string; assessmentMethod?: string; contributionType?: string; verifierAttributed?: boolean; employmentType?: string; startDate?: string; endDate?: string | null; isCurrent?: boolean; role?: string; skills?: string[]; artifactUrl?: string | null; visibility?: string; projectStatus?: string; fieldOfStudy?: string; methodology?: string; outputType?: string; publicationStatus?: string; provenanceStatus?: string; hasDoi?: boolean; hasResourceUrl?: boolean };
   competency: { key: string; title: string; outcomeKey: string; outcomeTitle: string } | null;
   status: string | null;
   mastery: { level: number; status: string } | null;
@@ -35,7 +35,7 @@ type JourneyResponse = {
     privateReflectionsIncluded: boolean;
     organizationAccessGranted: boolean;
     careerRecordsIncluded?: boolean;
-    careerRecordsShared?: boolean;
+    careerRecordsShared?: boolean;\n    researchRecordsIncluded?: boolean;\n    researchRecordsShared?: boolean;
   };
   limitations: string[];
 };
@@ -110,7 +110,7 @@ export default function DevelopmentJourneyScreen() {
     </Pressable>
     <Text style={styles.eyebrow}>DIGNITY · DEVELOPMENT JOURNEY</Text>
     <Text style={styles.title}>Your progress, with its context.</Text>
-    <Text style={styles.subtitle}>A chronological view of learning evidence, verified formal course completions, self-reported career records, personal growth activity and explicit competency assessments.</Text>
+    <Text style={styles.subtitle}>A chronological view of learning evidence, verified formal course completions, self-reported career and research records, personal growth activity and explicit competency assessments.</Text>
 
     <SurfaceCard style={styles.privacyCard}>
       <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
@@ -163,6 +163,8 @@ export default function DevelopmentJourneyScreen() {
             {item.domain === 'academic' && !item.competency ? <Text style={styles.source}>Competency mapping has not yet been configured for this course.</Text> : null}
             {item.domain === 'career' && item.kind === 'professional_experience' ? <Text style={styles.source}>Self-reported experience · {item.source.employmentType?.replaceAll('_', ' ')} · {item.source.startDate}{item.source.isCurrent ? ' — Present' : item.source.endDate ? ` — ${item.source.endDate}` : ''}</Text> : null}
             {item.domain === 'career' && item.kind === 'portfolio_project' ? <Text style={styles.source}>Self-reported portfolio · {item.source.visibility ?? 'private'}{item.source.skills?.length ? ` · ${item.source.skills.join(', ')}` : ''}</Text> : null}
+            {item.domain === 'research' && item.kind === 'research_project' ? <Text style={styles.source}>Self-reported research · {item.source.fieldOfStudy || 'Field not specified'} · {item.source.methodology || 'Method not specified'}</Text> : null}
+            {item.domain === 'research' && item.kind === 'research_output' ? <Text style={styles.source}>Self-reported output · {item.source.outputType} · {item.source.publicationStatus} · provenance {item.source.provenanceStatus}</Text> : null}
             {item.relatedMilestones.map((milestone) => (
               <View key={milestone.id} style={styles.milestone}>
                 <Ionicons name="flag-outline" size={13} color={colors.primaryDark} />
