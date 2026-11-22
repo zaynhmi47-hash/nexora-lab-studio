@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Alert } from 'react-native';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Screen } from '@/components/dignity/Screen';
 import { SectionHeading } from '@/components/dignity/SectionHeading';
 import { SurfaceCard } from '@/components/dignity/SurfaceCard';
 import { useNexoraApi } from '@/lib/api/NexoraApiProvider';
+import { useOrganization } from '@/lib/organization/OrganizationProvider';
 import { colors, radius, spacing } from '@/theme/tokens';
 
 type Project = {
@@ -13,6 +16,8 @@ type Project = {
 };
 type Output = { id: string; title: string; output_type: string; status: string; provenance_status: string };
 type Contribution = { id: string; contributor_name: string; role: string; contribution_type: string; attribution_status: string };
+type VerificationEvent = { id: string; from_status: string; to_status: string; reason: string; created_at: string };
+type Verification = { id: string; organization_id: string; status: string; reviewer_id: string | null; decision_reason: string; events: VerificationEvent[]; created_at: string };
 function payload<T>(response: unknown): T {
   if (response && typeof response === 'object' && 'data' in response) return (response as { data: T }).data;
   return response as T;
@@ -20,9 +25,11 @@ function payload<T>(response: unknown): T {
 
 export default function ResearchScreen() {
   const api = useNexoraApi();
+  const { organization } = useOrganization();
   const [projects, setProjects] = useState<Project[]>([]);
   const [outputs, setOutputs] = useState<Record<string, Output[]>>({});
   const [contributions, setContributions] = useState<Record<string, Contribution[]>>({});
+  const [verifications, setVerifications] = useState<Record<string, Verification[]>>({});
   const [title, setTitle] = useState('');
   const [question, setQuestion] = useState('');
   const [field, setField] = useState('');
@@ -55,6 +62,12 @@ export default function ResearchScreen() {
       }));
       setOutputs(Object.fromEntries(details.map(([id, out]) => [id, Array.isArray(out) ? out : []])));
       setContributions(Object.fromEntries(details.map(([id, , people]) => [id, Array.isArray(people) ? people : []])));
+      const verificationRows = await Promise.all(details.flatMap(([projectId, rows]) => rows.map(async (item) => {
+        const response = await api.request<Verification[]>('/api/v1/research/projects/' + projectId + '/outputs/' + item.id + '/verification/');
+        const result = payload<Verification[]>(response);
+        return [item.id, Array.isArray(result) ? result : []] as const;
+      })));
+      setVerifications(Object.fromEntries(verificationRows));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Tidak dapat memuat data penelitian.');
     } finally { setLoading(false); }
@@ -108,6 +121,30 @@ export default function ResearchScreen() {
   }, [api, contributorDraft, load]);
 
 
+  const submitVerification = useCallback((projectId: string, outputId: string, outputTitle: string) => {
+    if (!organization) { setError('Pilih organisasi aktif terlebih dahulu untuk mengajukan verifikasi.'); return; }
+    Alert.alert(
+      'Bagikan bukti untuk verifikasi?',
+      'Judul luaran “' + outputTitle + '” dan informasi pendukungnya akan dibagikan kepada ' + organization.name + '. Organisasi tidak memperoleh akses ke jurnal pribadi atau data Grow lainnya.',
+      [
+        { text: 'Batal', style: 'cancel' },
+        { text: 'Setuju & ajukan', onPress: () => {
+          void (async () => {
+            setSaving(true); setError(null); setNotice(null);
+            try {
+              await api.request('/api/v1/research/projects/' + projectId + '/outputs/' + outputId + '/verification/', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ organization_id: organization.id, consent: true }),
+              });
+              setNotice('Bukti berhasil diajukan. Organisasi hanya dapat meninjau luaran yang kamu setujui untuk dibagikan.');
+              await load();
+            } catch (cause) { setError(cause instanceof Error ? cause.message : 'Gagal mengajukan verifikasi.'); }
+            finally { setSaving(false); }
+          })();
+        } },
+      ],
+    );
+  }, [api, load, organization]);
   const startProjectEdit = useCallback((project: Project) => {
     setEditingProjectId(project.id); setTitle(project.title); setQuestion(project.research_question ?? '');
     setField(project.field_of_study ?? ''); setMethodology(project.methodology ?? '');
@@ -166,6 +203,7 @@ export default function ResearchScreen() {
     <Text style={styles.eyebrow}>DIGNITY RESEARCH</Text>
     <Text style={styles.title}>Explore questions. Create knowledge.</Text>
     <Text style={styles.subtitle}>Bangun rekam jejak penelitian, kontribusi, dan luaran ilmiah dalam satu ruang yang terstruktur.</Text>
+    <Pressable onPress={() => router.push('/research-review')} style={styles.reviewQueue}><Ionicons name="shield-checkmark-outline" size={16} color={colors.primaryDark} /><Text style={styles.reviewQueueText}>Antrian verifikasi organisasi</Text></Pressable>
     <SurfaceCard style={styles.privacy}>
       <Ionicons name="lock-closed-outline" size={19} color={colors.primary} />
       <View style={styles.flex}>
@@ -202,6 +240,23 @@ export default function ResearchScreen() {
           {(outputs[project.id] ?? []).map((item) => <View key={item.id} style={styles.record}>
             <Text style={styles.recordTitle}>{item.title}</Text>
             <Text style={styles.meta}>{item.output_type} · {item.status} · {item.provenance_status}</Text>
+            {(() => {
+              const cases = verifications[item.id] ?? [];
+              const latest = cases[0];
+              return (
+                <View style={styles.verificationPanel}>
+                  <Text style={styles.verificationStatus}>Verifikasi · {latest?.status ?? 'belum diajukan'}</Text>
+                  {latest?.events?.slice(-3).map((event) => <Text key={event.id} style={styles.verificationEvent}>{event.to_status} · {new Date(event.created_at).toLocaleDateString()}</Text>)}
+                  {latest?.decision_reason ? <Text style={styles.meta}>Catatan reviewer · {latest.decision_reason}</Text> : null}
+                  {latest && ['submitted', 'under_review', 'verified'].includes(latest.status) ? null : (
+                    <Pressable disabled={saving || !organization} onPress={() => submitVerification(project.id, item.id, item.title)} style={[styles.secondary, (!organization || saving) && styles.disabled]}>
+                      <Text style={styles.secondaryText}>{organization ? 'Ajukan ke ' + organization.name : 'Pilih organisasi untuk verifikasi'}</Text>
+                    </Pressable>
+                  )}
+                  <Text style={styles.meta}>Pengajuan membagikan luaran ini saja, bukan seluruh profil atau jurnal pribadi.</Text>
+                </View>
+              );
+            })()}
             {editingOutput?.id === item.id ? <View style={styles.inlineEditor}><TextInput value={outputEditDraft} onChangeText={setOutputEditDraft} style={styles.input} placeholder="Judul luaran" placeholderTextColor={colors.muted} /><View style={styles.actionRow}><Pressable disabled={saving} onPress={() => void saveOutputEdit()}><Text style={styles.actionText}>Simpan</Text></Pressable><Pressable onPress={() => setEditingOutput(null)}><Text style={styles.deleteText}>Batal</Text></Pressable></View></View> : <View style={styles.actionRow}><Pressable onPress={() => { setEditingOutput({ projectId: project.id, id: item.id }); setOutputEditDraft(item.title); }}><Text style={styles.actionText}>Edit</Text></Pressable><Pressable disabled={saving} onPress={() => void removeOutput(project.id, item.id)}><Text style={styles.deleteText}>Hapus luaran</Text></Pressable></View>}
           </View>)}
           <TextInput value={outputDraft[project.id] ?? ''} onChangeText={(value) => setOutputDraft((current) => ({ ...current, [project.id]: value }))} placeholder="Judul luaran / laporan" placeholderTextColor={colors.muted} style={styles.input} />
@@ -227,6 +282,11 @@ const styles = StyleSheet.create({
   title: { color: colors.ink, fontSize: 26, lineHeight: 33, fontWeight: '900', marginTop: 8 },
   subtitle: { color: colors.muted, fontSize: 13, lineHeight: 20, marginTop: 8, marginBottom: spacing.xl },
   privacy: { flexDirection: 'row', gap: 10, backgroundColor: colors.primarySoft },
+  reviewQueue: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 7, backgroundColor: colors.primarySoft, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 9, marginBottom: spacing.md },
+  reviewQueueText: { color: colors.primaryDark, fontSize: 10, fontWeight: '900' },
+  verificationPanel: { marginTop: 8, padding: 9, borderRadius: radius.small, backgroundColor: colors.surfaceMuted, gap: 5 },
+  verificationStatus: { color: colors.primaryDark, fontSize: 10, fontWeight: '900', textTransform: 'capitalize' },
+  verificationEvent: { color: colors.muted, fontSize: 9 },
   flex: { flex: 1 },
   cardTitle: { color: colors.ink, fontSize: 12, fontWeight: '900' },
   detail: { color: colors.muted, fontSize: 10, lineHeight: 16, marginTop: 5 },
