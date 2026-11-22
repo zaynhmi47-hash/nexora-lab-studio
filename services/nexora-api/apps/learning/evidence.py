@@ -9,6 +9,199 @@ from .models import LearningCompetency, LearningEvidence, LearningMastery, Learn
 
 class LearningEvidenceService:
     @staticmethod
+    def development_journey(*, user, window_days=30, limit=100):
+        """Build an owner-only, source-attributed development activity stream."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from apps.growth.models import (
+            GrowthEvidenceEvent,
+            GrowthGoal,
+            GrowthHabit,
+            GrowthHabitCheckIn,
+            GrowthMilestone,
+            GrowthMilestoneEvidence,
+        )
+
+        if window_days not in (7, 30, 90):
+            raise ValueError("window_days must be 7, 30 or 90.")
+        if type(limit) is not int or not 1 <= limit <= 100:
+            raise ValueError("limit must be an integer between 1 and 100.")
+
+        now = timezone.now()
+        start_at = now - timedelta(days=window_days)
+        items = []
+
+        evidence_items = LearningEvidence.objects.filter(
+            user=user,
+            created_at__gte=start_at,
+            deleted_at__isnull=True,
+            outcome__deleted_at__isnull=True,
+            outcome__is_published=True,
+            outcome__competency__deleted_at__isnull=True,
+            outcome__competency__is_published=True,
+        ).select_related("outcome", "outcome__competency").order_by("-created_at")
+        for evidence in evidence_items:
+            items.append({
+                "id": f"learning-evidence:{evidence.id}",
+                "occurredAt": evidence.created_at.isoformat(),
+                "domain": evidence.source_type,
+                "kind": "evidence",
+                "title": evidence.title,
+                "description": evidence.outcome.title,
+                "source": {
+                    "type": evidence.source_type,
+                    "reference": evidence.source_reference or None,
+                    "evidenceType": evidence.evidence_type,
+                },
+                "competency": {
+                    "key": evidence.outcome.competency.key,
+                    "title": evidence.outcome.competency.title,
+                    "outcomeKey": evidence.outcome.key,
+                    "outcomeTitle": evidence.outcome.title,
+                },
+                "status": evidence.status,
+                "mastery": None,
+                "relatedMilestones": [],
+            })
+
+        mastery_items = LearningMastery.objects.filter(
+            user=user,
+            assessed_at__gte=start_at,
+            assessed_at__isnull=False,
+            deleted_at__isnull=True,
+            outcome__deleted_at__isnull=True,
+            outcome__is_published=True,
+            outcome__competency__deleted_at__isnull=True,
+            outcome__competency__is_published=True,
+        ).select_related("outcome", "outcome__competency").order_by("-assessed_at")
+        for mastery in mastery_items:
+            items.append({
+                "id": f"mastery:{mastery.id}",
+                "occurredAt": mastery.assessed_at.isoformat(),
+                "domain": "assessment",
+                "kind": "mastery_assessment",
+                "title": "Competency assessment recorded",
+                "description": mastery.outcome.title,
+                "source": {
+                    "type": "organization_assessment",
+                    "assessmentMethod": mastery.assessment_method,
+                    "assessorId": str(mastery.assessed_by_id) if mastery.assessed_by_id else None,
+                },
+                "competency": {
+                    "key": mastery.outcome.competency.key,
+                    "title": mastery.outcome.competency.title,
+                    "outcomeKey": mastery.outcome.key,
+                    "outcomeTitle": mastery.outcome.title,
+                },
+                "status": mastery.status,
+                "mastery": {"level": mastery.level, "status": mastery.status},
+                "relatedMilestones": [],
+            })
+
+        growth_events = list(GrowthEvidenceEvent.objects.filter(
+            user=user,
+            occurred_at__gte=start_at,
+            occurred_at__lte=now,
+        ).order_by("-occurred_at", "-id"))
+        milestone_links = GrowthMilestoneEvidence.objects.filter(
+            user=user,
+            evidence_event__in=growth_events,
+            milestone__deleted_at__isnull=True,
+        ).select_related("milestone")
+        links_by_event = {}
+        for link in milestone_links:
+            links_by_event.setdefault(str(link.evidence_event_id), []).append({
+                "id": str(link.milestone_id),
+                "title": link.milestone.title,
+                "pillar": link.milestone.pillar,
+                "status": link.milestone.status,
+            })
+
+        for event in growth_events:
+            description = None
+            if event.subject_type == "goal":
+                subject = GrowthGoal.objects.filter(
+                    id=event.subject_id, user=user, deleted_at__isnull=True,
+                ).only("title").first()
+                if subject is None:
+                    continue
+                description = subject.title
+            elif event.subject_type == "habit":
+                subject = GrowthHabit.objects.filter(
+                    id=event.subject_id, user=user, deleted_at__isnull=True,
+                ).only("title").first()
+                if subject is None:
+                    continue
+                description = subject.title
+            elif event.subject_type == "habit_check_in":
+                subject = GrowthHabitCheckIn.objects.filter(
+                    id=event.subject_id, habit__user=user,
+                    habit__deleted_at__isnull=True, deleted_at__isnull=True,
+                ).select_related("habit").only("habit__title").first()
+                if subject is None:
+                    continue
+                description = subject.habit.title
+            elif event.subject_type == "milestone":
+                subject = GrowthMilestone.objects.filter(
+                    id=event.subject_id, user=user, deleted_at__isnull=True,
+                ).only("title", "pillar", "status").first()
+                if subject is None:
+                    continue
+                description = subject.title
+            else:
+                continue
+
+            title = {
+                "goal.created": "Personal goal created",
+                "goal.status_changed": "Personal goal updated",
+                "habit.created": "Habit created",
+                "habit.check_in_recorded": "Habit check-in recorded",
+                "habit.check_in_changed": "Habit check-in updated",
+                "milestone.created": "Development milestone created",
+                "milestone.status_changed": (
+                    "Development milestone achieved"
+                    if event.metadata.get("new_status") == "achieved"
+                    else "Development milestone updated"
+                ),
+            }.get(event.event_type, "Personal growth activity recorded")
+            items.append({
+                "id": f"growth-event:{event.id}",
+                "occurredAt": event.occurred_at.isoformat(),
+                "domain": "growth",
+                "kind": event.event_type,
+                "title": title,
+                "description": description,
+                "source": {"type": "growth_ledger", "subjectType": event.subject_type},
+                "competency": None,
+                "status": None,
+                "mastery": None,
+                "relatedMilestones": links_by_event.get(str(event.id), []),
+            })
+
+        items.sort(key=lambda item: (item["occurredAt"], item["id"]), reverse=True)
+        return {
+            "windowDays": window_days,
+            "generatedAt": now.isoformat(),
+            "items": items[:limit],
+            "total": len(items),
+            "hasMore": len(items) > limit,
+            "privacy": {
+                "ownerScoped": True,
+                "journalContentIncluded": False,
+                "habitNotesIncluded": False,
+                "privateReflectionsIncluded": False,
+                "organizationAccessGranted": False,
+            },
+            "limitations": [
+                "Activity records describe recorded evidence, not a complete measure of personal development.",
+                "Learning evidence, growth activity and explicit mastery assessments remain distinct.",
+                "Academic, career and external records appear only when an authorized source has written them to the evidence registry.",
+            ],
+        }
+
+    @staticmethod
     def competency_catalog() -> list[dict]:
         competencies = LearningCompetency.objects.filter(
             is_published=True,
