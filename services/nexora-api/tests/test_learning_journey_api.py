@@ -103,6 +103,7 @@ def test_development_journey_is_private_to_authenticated_owner():
         ("?window=14", 400),
         ("?window=30&limit=0", 400),
         ("?window=30&limit=101", 400),
+        ("?window=30&offset=-1", 400),
         ("?window=not-a-number", 400),
     ],
 )
@@ -123,3 +124,39 @@ def test_development_journey_rejects_invalid_window_and_limit(query, expected):
 def test_development_journey_requires_authentication():
     response = APIClient().get("/api/v1/learning/journey/")
     assert response.status_code == 401
+
+
+@pytest.mark.django_db
+def test_development_journey_paginates_without_repeating_items():
+    user = NexoraUser.objects.create(
+        status=NexoraUser.Status.ACTIVE,
+        email="journey-pagination@example.com",
+    )
+    for index in range(3):
+        outcome = make_outcome(f"journey-pagination-{index}")
+        LearningEvidence.objects.create(
+            user=user,
+            outcome=outcome,
+            evidence_type=LearningEvidence.EvidenceType.PROJECT,
+            title=f"Evidence {index}",
+        )
+
+    client = APIClient()
+    client.force_authenticate(user=user)
+    first = client.get("/api/v1/learning/journey/?limit=2&offset=0")
+    second = client.get("/api/v1/learning/journey/?limit=2&offset=2")
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    first_payload = first.json()
+    second_payload = second.json()
+    assert len(first_payload["items"]) == 2
+    assert first_payload["hasMore"] is True
+    assert first_payload["nextOffset"] == 2
+    assert second_payload["offset"] == 2
+    assert len(second_payload["items"]) == 1
+    assert second_payload["hasMore"] is False
+    assert second_payload["nextOffset"] is None
+    assert not {
+        item["id"] for item in first_payload["items"]
+    }.intersection({item["id"] for item in second_payload["items"]})
