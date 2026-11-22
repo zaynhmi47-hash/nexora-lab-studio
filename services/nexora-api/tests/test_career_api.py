@@ -57,7 +57,7 @@ def test_career_project_defaults_to_private_and_is_owner_scoped():
     CareerProject.objects.create(
         user=other,
         title="Private project of another user",
-        visibility=CareerProject.Visibility.PUBLIC,
+        visibility=CareerProject.Visibility.PRIVATE,
     )
     client = APIClient()
     client.force_authenticate(user=owner)
