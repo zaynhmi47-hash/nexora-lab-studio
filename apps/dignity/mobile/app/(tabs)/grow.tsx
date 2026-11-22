@@ -8,6 +8,14 @@ import { DevelopmentCycle } from '@/components/dignity/DevelopmentCycle';
 import { useNexoraApi } from '@/lib/api/NexoraApiProvider';
 import { colors, radius, spacing } from '@/theme/tokens';
 
+interface GrowthSnapshot {
+  window: { days: number; startDate: string; endDate: string };
+  dataCoverage: 'recorded_activity_available' | 'insufficient_information';
+  goals: { total: number; active: number; paused: number; completed: number; createdInWindow: number; completedInWindow: number };
+  habits: { active: number; completedCheckIns: number; skippedCheckIns: number; recordedCheckIns: number; adherencePercentOfRecordedCheckIns: number | null };
+  journal: { entriesInWindow: number; contentIncluded: false; moodAnalysisIncluded: false };
+  recommendations: { code: string; message: string; evidence: string }[];
+}
 interface GrowthGoal {
   id: string;
   title: string;
@@ -63,6 +71,7 @@ export default function GrowScreen() {
   const [goals, setGoals] = useState<GrowthGoal[]>([]);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [habits, setHabits] = useState<GrowthHabit[]>([]);
+  const [snapshot, setSnapshot] = useState<GrowthSnapshot | null>(null);
   const [habitTitle, setHabitTitle] = useState('');
   const [habitFrequency, setHabitFrequency] = useState<'daily' | 'weekly'>('daily');
   const [weeklyTarget, setWeeklyTarget] = useState(3);
@@ -86,14 +95,17 @@ export default function GrowScreen() {
     setLoading(true);
     setError(null);
     try {
-      const [goalResponse, journalResponse, habitResponse] = await Promise.all([
+      const [goalResponse, journalResponse, habitResponse, snapshotResponse] = await Promise.all([
         api.request<GrowthGoal[]>('/api/v1/growth/goals/'),
         api.request<JournalEntry[]>('/api/v1/growth/journal/'),
         api.request<GrowthHabit[]>('/api/v1/growth/habits/'),
+        api.request<GrowthSnapshot>('/api/v1/growth/insights/?window=30'),
       ]);
       const nextGoals = payload<GrowthGoal[]>(goalResponse);
       const nextEntries = payload<JournalEntry[]>(journalResponse);
       const nextHabits = payload<GrowthHabit[]>(habitResponse);
+      const nextSnapshot = payload<GrowthSnapshot>(snapshotResponse);
+      setSnapshot(nextSnapshot);
       setGoals(Array.isArray(nextGoals) ? nextGoals : []);
       setEntries(Array.isArray(nextEntries) ? nextEntries : []);
       setHabits(Array.isArray(nextHabits) ? nextHabits : []);
@@ -242,6 +254,30 @@ export default function GrowScreen() {
     </View>
 
     <View style={styles.section}>
+      <SectionHeading title="Your progress snapshot" subtitle="A factual summary of activity you chose to record over the last 30 days." />
+      {snapshot ? <SurfaceCard style={styles.snapshotCard}>
+        <View style={styles.snapshotHeader}>
+          <Text style={styles.snapshotLabel}>PERSONAL PROGRESS · 30 DAYS</Text>
+          <Ionicons name="analytics-outline" size={18} color={colors.primary} />
+        </View>
+        {snapshot.dataCoverage === 'insufficient_information' ? <Text style={styles.helper}>There is not enough recorded activity to summarize yet. This does not mean you have not grown.</Text> : <>
+          <View style={styles.snapshotMetrics}>
+            <View style={styles.snapshotMetric}><Text style={styles.snapshotValue}>{snapshot.goals.active}</Text><Text style={styles.snapshotCaption}>Active goals</Text></View>
+            <View style={styles.snapshotMetric}><Text style={styles.snapshotValue}>{snapshot.goals.completedInWindow}</Text><Text style={styles.snapshotCaption}>Goals completed</Text></View>
+            <View style={styles.snapshotMetric}><Text style={styles.snapshotValue}>{snapshot.habits.recordedCheckIns}</Text><Text style={styles.snapshotCaption}>Habit records</Text></View>
+            <View style={styles.snapshotMetric}><Text style={styles.snapshotValue}>{snapshot.journal.entriesInWindow}</Text><Text style={styles.snapshotCaption}>Reflections</Text></View>
+          </View>
+          <Text style={styles.snapshotFootnote}>{snapshot.habits.adherencePercentOfRecordedCheckIns === null ? 'Habit consistency is not available until a check-in is recorded.' : String(snapshot.habits.adherencePercentOfRecordedCheckIns) + '% completed among recorded habit check-ins only.'}</Text>
+        </>}
+        {snapshot.recommendations.map((item) => <View key={item.code} style={styles.recommendation}>
+          <Text style={styles.recommendationText}>{item.message}</Text>
+          <Text style={styles.recommendationEvidence}>Based on: {item.evidence}</Text>
+        </View>)}
+        <Text style={styles.snapshotPrivacy}>Private to your account. Journal content and mood are not analyzed or included.</Text>
+      </SurfaceCard> : <SurfaceCard><Text style={styles.helper}>Loading your progress snapshot…</Text></SurfaceCard>}
+    </View>
+
+    <View style={styles.section}>
       <SectionHeading title="Personal goals" subtitle="Define a direction and mark progress when you are ready." />
       <SurfaceCard style={styles.form}>
         <Text style={styles.fieldLabel}>What would you like to work toward?</Text>
@@ -341,6 +377,18 @@ const styles = StyleSheet.create({
   subtitle: { color: colors.muted, fontSize: 13, lineHeight: 20, marginTop: 8, marginBottom: spacing.xl },
   section: { marginBottom: spacing.section },
   form: { gap: 9 },
+  snapshotCard: { gap: 12 },
+  snapshotHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  snapshotLabel: { color: colors.primary, fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
+  snapshotMetrics: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  snapshotMetric: { width: '47%', backgroundColor: colors.surfaceMuted, borderRadius: radius.medium, padding: 11 },
+  snapshotValue: { color: colors.ink, fontSize: 21, fontWeight: '900' },
+  snapshotCaption: { color: colors.muted, fontSize: 9, marginTop: 3 },
+  snapshotFootnote: { color: colors.muted, fontSize: 10, lineHeight: 15 },
+  recommendation: { borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 9, gap: 4 },
+  recommendationText: { color: colors.ink, fontSize: 11, lineHeight: 16, fontWeight: '700' },
+  recommendationEvidence: { color: colors.muted, fontSize: 9, lineHeight: 14 },
+  snapshotPrivacy: { color: colors.muted, fontSize: 9, lineHeight: 14 },
   fieldLabel: { color: colors.ink, fontSize: 11, fontWeight: '900', marginTop: 6 },
   input: { minHeight: 42, borderWidth: 1, borderColor: colors.line, borderRadius: radius.medium, paddingHorizontal: 11, paddingVertical: 9, color: colors.ink, fontSize: 12, backgroundColor: colors.background },
   multiline: { minHeight: 108 },
