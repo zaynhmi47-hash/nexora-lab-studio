@@ -186,6 +186,25 @@ class LearningService:
             "kind": lesson.kind,
             "version": content.version,
             "estimatedMinutes": content.estimated_minutes,
+            "learningOutcomes": [
+                {
+                    "key": mapping.outcome.key,
+                    "title": mapping.outcome.title,
+                    "competencyTitle": mapping.outcome.competency.title,
+                    "contributionType": mapping.contribution_type,
+                }
+                for mapping in LearningOutcomeLessonMapping.objects.filter(
+                    lesson=lesson,
+                    is_active=True,
+                    deleted_at__isnull=True,
+                    outcome__is_published=True,
+                    outcome__deleted_at__isnull=True,
+                    outcome__competency__is_published=True,
+                    outcome__competency__deleted_at__isnull=True,
+                ).select_related("outcome", "outcome__competency").order_by(
+                    "outcome__competency__domain", "outcome__sort_order", "outcome__title",
+                )
+            ],
             "blocks": normalized_blocks,
         }
 
