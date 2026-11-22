@@ -1,7 +1,6 @@
 from django.core.exceptions import ValidationError
 from rest_framework import serializers, status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -72,6 +71,7 @@ class ResearchVerificationSerializer(serializers.ModelSerializer):
 
 
 class ResearchVerificationQueueSerializer(serializers.ModelSerializer):
+    events = ResearchVerificationEventSerializer(many=True, read_only=True)
     output_id = serializers.UUIDField(read_only=True)
     project_id = serializers.UUIDField(source="output.project_id", read_only=True)
     output_title = serializers.CharField(source="output.title", read_only=True)
