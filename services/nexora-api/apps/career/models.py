@@ -48,7 +48,6 @@ class CareerProject(AuditableBaseModel):
     class Visibility(models.TextChoices):
         PRIVATE = "private", "Private"
         UNLISTED = "unlisted", "Unlisted"
-        PUBLIC = "public", "Public"
 
     user = models.ForeignKey(NexoraUser, on_delete=models.CASCADE, related_name="career_projects")
     title = models.CharField(max_length=180)
