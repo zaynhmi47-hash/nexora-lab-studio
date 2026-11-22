@@ -8,9 +8,19 @@ from .api import (
 )
 from .habit_api import GrowthHabitCheckInView, GrowthHabitDetailView, GrowthHabitListView
 from .insights_api import GrowthInsightsView
+from .milestone_api import (
+    GrowthDevelopmentReviewView,
+    GrowthMilestoneDetailView,
+    GrowthMilestoneEvidenceView,
+    GrowthMilestoneListView,
+)
 from .timeline_api import GrowthTimelineView
 
 urlpatterns = [
+    path("milestones/", GrowthMilestoneListView.as_view(), name="growth-milestones"),
+    path("milestones/<uuid:milestone_id>/", GrowthMilestoneDetailView.as_view(), name="growth-milestone-detail"),
+    path("milestones/<uuid:milestone_id>/evidence/", GrowthMilestoneEvidenceView.as_view(), name="growth-milestone-evidence"),
+    path("reviews/", GrowthDevelopmentReviewView.as_view(), name="growth-development-reviews"),
     path("insights/", GrowthInsightsView.as_view(), name="growth-insights"),
     path("timeline/", GrowthTimelineView.as_view(), name="growth-timeline"),
     path("goals/", GrowthGoalListView.as_view(), name="growth-goals"),
