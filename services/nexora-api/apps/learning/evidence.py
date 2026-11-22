@@ -9,7 +9,7 @@ from .models import LearningCompetency, LearningEvidence, LearningMastery, Learn
 
 class LearningEvidenceService:
     @staticmethod
-    def development_journey(*, user, window_days=30, limit=100):
+    def development_journey(*, user, window_days=30, limit=100, offset=0):
         """Build an owner-only, source-attributed development activity stream."""
         from datetime import timedelta
 
@@ -28,6 +28,8 @@ class LearningEvidenceService:
             raise ValueError("window_days must be 7, 30 or 90.")
         if type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError("limit must be an integer between 1 and 100.")
+        if type(offset) is not int or offset < 0:
+            raise ValueError("offset must be a non-negative integer.")
 
         now = timezone.now()
         start_at = now - timedelta(days=window_days)
@@ -184,9 +186,12 @@ class LearningEvidenceService:
         return {
             "windowDays": window_days,
             "generatedAt": now.isoformat(),
-            "items": items[:limit],
+            "items": items[offset:offset + limit],
             "total": len(items),
-            "hasMore": len(items) > limit,
+            "offset": offset,
+            "limit": limit,
+            "hasMore": offset + limit < len(items),
+            "nextOffset": offset + limit if offset + limit < len(items) else None,
             "privacy": {
                 "ownerScoped": True,
                 "journalContentIncluded": False,
