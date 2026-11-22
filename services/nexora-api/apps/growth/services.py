@@ -8,8 +8,6 @@ from django.utils import timezone
 from .models import GrowthGoal, GrowthHabit, GrowthHabitCheckIn, GrowthJournalEntry
 
 
-
-
 class GrowthEvidenceLedger:
     """Persist minimal activity facts atomically with their source mutation."""
 
