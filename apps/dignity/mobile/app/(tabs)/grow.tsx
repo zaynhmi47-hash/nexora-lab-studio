@@ -430,6 +430,80 @@ export default function GrowScreen() {
     </View>
 
     <View style={styles.section}>
+      <SectionHeading title="Development milestones" subtitle="Turn meaningful intentions into observable milestones across the ten pillars." />
+      <SurfaceCard style={styles.form}>
+        <Text style={styles.fieldLabel}>Milestone</Text>
+        <TextInput value={milestoneTitle} onChangeText={setMilestoneTitle} placeholder="e.g. Publish a portfolio case study" placeholderTextColor={colors.muted} style={styles.input} maxLength={180} />
+        <Text style={styles.fieldLabel}>Development pillar</Text>
+        <View style={styles.moodRow}>
+          {GROWTH_PILLARS.map((pillar) => <Pressable key={pillar.key} onPress={() => setMilestonePillar(pillar.key)} style={[styles.moodChip, milestonePillar === pillar.key && styles.moodActive]}>
+            <Text style={[styles.moodText, milestonePillar === pillar.key && styles.moodTextActive]}>{pillar.label}</Text>
+          </Pressable>)}
+        </View>
+        <Pressable disabled={!milestoneTitle.trim() || savingMilestone} onPress={() => void createMilestone()} style={[styles.primaryButton, (!milestoneTitle.trim() || savingMilestone) && styles.disabled]}>
+          <Text style={styles.primaryButtonText}>{savingMilestone ? 'Saving…' : 'Create milestone'}</Text>
+        </Pressable>
+        <Text style={styles.privacy}>Pillar mapping organizes your own development. It is not a diagnosis, ranking or score.</Text>
+      </SurfaceCard>
+      {milestones.length === 0 ? <SurfaceCard><Text style={styles.helper}>Your milestones will appear here when you create them.</Text></SurfaceCard> : milestones.map((milestone) => {
+        const pillarLabel = GROWTH_PILLARS.find((pillar) => pillar.key === milestone.pillar)?.label ?? milestone.pillar;
+        const evidenceChoices = (timeline?.items ?? []).filter((item) => /^[0-9a-f-]{36}$/i.test(item.id) && item.type !== 'reflection_recorded').slice(0, 4);
+        return <SurfaceCard key={milestone.id} style={styles.goalCard}>
+          <View style={styles.goalTop}>
+            <Text style={styles.goalStatus}>{pillarLabel.toUpperCase()}</Text>
+            <Text style={styles.dateText}>{milestone.status.replace('_', ' ').toUpperCase()}</Text>
+          </View>
+          <Text style={styles.cardTitle}>{milestone.title}</Text>
+          <Text style={styles.helper}>{milestone.evidenceCount ?? 0} evidence item(s) linked</Text>
+          {milestone.status !== 'cancelled' ? <Pressable disabled={busyMilestoneId === milestone.id} onPress={() => void updateMilestone(milestone)} style={styles.goalAction}>
+            <Ionicons name={milestone.status === 'achieved' ? 'refresh-outline' : 'ribbon-outline'} size={16} color={colors.primaryDark} />
+            <Text style={styles.goalActionText}>{busyMilestoneId === milestone.id ? 'Updating…' : milestone.status === 'achieved' ? 'Reopen milestone' : 'Mark achieved'}</Text>
+          </Pressable> : null}
+          {evidenceChoices.length > 0 ? <View style={styles.evidenceChoices}>
+            <Text style={styles.fieldLabel}>Link recent evidence</Text>
+            {evidenceChoices.map((item) => <Pressable key={item.id} disabled={busyEvidenceKey === `${milestone.id}:${item.id}`} onPress={() => void linkEvidence(milestone, item)} style={styles.evidenceChoice}>
+              <Ionicons name="link-outline" size={13} color={colors.primaryDark} />
+              <Text style={styles.evidenceChoiceText}>{busyEvidenceKey === `${milestone.id}:${item.id}` ? 'Linking…' : item.title} · {item.date}</Text>
+            </Pressable>)}
+          </View> : <Text style={styles.helper}>Record a goal or habit activity to attach evidence here.</Text>}
+        </SurfaceCard>;
+      })}
+    </View>
+
+    <View style={styles.section}>
+      <SectionHeading title="Development review" subtitle="Review observable activity, then add your own interpretation and next steps." />
+      <SurfaceCard style={styles.form}>
+        <Text style={styles.fieldLabel}>Your reflection on this period</Text>
+        <TextInput value={reviewReflection} onChangeText={setReviewReflection} multiline placeholder="What moved forward? What felt difficult? What would you like to change?" placeholderTextColor={colors.muted} style={[styles.input, styles.multiline]} textAlignVertical="top" />
+        <Text style={styles.fieldLabel}>Next steps (one per line)</Text>
+        <TextInput value={reviewNextSteps} onChangeText={setReviewNextSteps} multiline placeholder={'Practice one skill\nAsk for feedback'} placeholderTextColor={colors.muted} style={[styles.input, styles.multiline]} textAlignVertical="top" />
+        <View style={styles.habitActions}>
+          <Pressable disabled={savingReview} onPress={() => void createReview('weekly')} style={[styles.primaryButton, styles.reviewButton, savingReview && styles.disabled]}>
+            <Text style={styles.primaryButtonText}>Save weekly review</Text>
+          </Pressable>
+          <Pressable disabled={savingReview} onPress={() => void createReview('monthly')} style={[styles.primaryButton, styles.reviewButton, savingReview && styles.disabled]}>
+            <Text style={styles.primaryButtonText}>Save monthly review</Text>
+          </Pressable>
+        </View>
+        <Text style={styles.privacy}>Activity counts are evidence summaries, not a measurement of your worth or overall development.</Text>
+      </SurfaceCard>
+      {reviews.length === 0 ? <SurfaceCard><Text style={styles.helper}>Your saved development reviews will appear here.</Text></SurfaceCard> : reviews.slice(0, 3).map((review) => <SurfaceCard key={review.id} style={styles.goalCard}>
+        <View style={styles.goalTop}>
+          <Text style={styles.goalStatus}>{review.period.toUpperCase()} REVIEW</Text>
+          <Text style={styles.dateText}>{review.periodStart} – {review.periodEnd}</Text>
+        </View>
+        <View style={styles.snapshotMetrics}>
+          <View style={styles.snapshotMetric}><Text style={styles.snapshotValue}>{review.evidenceCount}</Text><Text style={styles.snapshotCaption}>Recorded evidence</Text></View>
+          <View style={styles.snapshotMetric}><Text style={styles.snapshotValue}>{review.achievedMilestoneCount}</Text><Text style={styles.snapshotCaption}>Milestones achieved</Text></View>
+          <View style={styles.snapshotMetric}><Text style={styles.snapshotValue}>{review.activeMilestoneCount}</Text><Text style={styles.snapshotCaption}>Active milestones</Text></View>
+        </View>
+        {review.reflection ? <Text style={styles.helper}>{review.reflection}</Text> : null}
+        {review.nextSteps.map((step, index) => <Text key={index} style={styles.evidenceChoiceText}>• {step}</Text>)}
+        {Object.keys(review.pillarActivity).length > 0 ? <Text style={styles.snapshotFootnote}>Evidence linked by pillar: {Object.entries(review.pillarActivity).map(([pillar, count]) => `${pillar.replace('_', ' ')} ${count}`).join(' · ')}</Text> : null}
+      </SurfaceCard>)}
+    </View>
+
+    <View style={styles.section}>
       <SectionHeading title="Personal goals" subtitle="Define a direction and mark progress when you are ready." />
       <SurfaceCard style={styles.form}>
         <Text style={styles.fieldLabel}>What would you like to work toward?</Text>
@@ -530,6 +604,10 @@ const styles = StyleSheet.create({
   section: { marginBottom: spacing.section },
   form: { gap: 9 },
   snapshotCard: { gap: 12 },
+  evidenceChoices: { borderTopWidth: 1, borderTopColor: colors.line, marginTop: 8, paddingTop: 8, gap: 6 },
+  evidenceChoice: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 5 },
+  evidenceChoiceText: { color: colors.muted, fontSize: 10, lineHeight: 15, flex: 1 },
+  reviewButton: { flex: 1, marginTop: 0 },
   timelineCard: { gap: 12 },
   timelineHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   timelineCount: { color: colors.muted, fontSize: 9, fontWeight: '800' },
