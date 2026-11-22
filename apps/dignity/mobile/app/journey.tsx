@@ -27,6 +27,7 @@ type JourneyResponse = {
   items: JourneyItem[];
   total: number;
   hasMore: boolean;
+  nextOffset: number | null;
   privacy: {
     ownerScoped: boolean;
     journalContentIncluded: boolean;
@@ -57,6 +58,7 @@ export default function DevelopmentJourneyScreen() {
   const [windowDays, setWindowDays] = useState<7 | 30 | 90>(30);
   const [journey, setJourney] = useState<JourneyResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (days = windowDays) => {
@@ -71,6 +73,26 @@ export default function DevelopmentJourneyScreen() {
       setLoading(false);
     }
   }, [api, windowDays]);
+
+  const loadMore = useCallback(async () => {
+    if (!journey?.hasMore || journey.nextOffset === null || loadingMore) return;
+    setLoadingMore(true);
+    setError(null);
+    try {
+      const response = await api.request<JourneyResponse>(
+        `/api/v1/learning/journey/?window=${windowDays}&limit=100&offset=${journey.nextOffset}`,
+      );
+      const next = payload<JourneyResponse>(response);
+      setJourney((current) => current ? {
+        ...next,
+        items: [...current.items, ...next.items],
+      } : next);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to load more activity.');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [api, journey, loadingMore, windowDays]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -143,6 +165,11 @@ export default function DevelopmentJourneyScreen() {
           </SurfaceCard>
         </View>
       )) : null}
+      {!loading && journey?.hasMore ? (
+        <Pressable onPress={() => void loadMore()} disabled={loadingMore} style={[styles.loadMore, loadingMore && styles.disabled]}>
+          <Text style={styles.loadMoreText}>{loadingMore ? 'Loading more…' : 'Load more activity'}</Text>
+        </Pressable>
+      ) : null}
     </View>
 
     {journey ? <SurfaceCard style={styles.limitations}>
@@ -186,6 +213,9 @@ const styles = StyleSheet.create({
   milestone: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
   milestoneText: { color: colors.primaryDark, fontSize: 9, fontWeight: '800', flex: 1 },
   limitations: { marginTop: spacing.lg, gap: 5 },
+  loadMore: { alignItems: 'center', paddingVertical: 12, borderWidth: 1, borderColor: colors.line, borderRadius: radius.pill, marginTop: spacing.sm },
+  loadMoreText: { color: colors.primary, fontSize: 11, fontWeight: '900' },
+  disabled: { opacity: 0.5 },
   errorBox: { backgroundColor: colors.roseSoft, borderRadius: radius.medium, padding: 11, marginTop: 10 },
   errorText: { color: colors.danger, fontSize: 11, fontWeight: '700' },
 });
