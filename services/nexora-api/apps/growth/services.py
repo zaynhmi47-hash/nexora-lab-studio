@@ -256,3 +256,134 @@ class GrowthHabitService:
                 for item in recent[:14]
             ],
         }
+
+class GrowthMilestoneService:
+    @staticmethod
+    @transaction.atomic
+    def create_milestone(*, user, **data):
+        from .models import GrowthMilestone
+
+        milestone = GrowthMilestone(user=user, **data)
+        milestone.full_clean()
+        milestone.save()
+        return milestone
+
+    @staticmethod
+    @transaction.atomic
+    def update_milestone(*, user, milestone_id, **changes):
+        from .models import GrowthMilestone
+
+        milestone = GrowthMilestone.objects.select_for_update().filter(
+            id=milestone_id, user=user, deleted_at__isnull=True,
+        ).first()
+        if milestone is None:
+            raise GrowthMilestone.DoesNotExist
+        if milestone.status == GrowthMilestone.Status.CANCELLED:
+            raise ValidationError("Cancelled milestones cannot be edited.")
+        if changes.get("status") == GrowthMilestone.Status.ACHIEVED:
+            changes["achieved_at"] = timezone.now()
+        elif changes.get("status") in (
+            GrowthMilestone.Status.PLANNED,
+            GrowthMilestone.Status.IN_PROGRESS,
+            GrowthMilestone.Status.PAUSED,
+        ):
+            changes["achieved_at"] = None
+        for field, value in changes.items():
+            setattr(milestone, field, value)
+        milestone.full_clean()
+        milestone.save()
+        return milestone
+
+    @staticmethod
+    @transaction.atomic
+    def link_evidence(*, user, milestone_id, evidence_event_id):
+        from .models import GrowthEvidenceEvent, GrowthMilestone, GrowthMilestoneEvidence
+
+        milestone = GrowthMilestone.objects.filter(
+            id=milestone_id, user=user, deleted_at__isnull=True,
+        ).first()
+        if milestone is None:
+            raise GrowthMilestone.DoesNotExist
+        evidence = GrowthEvidenceEvent.objects.filter(
+            id=evidence_event_id, user=user,
+        ).first()
+        if evidence is None:
+            raise GrowthEvidenceEvent.DoesNotExist
+        link, _ = GrowthMilestoneEvidence.objects.get_or_create(
+            milestone=milestone, evidence_event=evidence, user=user,
+        )
+        return link
+
+
+class GrowthDevelopmentReviewService:
+    @staticmethod
+    @transaction.atomic
+    def create_review(*, user, period, reflection="", next_steps=None, today=None):
+        from calendar import monthrange
+        from datetime import timedelta
+        from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+        from .models import (
+            GrowthDevelopmentReview,
+            GrowthEvidenceEvent,
+            GrowthMilestone,
+            GrowthMilestoneEvidence,
+        )
+
+        if period not in GrowthDevelopmentReview.Period.values:
+            raise ValidationError({"period": "Choose weekly or monthly."})
+        try:
+            user_timezone = ZoneInfo(user.timezone)
+        except ZoneInfoNotFoundError:
+            user_timezone = timezone.get_default_timezone()
+        today = today or timezone.localdate(timezone=user_timezone)
+        if period == GrowthDevelopmentReview.Period.WEEKLY:
+            period_start = today - timedelta(days=today.weekday())
+            period_end = min(period_start + timedelta(days=6), today)
+        else:
+            period_start = today.replace(day=1)
+            period_end = today
+        start_at = timezone.make_aware(
+            timezone.datetime.combine(period_start, timezone.datetime.min.time()),
+            user_timezone,
+        )
+        end_at = timezone.make_aware(
+            timezone.datetime.combine(period_end + timedelta(days=1), timezone.datetime.min.time()),
+            user_timezone,
+        )
+        events = GrowthEvidenceEvent.objects.filter(
+            user=user, occurred_at__gte=start_at, occurred_at__lt=end_at,
+        )
+        milestones = GrowthMilestone.objects.filter(user=user, deleted_at__isnull=True)
+        achieved_count = milestones.filter(
+            status=GrowthMilestone.Status.ACHIEVED,
+            achieved_at__gte=start_at,
+            achieved_at__lt=end_at,
+        ).count()
+        active_count = milestones.filter(
+            status__in=(GrowthMilestone.Status.PLANNED, GrowthMilestone.Status.IN_PROGRESS),
+        ).count()
+        pillar_activity = {}
+        links = GrowthMilestoneEvidence.objects.filter(
+            user=user,
+            evidence_event__in=events,
+            milestone__deleted_at__isnull=True,
+        ).select_related("milestone")
+        for link in links:
+            pillar = link.milestone.pillar
+            pillar_activity[pillar] = pillar_activity.get(pillar, 0) + 1
+        review, _ = GrowthDevelopmentReview.objects.get_or_create(
+            user=user,
+            period=period,
+            period_start=period_start,
+            period_end=period_end,
+            defaults={
+                "evidence_count": events.count(),
+                "achieved_milestone_count": achieved_count,
+                "active_milestone_count": active_count,
+                "pillar_activity": pillar_activity,
+                "reflection": reflection,
+                "next_steps": next_steps or [],
+            },
+        )
+        return review
