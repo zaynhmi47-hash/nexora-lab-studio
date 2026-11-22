@@ -190,6 +190,7 @@ class GrowthHabitCheckIn(AuditableBaseModel):
     def __str__(self):
         return f"{self.habit.title} · {self.entry_date} · {self.status}"
 
+
 class GrowthEvidenceEvent(models.Model):
     """Minimal, append-only index of non-sensitive growth activity."""
 
