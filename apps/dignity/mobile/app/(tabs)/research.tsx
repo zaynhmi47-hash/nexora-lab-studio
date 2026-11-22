@@ -1,4 +1,191 @@
-import { DomainLanding } from '@/components/dignity/DomainLanding';
-export default function ResearchScreen() {
-  return <DomainLanding eyebrow="DIGNITY RESEARCH" title="Explore questions. Create knowledge." description="A structured space for inquiry, research collaboration and responsible knowledge creation." icon="flask-outline" features={['Research ideas, questions and proposals','Supervisor and collaborator relationships','Milestones, reviews and research notes','Documents, references and datasets','Publication and research output records']} boundary="Research documents and participant-related information require appropriate access controls, consent and provenance. File storage will use Nexora Core capabilities." />;
+import { useCallback, useEffect, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Screen } from '@/components/dignity/Screen';
+import { SectionHeading } from '@/components/dignity/SectionHeading';
+import { SurfaceCard } from '@/components/dignity/SurfaceCard';
+import { useNexoraApi } from '@/lib/api/NexoraApiProvider';
+import { colors, radius, spacing } from '@/theme/tokens';
+
+type Project = {
+  id: string; title: string; abstract: string; research_question: string;
+  field_of_study: string; methodology: string; status: string; visibility: string;
+};
+type Output = { id: string; title: string; output_type: string; status: string; provenance_status: string };
+type Contribution = { id: string; contributor_name: string; role: string; contribution_type: string; attribution_status: string };
+function payload<T>(response: unknown): T {
+  if (response && typeof response === 'object' && 'data' in response) return (response as { data: T }).data;
+  return response as T;
 }
+
+export default function ResearchScreen() {
+  const api = useNexoraApi();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [outputs, setOutputs] = useState<Record<string, Output[]>>({});
+  const [contributions, setContributions] = useState<Record<string, Contribution[]>>({});
+  const [title, setTitle] = useState('');
+  const [question, setQuestion] = useState('');
+  const [field, setField] = useState('');
+  const [methodology, setMethodology] = useState('');
+  const [outputDraft, setOutputDraft] = useState<Record<string, string>>({});
+  const [contributorDraft, setContributorDraft] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true); setError(null);
+    try {
+      const response = await api.request<Project[]>('/api/v1/research/projects/');
+      const next = payload<Project[]>(response);
+      const rows = Array.isArray(next) ? next : [];
+      setProjects(rows);
+      const details = await Promise.all(rows.map(async (project) => {
+        const [out, people] = await Promise.all([
+          api.request<Output[]>(`/api/v1/research/projects/${project.id}/outputs/`),
+          api.request<Contribution[]>(`/api/v1/research/projects/${project.id}/contributions/`),
+        ]);
+        return [project.id, payload<Output[]>(out), payload<Contribution[]>(people)] as const;
+      }));
+      setOutputs(Object.fromEntries(details.map(([id, out]) => [id, Array.isArray(out) ? out : []])));
+      setContributions(Object.fromEntries(details.map(([id, people]) => [id, Array.isArray(people) ? people : []])));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Tidak dapat memuat data penelitian.');
+    } finally { setLoading(false); }
+  }, [api]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const createProject = useCallback(async () => {
+    if (!title.trim()) { setError('Judul penelitian wajib diisi.'); return; }
+    setSaving(true); setError(null); setNotice(null);
+    try {
+      await api.request('/api/v1/research/projects/', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title.trim(), research_question: question.trim(), field_of_study: field.trim(), methodology: methodology.trim() }),
+      });
+      setTitle(''); setQuestion(''); setField(''); setMethodology('');
+      setNotice('Proyek penelitian tersimpan sebagai catatan privat.');
+      await load();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Gagal menyimpan penelitian.'); }
+    finally { setSaving(false); }
+  }, [api, field, load, methodology, question, title]);
+
+  const addOutput = useCallback(async (projectId: string) => {
+    const outputTitle = (outputDraft[projectId] ?? '').trim();
+    if (!outputTitle) { setError('Judul luaran penelitian wajib diisi.'); return; }
+    setSaving(true); setError(null);
+    try {
+      await api.request(`/api/v1/research/projects/${projectId}/outputs/`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: outputTitle, output_type: 'report', status: 'draft' }),
+      });
+      setOutputDraft((current) => ({ ...current, [projectId]: '' }));
+      await load();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Gagal menambah luaran.'); }
+    finally { setSaving(false); }
+  }, [api, load, outputDraft]);
+
+  const addContribution = useCallback(async (projectId: string) => {
+    const name = (contributorDraft[projectId] ?? '').trim();
+    if (!name) { setError('Nama kontributor wajib diisi.'); return; }
+    setSaving(true); setError(null);
+    try {
+      await api.request(`/api/v1/research/projects/${projectId}/contributions/`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contributor_name: name, contribution_type: 'other' }),
+      });
+      setContributorDraft((current) => ({ ...current, [projectId]: '' }));
+      await load();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Gagal menambah kontributor.'); }
+    finally { setSaving(false); }
+  }, [api, contributorDraft, load]);
+
+  return <Screen>
+    <Text style={styles.eyebrow}>DIGNITY RESEARCH</Text>
+    <Text style={styles.title}>Explore questions. Create knowledge.</Text>
+    <Text style={styles.subtitle}>Bangun rekam jejak penelitian, kontribusi, dan luaran ilmiah dalam satu ruang yang terstruktur.</Text>
+    <SurfaceCard style={styles.privacy}>
+      <Ionicons name="lock-closed-outline" size={19} color={colors.primary} />
+      <View style={styles.flex}>
+        <Text style={styles.cardTitle}>Penelitian privat secara default</Text>
+        <Text style={styles.detail}>Catatan proyek dan atribusi kontributor adalah laporan mandiri. Dignity tidak mengesahkan kepengarangan atau status publikasi secara otomatis.</Text>
+      </View>
+    </SurfaceCard>
+    <SurfaceCard style={styles.form}>
+      <SectionHeading title="Mulai proyek penelitian" subtitle="Pertanyaan penelitian, bidang, dan metode dapat disempurnakan nanti." />
+      <TextInput value={title} onChangeText={setTitle} placeholder="Judul penelitian" placeholderTextColor={colors.muted} style={styles.input} />
+      <TextInput value={question} onChangeText={setQuestion} placeholder="Pertanyaan penelitian" placeholderTextColor={colors.muted} multiline style={[styles.input, styles.multiline]} />
+      <TextInput value={field} onChangeText={setField} placeholder="Bidang studi · mis. Pendidikan" placeholderTextColor={colors.muted} style={styles.input} />
+      <TextInput value={methodology} onChangeText={setMethodology} placeholder="Metodologi · opsional" placeholderTextColor={colors.muted} style={styles.input} />
+      <Pressable disabled={saving} onPress={() => void createProject()} style={[styles.save, saving && styles.disabled]}>
+        <Ionicons name="add-circle-outline" size={17} color="#FFFFFF" /><Text style={styles.saveText}>{saving ? 'Menyimpan…' : 'Simpan proyek'}</Text>
+      </Pressable>
+    </SurfaceCard>
+    {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+    {error ? <Pressable onPress={() => void load()} style={styles.error}><Text style={styles.errorText}>{error} · Ketuk untuk memuat ulang</Text></Pressable> : null}
+    <View style={styles.section}>
+      <SectionHeading title="Ruang penelitian" subtitle={`${projects.length} proyek · hanya pemilik yang dapat mengakses`} />
+      {loading ? <SurfaceCard><Text style={styles.detail}>Memuat proyek penelitian…</Text></SurfaceCard> : null}
+      {!loading && projects.length === 0 ? <SurfaceCard><Text style={styles.detail}>Belum ada proyek penelitian. Mulai dari pertanyaan yang ingin kamu jawab.</Text></SurfaceCard> : null}
+      {projects.map((project) => <SurfaceCard key={project.id} style={styles.project}>
+        <View style={styles.projectHeader}>
+          <View style={styles.flex}><Text style={styles.cardTitle}>{project.title}</Text><Text style={styles.meta}>{project.field_of_study || 'Bidang belum ditentukan'} · {project.methodology || 'Metode belum ditentukan'}</Text></View>
+          <Text style={styles.pill}>{project.status.replaceAll('_', ' ')}</Text>
+        </View>
+        {project.research_question ? <Text style={styles.detail}>Pertanyaan · {project.research_question}</Text> : null}
+        <Text style={styles.privateLabel}>Privat · laporan mandiri</Text>
+        <View style={styles.subsection}>
+          <Text style={styles.subheading}>Luaran penelitian ({outputs[project.id]?.length ?? 0})</Text>
+          {(outputs[project.id] ?? []).map((item) => <View key={item.id} style={styles.record}>
+            <Text style={styles.recordTitle}>{item.title}</Text>
+            <Text style={styles.meta}>{item.output_type} · {item.status} · {item.provenance_status}</Text>
+          </View>)}
+          <TextInput value={outputDraft[project.id] ?? ''} onChangeText={(value) => setOutputDraft((current) => ({ ...current, [project.id]: value }))} placeholder="Judul luaran / laporan" placeholderTextColor={colors.muted} style={styles.input} />
+          <Pressable onPress={() => void addOutput(project.id)} disabled={saving} style={styles.secondary}><Text style={styles.secondaryText}>Tambah luaran sebagai draft</Text></Pressable>
+        </View>
+        <View style={styles.subsection}>
+          <Text style={styles.subheading}>Kontribusi ({contributions[project.id]?.length ?? 0})</Text>
+          {(contributions[project.id] ?? []).map((person) => <View key={person.id} style={styles.record}>
+            <Text style={styles.recordTitle}>{person.contributor_name}{person.role ? ` · ${person.role}` : ''}</Text>
+            <Text style={styles.meta}>Atribusi · {person.attribution_status}</Text>
+          </View>)}
+          <TextInput value={contributorDraft[project.id] ?? ''} onChangeText={(value) => setContributorDraft((current) => ({ ...current, [project.id]: value }))} placeholder="Nama kontributor" placeholderTextColor={colors.muted} style={styles.input} />
+          <Pressable onPress={() => void addContribution(project.id)} disabled={saving} style={styles.secondary}><Text style={styles.secondaryText}>Catat kontributor</Text></Pressable>
+        </View>
+      </SurfaceCard>)}
+    </View>
+  </Screen>;
+}
+
+const styles = StyleSheet.create({
+  eyebrow: { color: colors.primary, fontSize: 10, fontWeight: '900', letterSpacing: 1.3 },
+  title: { color: colors.ink, fontSize: 26, lineHeight: 33, fontWeight: '900', marginTop: 8 },
+  subtitle: { color: colors.muted, fontSize: 13, lineHeight: 20, marginTop: 8, marginBottom: spacing.xl },
+  privacy: { flexDirection: 'row', gap: 10, backgroundColor: colors.primarySoft },
+  flex: { flex: 1 },
+  cardTitle: { color: colors.ink, fontSize: 12, fontWeight: '900' },
+  detail: { color: colors.muted, fontSize: 10, lineHeight: 16, marginTop: 5 },
+  form: { marginTop: spacing.lg, gap: spacing.sm },
+  input: { borderWidth: 1, borderColor: colors.line, borderRadius: radius.medium, paddingHorizontal: 12, paddingVertical: 11, color: colors.ink, fontSize: 12 },
+  multiline: { minHeight: 68, textAlignVertical: 'top' },
+  save: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 7, backgroundColor: colors.primary, borderRadius: radius.pill, paddingVertical: 12 },
+  saveText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
+  disabled: { opacity: 0.55 },
+  notice: { color: colors.primaryDark, fontSize: 10, fontWeight: '700', marginTop: 10 },
+  error: { backgroundColor: colors.roseSoft, borderRadius: radius.medium, padding: 11, marginTop: 10 },
+  errorText: { color: colors.danger, fontSize: 10, fontWeight: '700' },
+  section: { marginTop: spacing.section },
+  project: { marginBottom: spacing.md },
+  projectHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  pill: { color: colors.primaryDark, fontSize: 9, fontWeight: '900', backgroundColor: colors.primarySoft, paddingHorizontal: 9, paddingVertical: 5, borderRadius: radius.pill, textTransform: 'capitalize' },
+  meta: { color: colors.muted, fontSize: 9, lineHeight: 14, marginTop: 4 },
+  privateLabel: { color: colors.primaryDark, fontSize: 9, fontWeight: '900', marginTop: 9 },
+  subsection: { borderTopWidth: 1, borderTopColor: colors.line, marginTop: 12, paddingTop: 11, gap: 7 },
+  subheading: { color: colors.ink, fontSize: 11, fontWeight: '900' },
+  record: { backgroundColor: colors.surfaceMuted, borderRadius: radius.small, padding: 9 },
+  recordTitle: { color: colors.ink, fontSize: 10, fontWeight: '800' },
+  secondary: { alignItems: 'center', paddingVertical: 10, borderRadius: radius.pill, backgroundColor: colors.surfaceMuted },
+  secondaryText: { color: colors.primaryDark, fontSize: 10, fontWeight: '900' },
+});
