@@ -16,7 +16,9 @@ interface GrowthSnapshot {
   journal: { entriesInWindow: number; contentIncluded: false; moodAnalysisIncluded: false };
   recommendations: { code: string; message: string; evidence: string }[];
 }
-interface GrowthTimelineItem { id: string; date: string; type: string; title: string; description: string | null; evidence: { kind: string; id: string }; relatedGoalId: string | null; }\ninterface GrowthTimeline { window: { days: number; startDate: string; endDate: string }; items: GrowthTimelineItem[]; total: number; hasMore: boolean; privacy: { journalContentIncluded: false; habitNotesIncluded: false; moodIncluded: false }; }\ninterface GrowthGoal {
+interface GrowthTimelineItem { id: string; date: string; type: string; title: string; description: string | null; evidence: { kind: string; id: string }; relatedGoalId: string | null; }
+interface GrowthTimeline { window: { days: number; startDate: string; endDate: string }; items: GrowthTimelineItem[]; total: number; hasMore: boolean; privacy: { journalContentIncluded: false; habitNotesIncluded: false; moodIncluded: false }; }
+interface GrowthGoal {
   id: string;
   title: string;
   description: string;
@@ -52,6 +54,46 @@ interface GrowthHabit {
     dailyStreak: number | null;
   };
 }
+
+type GrowthPillar =
+  | 'self_awareness' | 'intellectual' | 'skills' | 'habits' | 'social_emotional'
+  | 'wellness' | 'creativity' | 'career_finance' | 'leadership' | 'values_purpose';
+interface GrowthMilestone {
+  id: string;
+  title: string;
+  description: string;
+  pillar: GrowthPillar;
+  status: 'planned' | 'in_progress' | 'achieved' | 'paused' | 'cancelled';
+  target_date: string | null;
+  achieved_at: string | null;
+  evidenceCount?: number;
+}
+interface GrowthDevelopmentReview {
+  id: string;
+  period: 'weekly' | 'monthly';
+  periodStart: string;
+  periodEnd: string;
+  evidenceCount: number;
+  achievedMilestoneCount: number;
+  activeMilestoneCount: number;
+  pillarActivity: Record<string, number>;
+  reflection: string;
+  nextSteps: string[];
+  generatedAt: string;
+}
+const GROWTH_PILLARS: { key: GrowthPillar; label: string }[] = [
+  { key: 'self_awareness', label: 'Self-awareness' },
+  { key: 'intellectual', label: 'Intellectual' },
+  { key: 'skills', label: 'Skills' },
+  { key: 'habits', label: 'Habits' },
+  { key: 'social_emotional', label: 'Social & emotional' },
+  { key: 'wellness', label: 'Wellness' },
+  { key: 'creativity', label: 'Creativity' },
+  { key: 'career_finance', label: 'Career & finance' },
+  { key: 'leadership', label: 'Leadership' },
+  { key: 'values_purpose', label: 'Values & purpose' },
+];
+
 function payload<T>(response: unknown): T {
   if (response && typeof response === 'object' && 'data' in response) {
     return (response as { data: T }).data;
@@ -71,7 +113,18 @@ export default function GrowScreen() {
   const [goals, setGoals] = useState<GrowthGoal[]>([]);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [habits, setHabits] = useState<GrowthHabit[]>([]);
-  const [snapshot, setSnapshot] = useState<GrowthSnapshot | null>(null);\n  const [timeline, setTimeline] = useState<GrowthTimeline | null>(null);
+  const [snapshot, setSnapshot] = useState<GrowthSnapshot | null>(null);
+  const [timeline, setTimeline] = useState<GrowthTimeline | null>(null);
+  const [milestones, setMilestones] = useState<GrowthMilestone[]>([]);
+  const [reviews, setReviews] = useState<GrowthDevelopmentReview[]>([]);
+  const [milestoneTitle, setMilestoneTitle] = useState('');
+  const [milestonePillar, setMilestonePillar] = useState<GrowthPillar>('skills');
+  const [reviewReflection, setReviewReflection] = useState('');
+  const [reviewNextSteps, setReviewNextSteps] = useState('');
+  const [savingMilestone, setSavingMilestone] = useState(false);
+  const [savingReview, setSavingReview] = useState(false);
+  const [busyMilestoneId, setBusyMilestoneId] = useState<string | null>(null);
+  const [busyEvidenceKey, setBusyEvidenceKey] = useState<string | null>(null);
   const [habitTitle, setHabitTitle] = useState('');
   const [habitFrequency, setHabitFrequency] = useState<'daily' | 'weekly'>('daily');
   const [weeklyTarget, setWeeklyTarget] = useState(3);
@@ -95,17 +148,26 @@ export default function GrowScreen() {
     setLoading(true);
     setError(null);
     try {
-      const [goalResponse, journalResponse, habitResponse, snapshotResponse, timelineResponse] = await Promise.all([
+      const [goalResponse, journalResponse, habitResponse, snapshotResponse, timelineResponse, milestoneResponse, reviewResponse] = await Promise.all([
         api.request<GrowthGoal[]>('/api/v1/growth/goals/'),
         api.request<JournalEntry[]>('/api/v1/growth/journal/'),
         api.request<GrowthHabit[]>('/api/v1/growth/habits/'),
-        api.request<GrowthSnapshot>('/api/v1/growth/insights/?window=30'),\n        api.request<GrowthTimeline>('/api/v1/growth/timeline/?window=30&limit=50'),
+        api.request<GrowthSnapshot>('/api/v1/growth/insights/?window=30'),
+        api.request<GrowthTimeline>('/api/v1/growth/timeline/?window=30&limit=50'),
+        api.request<GrowthMilestone[]>('/api/v1/growth/milestones/'),
+        api.request<GrowthDevelopmentReview[]>('/api/v1/growth/reviews/'),
       ]);
       const nextGoals = payload<GrowthGoal[]>(goalResponse);
       const nextEntries = payload<JournalEntry[]>(journalResponse);
       const nextHabits = payload<GrowthHabit[]>(habitResponse);
-      const nextSnapshot = payload<GrowthSnapshot>(snapshotResponse);\n      const nextTimeline = payload<GrowthTimeline>(timelineResponse);
-      setSnapshot(nextSnapshot);\n      setTimeline(nextTimeline);
+      const nextSnapshot = payload<GrowthSnapshot>(snapshotResponse);
+      const nextTimeline = payload<GrowthTimeline>(timelineResponse);
+      const nextMilestones = payload<GrowthMilestone[]>(milestoneResponse);
+      const nextReviews = payload<GrowthDevelopmentReview[]>(reviewResponse);
+      setSnapshot(nextSnapshot);
+      setTimeline(nextTimeline);
+      setMilestones(Array.isArray(nextMilestones) ? nextMilestones : []);
+      setReviews(Array.isArray(nextReviews) ? nextReviews : []);
       setGoals(Array.isArray(nextGoals) ? nextGoals : []);
       setEntries(Array.isArray(nextEntries) ? nextEntries : []);
       setHabits(Array.isArray(nextHabits) ? nextHabits : []);
@@ -377,7 +439,16 @@ const styles = StyleSheet.create({
   subtitle: { color: colors.muted, fontSize: 13, lineHeight: 20, marginTop: 8, marginBottom: spacing.xl },
   section: { marginBottom: spacing.section },
   form: { gap: 9 },
-  snapshotCard: { gap: 12 },\n  timelineCard: { gap: 12 },\n  timelineHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },\n  timelineCount: { color: colors.muted, fontSize: 9, fontWeight: '800' },\n  timelineItem: { flexDirection: 'row', gap: 10, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.line },\n  timelineMarker: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },\n  timelineContent: { flex: 1, gap: 3 },\n  timelineTitle: { color: colors.ink, fontSize: 11, fontWeight: '900' },\n  timelineDescription: { color: colors.muted, fontSize: 10, lineHeight: 15 },\n  timelineDate: { color: colors.muted, fontSize: 9 },
+  snapshotCard: { gap: 12 },
+  timelineCard: { gap: 12 },
+  timelineHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  timelineCount: { color: colors.muted, fontSize: 9, fontWeight: '800' },
+  timelineItem: { flexDirection: 'row', gap: 10, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.line },
+  timelineMarker: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  timelineContent: { flex: 1, gap: 3 },
+  timelineTitle: { color: colors.ink, fontSize: 11, fontWeight: '900' },
+  timelineDescription: { color: colors.muted, fontSize: 10, lineHeight: 15 },
+  timelineDate: { color: colors.muted, fontSize: 9 },
   snapshotHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   snapshotLabel: { color: colors.primary, fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
   snapshotMetrics: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
