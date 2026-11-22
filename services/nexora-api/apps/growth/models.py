@@ -1,3 +1,5 @@
+import uuid
+
 from django.core.exceptions import ValidationError
 from django.db import models
 
@@ -198,7 +200,7 @@ class GrowthEvidenceEvent(models.Model):
         HABIT_CHECK_IN_RECORDED = "habit.check_in_recorded", "Habit check-in recorded"
         HABIT_CHECK_IN_CHANGED = "habit.check_in_changed", "Habit check-in changed"
 
-    id = models.UUIDField(primary_key=True, default=__import__("uuid").uuid4, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
         NexoraUser,
         on_delete=models.CASCADE,
