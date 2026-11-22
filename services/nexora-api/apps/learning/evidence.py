@@ -15,6 +15,7 @@ class LearningEvidenceService:
 
         from django.utils import timezone
 
+        from apps.academic.models import AcademicCourseCompletion, AcademicCourseOutcomeMapping
         from apps.growth.models import (
             GrowthEvidenceEvent,
             GrowthGoal,
@@ -67,6 +68,62 @@ class LearningEvidenceService:
                 "mastery": None,
                 "relatedMilestones": [],
             })
+
+        academic_completions = AcademicCourseCompletion.objects.filter(
+            membership__user=user,
+            membership__deleted_at__isnull=True,
+            course__deleted_at__isnull=True,
+            organization__deleted_at__isnull=True,
+            status=AcademicCourseCompletion.Status.VERIFIED,
+            verified_at__gte=start_at,
+            verified_at__lte=now,
+            verified_at__isnull=False,
+            deleted_at__isnull=True,
+        ).select_related("course", "verified_by").prefetch_related(
+            "course__outcome_mappings__outcome__competency",
+        ).order_by("-verified_at", "-id")
+        for completion in academic_completions:
+            mappings = [
+                mapping for mapping in completion.course.outcome_mappings.all()
+                if mapping.is_active
+                and mapping.deleted_at is None
+                and mapping.outcome.is_published
+                and mapping.outcome.deleted_at is None
+                and mapping.outcome.competency.is_published
+                and mapping.outcome.competency.deleted_at is None
+            ]
+            evidence_rows = mappings or [None]
+            for mapping in evidence_rows:
+                competency = None
+                if mapping is not None:
+                    competency = {
+                        "key": mapping.outcome.competency.key,
+                        "title": mapping.outcome.competency.title,
+                        "outcomeKey": mapping.outcome.key,
+                        "outcomeTitle": mapping.outcome.title,
+                    }
+                items.append({
+                    "id": (
+                        f"academic-completion:{completion.id}:"
+                        f"{mapping.id if mapping is not None else 'unmapped'}"
+                    ),
+                    "occurredAt": completion.verified_at.isoformat(),
+                    "domain": "academic",
+                    "kind": "verified_course_completion",
+                    "title": "Formal course completion verified",
+                    "description": completion.course.name,
+                    "source": {
+                        "type": "academic_course_completion",
+                        "reference": completion.evidence_reference or str(completion.id),
+                        "organizationId": str(completion.organization_id),
+                        "verifierAttributed": completion.verified_by_id is not None,
+                        "contributionType": mapping.contribution_type if mapping is not None else None,
+                    },
+                    "competency": competency,
+                    "status": "verified",
+                    "mastery": None,
+                    "relatedMilestones": [],
+                })
 
         mastery_items = LearningMastery.objects.filter(
             user=user,
