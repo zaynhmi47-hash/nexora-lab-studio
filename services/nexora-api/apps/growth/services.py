@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
 from datetime import timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .models import GrowthGoal, GrowthHabit, GrowthHabitCheckIn, GrowthJournalEntry
 
@@ -123,6 +124,12 @@ class GrowthHabitService:
             raise GrowthHabit.DoesNotExist
         if status not in GrowthHabitCheckIn.Status.values:
             raise ValidationError({"status": "Choose completed or skipped."})
+        try:
+            user_timezone = ZoneInfo(user.timezone)
+        except ZoneInfoNotFoundError:
+            user_timezone = timezone.get_default_timezone()
+        if entry_date > timezone.localdate(timezone=user_timezone):
+            raise ValidationError({"entry_date": "Future habit check-ins are not allowed."})
         check_in = GrowthHabitCheckIn.objects.filter(
             habit=habit,
             entry_date=entry_date,
@@ -161,9 +168,9 @@ class GrowthHabitService:
         ).order_by("-entry_date")
         latest = recent.first()
         streak = 0
-        if habit.frequency == GrowthHabit.Frequency.DAILY:
-            expected_date = today
-            if latest and latest.entry_date == today and latest.status == GrowthHabitCheckIn.Status.SKIPPED:
+        if habit.frequency == GrowthHabit.Frequency.DAILY and latest is not None:
+            expected_date = today if latest.entry_date == today else today - timedelta(days=1)
+            if latest.entry_date == today and latest.status == GrowthHabitCheckIn.Status.SKIPPED:
                 expected_date = today - timedelta(days=1)
             for item in recent:
                 if item.entry_date != expected_date or item.status != GrowthHabitCheckIn.Status.COMPLETED:
