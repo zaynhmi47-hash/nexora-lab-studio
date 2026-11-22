@@ -89,7 +89,7 @@ class LearningEvidenceService:
                 "source": {
                     "type": "organization_assessment",
                     "assessmentMethod": mastery.assessment_method,
-                    "assessorId": str(mastery.assessed_by_id) if mastery.assessed_by_id else None,
+                    "assessorAttributed": mastery.assessed_by_id is not None,
                 },
                 "competency": {
                     "key": mastery.outcome.competency.key,
@@ -175,7 +175,7 @@ class LearningEvidenceService:
                 "kind": event.event_type,
                 "title": title,
                 "description": description,
-                "source": {"type": "growth_ledger", "subjectType": event.subject_type},
+                "source": {"type": "growth_ledger", "reference": str(event.id), "subjectType": event.subject_type},
                 "competency": None,
                 "status": None,
                 "mastery": None,
