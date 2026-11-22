@@ -60,7 +60,7 @@ jobs:
 
       # Lint the domains changed in this feature; legacy repository-wide lint debt is tracked separately.
       - name: Ruff (changed domains)
-        run: ruff check apps/access apps/nexverse apps/places apps/finance apps/learning apps/academic apps/career tests/test_learning_service.py tests/test_learning_api.py tests/test_learning_evidence_api.py tests/test_learning_journey_api.py tests/test_career_api.py
+        run: ruff check apps/access apps/nexverse apps/places apps/finance apps/learning apps/career apps/academic/models/course.py apps/academic/models/__init__.py apps/academic/admin.py tests/test_learning_service.py tests/test_learning_api.py tests/test_learning_evidence_api.py tests/test_learning_journey_api.py tests/test_career_api.py
 
       - name: Tests
         env:
