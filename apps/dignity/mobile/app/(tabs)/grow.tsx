@@ -28,6 +28,22 @@ interface JournalEntry {
   mood: string;
   gratitude: string[];
 }
+interface GrowthHabit {
+  id: string;
+  title: string;
+  description: string;
+  frequency: 'daily' | 'weekly';
+  weekly_target: number;
+  start_date: string;
+  end_date: string | null;
+  status: 'active' | 'paused' | 'archived';
+  summary: {
+    completedThisWeek: number;
+    skippedThisWeek: number;
+    weeklyTarget: number;
+    dailyStreak: number | null;
+  };
+}
 function payload<T>(response: unknown): T {
   if (response && typeof response === 'object' && 'data' in response) {
     return (response as { data: T }).data;
@@ -46,6 +62,10 @@ export default function GrowScreen() {
   const api = useNexoraApi();
   const [goals, setGoals] = useState<GrowthGoal[]>([]);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [habits, setHabits] = useState<GrowthHabit[]>([]);
+  const [habitTitle, setHabitTitle] = useState('');
+  const [habitFrequency, setHabitFrequency] = useState<'daily' | 'weekly'>('daily');
+  const [weeklyTarget, setWeeklyTarget] = useState(3);
   const [goalTitle, setGoalTitle] = useState('');
   const [goalDescription, setGoalDescription] = useState('');
   const [goalTargetDate, setGoalTargetDate] = useState('');
@@ -56,6 +76,8 @@ export default function GrowScreen() {
   const [loading, setLoading] = useState(true);
   const [savingGoal, setSavingGoal] = useState(false);
   const [savingJournal, setSavingJournal] = useState(false);
+  const [savingHabit, setSavingHabit] = useState(false);
+  const [busyHabitId, setBusyHabitId] = useState<string | null>(null);
   const [busyGoalId, setBusyGoalId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -64,14 +86,17 @@ export default function GrowScreen() {
     setLoading(true);
     setError(null);
     try {
-      const [goalResponse, journalResponse] = await Promise.all([
+      const [goalResponse, journalResponse, habitResponse] = await Promise.all([
         api.request<GrowthGoal[]>('/api/v1/growth/goals/'),
         api.request<JournalEntry[]>('/api/v1/growth/journal/'),
+        api.request<GrowthHabit[]>('/api/v1/growth/habits/'),
       ]);
       const nextGoals = payload<GrowthGoal[]>(goalResponse);
       const nextEntries = payload<JournalEntry[]>(journalResponse);
+      const nextHabits = payload<GrowthHabit[]>(habitResponse);
       setGoals(Array.isArray(nextGoals) ? nextGoals : []);
       setEntries(Array.isArray(nextEntries) ? nextEntries : []);
+      setHabits(Array.isArray(nextHabits) ? nextHabits : []);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Unable to load your private growth space.');
     } finally {
@@ -110,6 +135,51 @@ export default function GrowScreen() {
       setSavingGoal(false);
     }
   }, [api, goalDescription, goalTargetDate, goalTitle, load]);
+
+  const createHabit = useCallback(async () => {
+    if (!habitTitle.trim()) return;
+    setSavingHabit(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await api.request('/api/v1/growth/habits/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: habitTitle.trim(),
+          frequency: habitFrequency,
+          weekly_target: habitFrequency === 'daily' ? 7 : weeklyTarget,
+          start_date: localDate(),
+        }),
+      });
+      setHabitTitle('');
+      setNotice('Habit added to your private routine tracker.');
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to save this habit.');
+    } finally {
+      setSavingHabit(false);
+    }
+  }, [api, habitFrequency, habitTitle, load, weeklyTarget]);
+
+  const checkInHabit = useCallback(async (habit: GrowthHabit, status: 'completed' | 'skipped') => {
+    setBusyHabitId(habit.id);
+    setError(null);
+    setNotice(null);
+    try {
+      await api.request(`/api/v1/growth/habits/${habit.id}/check-ins/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entry_date: localDate(), status }),
+      });
+      setNotice(status === 'completed' ? 'Habit check-in saved.' : 'Today marked as skipped.');
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to save this check-in.');
+    } finally {
+      setBusyHabitId(null);
+    }
+  }, [api, load]);
 
   const createJournalEntry = useCallback(async () => {
     if (!reflection.trim()) return;
@@ -202,6 +272,42 @@ export default function GrowScreen() {
     </View>
 
     <View style={styles.section}>
+      <SectionHeading title="Habit practice" subtitle="Build repeatable actions, then record what actually happened." />
+      <SurfaceCard style={styles.form}>
+        <Text style={styles.fieldLabel}>A small action you want to repeat</Text>
+        <TextInput value={habitTitle} onChangeText={setHabitTitle} placeholder="e.g. Walk for fifteen minutes" placeholderTextColor={colors.muted} style={styles.input} maxLength={180} />
+        <Text style={styles.fieldLabel}>Routine</Text>
+        <View style={styles.moodRow}>
+          {(['daily', 'weekly'] as const).map((value) => <Pressable key={value} onPress={() => setHabitFrequency(value)} style={[styles.moodChip, habitFrequency === value && styles.moodActive]}><Text style={[styles.moodText, habitFrequency === value && styles.moodTextActive]}>{value === 'daily' ? 'Every day' : 'Weekly target'}</Text></Pressable>)}
+        </View>
+        {habitFrequency === 'weekly' ? <View style={styles.moodRow}>
+          {[1, 2, 3, 4, 5, 6, 7].map((value) => <Pressable key={value} onPress={() => setWeeklyTarget(value)} style={[styles.targetChip, weeklyTarget === value && styles.moodActive]}><Text style={[styles.moodText, weeklyTarget === value && styles.moodTextActive]}>{value}×</Text></Pressable>)}
+        </View> : <Text style={styles.helper}>A daily habit has a seven-day target. You can still record skipped days honestly.</Text>}
+        <Pressable disabled={!habitTitle.trim() || savingHabit} onPress={() => void createHabit()} style={[styles.primaryButton, (!habitTitle.trim() || savingHabit) && styles.disabled]}>
+          <Text style={styles.primaryButtonText}>{savingHabit ? 'Saving…' : 'Add habit'}</Text>
+        </Pressable>
+        <Text style={styles.privacy}>Check-ins belong to your account and are not automatically shared with organizations.</Text>
+      </SurfaceCard>
+      {habits.length === 0 ? <SurfaceCard><Text style={styles.helper}>No routines yet. Start with an action small enough to repeat.</Text></SurfaceCard> : habits.map((habit) => <SurfaceCard key={habit.id} style={styles.goalCard}>
+        <View style={styles.goalTop}>
+          <Text style={styles.goalStatus}>{habit.status.toUpperCase()} · {habit.frequency.toUpperCase()}</Text>
+          <Text style={styles.dateText}>{habit.summary.completedThisWeek}/{habit.summary.weeklyTarget} this week</Text>
+        </View>
+        <Text style={styles.cardTitle}>{habit.title}</Text>
+        {habit.summary.dailyStreak !== null ? <Text style={styles.helper}>{habit.summary.dailyStreak} day current streak</Text> : <Text style={styles.helper}>Weekly target: {habit.summary.weeklyTarget} check-ins</Text>}
+        <View style={styles.habitActions}>
+          <Pressable disabled={busyHabitId === habit.id || habit.status !== 'active'} onPress={() => void checkInHabit(habit, 'completed')} style={[styles.habitButton, styles.habitDone, (busyHabitId === habit.id || habit.status !== 'active') && styles.disabled]}>
+            <Ionicons name="checkmark-circle-outline" size={15} color={colors.primaryDark} />
+            <Text style={styles.goalActionText}>Done today</Text>
+          </Pressable>
+          <Pressable disabled={busyHabitId === habit.id || habit.status !== 'active'} onPress={() => void checkInHabit(habit, 'skipped')} style={[styles.habitButton, (busyHabitId === habit.id || habit.status !== 'active') && styles.disabled]}>
+            <Text style={styles.moodText}>Skip today</Text>
+          </Pressable>
+        </View>
+      </SurfaceCard>)}
+    </View>
+
+    <View style={styles.section}>
       <SectionHeading title="Private reflection journal" subtitle="Write honestly. Your reflections are not shared with an institution." />
       <SurfaceCard style={styles.form}>
         <Text style={styles.fieldLabel}>Entry title (optional)</Text>
@@ -250,6 +356,10 @@ const styles = StyleSheet.create({
   helper: { color: colors.muted, fontSize: 10, lineHeight: 15, marginTop: 7 },
   goalAction: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6, paddingVertical: 8, marginTop: 7 },
   goalActionText: { color: colors.primaryDark, fontSize: 10, fontWeight: '900' },
+  habitActions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 7 },
+  habitButton: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: colors.line, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 8 },
+  habitDone: { backgroundColor: colors.primarySoft, borderColor: colors.primarySoft },
+  targetChip: { borderWidth: 1, borderColor: colors.line, borderRadius: radius.pill, paddingHorizontal: 11, paddingVertical: 8 },
   question: { color: colors.ink, fontSize: 13, fontWeight: '800', marginTop: 8 },
   moodRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   moodChip: { borderWidth: 1, borderColor: colors.line, borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 7 },
