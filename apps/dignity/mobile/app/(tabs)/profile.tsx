@@ -37,6 +37,11 @@ export default function ProfileScreen() {
     <ProfileRow icon="school-outline" title="Learning evidence" detail="Courses, practice and demonstrated skills" />
     <ProfileRow icon="leaf-outline" title="Personal growth" detail="Goals, habits and reflections — private by default" />
     <ProfileRow icon="briefcase-outline" title="Career & portfolio" detail="Projects and professional evidence" />
+    <Pressable onPress={() => router.push('/(tabs)/research')} style={styles.settings}>
+      <Ionicons name="flask-outline" size={18} color={colors.primary} />
+      <View style={{ flex: 1 }}><Text style={styles.settingsText}>Research workspace</Text><Text style={styles.rowDetail}>Research projects, outputs and contributor attribution</Text></View>
+      <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+    </Pressable>
     <ProfileRow icon="document-text-outline" title="Academic context" detail="Institutional records only when authorized" />
     <SurfaceCard style={styles.privacy}><Ionicons name="lock-closed-outline" size={19} color={colors.primary} /><View style={{ flex: 1 }}><Text style={styles.privacyTitle}>You control your development story</Text><Text style={styles.privacyText}>A unified profile does not merge private data or grant organizations automatic access.</Text></View></SurfaceCard>
     <Pressable onPress={() => router.push('/(tabs)/mentor')} style={styles.settings}><Ionicons name="sparkles-outline" size={18} color={colors.primary} /><Text style={styles.settingsText}>Dignity AI Mentor</Text><Ionicons name="chevron-forward" size={16} color={colors.muted} /></Pressable>
