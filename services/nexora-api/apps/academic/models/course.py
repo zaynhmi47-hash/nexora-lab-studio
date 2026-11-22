@@ -38,3 +38,51 @@ class AcademicCourse(AuditableBaseModel):
 
     def __str__(self) -> str:
         return f"{self.organization_id}:{self.code}"
+
+
+class AcademicCourseOutcomeMapping(AuditableBaseModel):
+    """Curated mapping from a formal course to a Dignity learning outcome."""
+
+    class ContributionType(models.TextChoices):
+        INTRODUCED = "introduced", "Introduces"
+        PRACTICED = "practiced", "Practices"
+        ASSESSED = "assessed", "Assesses"
+
+    course = models.ForeignKey(
+        AcademicCourse,
+        on_delete=models.CASCADE,
+        related_name="outcome_mappings",
+    )
+    outcome = models.ForeignKey(
+        "learning.LearningOutcome",
+        on_delete=models.PROTECT,
+        related_name="academic_course_mappings",
+    )
+    contribution_type = models.CharField(
+        max_length=12,
+        choices=ContributionType.choices,
+        default=ContributionType.INTRODUCED,
+    )
+    is_active = models.BooleanField(default=True, db_index=True)
+
+    class Meta:
+        db_table = "academic_course_outcome_mappings"
+        constraints = [
+            models.UniqueConstraint(
+                fields=("course", "outcome"),
+                condition=models.Q(deleted_at__isnull=True),
+                name="acad_course_outcome_map_uniq",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=("course", "is_active"), name="acad_course_outcome_idx"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.outcome_id and (
+            self.outcome.deleted_at is not None or not self.outcome.is_published
+        ):
+            from django.core.exceptions import ValidationError
+
+            raise ValidationError({"outcome": "Only published learning outcomes can be mapped."})
