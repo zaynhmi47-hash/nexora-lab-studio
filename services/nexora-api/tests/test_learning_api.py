@@ -194,6 +194,52 @@ def test_published_lesson_content_is_available_to_unlocked_learner():
 
 
 @pytest.mark.django_db
+def test_lesson_content_discloses_curated_competency_outcomes():
+    from apps.learning.models import (
+        LearningCompetency,
+        LearningOutcome,
+        LearningOutcomeLessonMapping,
+    )
+
+    user = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="mapped-content-reader@example.com")
+    course = LearningCourse.objects.create(key="mapped-content-course", title="Mapped content")
+    lesson = LearningLesson.objects.create(key="mapped-content-lesson", course=course, title="Mapped lesson")
+    LearningLessonContent.objects.create(
+        lesson=lesson,
+        is_published=True,
+        blocks=[{"type": "text", "text": "Practice clear communication."}],
+    )
+    competency = LearningCompetency.objects.create(
+        key="clear-communication", title="Clear communication", domain="skills", is_published=True,
+    )
+    outcome = LearningOutcome.objects.create(
+        key="write-clear-instructions",
+        competency=competency,
+        title="Write clear instructions",
+        is_published=True,
+    )
+    LearningOutcomeLessonMapping.objects.create(
+        lesson=lesson,
+        outcome=outcome,
+        contribution_type=LearningOutcomeLessonMapping.ContributionType.PRACTICED,
+    )
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.get(f"/api/v1/learning/lessons/{lesson.key}/content/")
+
+    assert response.status_code == 200
+    assert response.json()["learningOutcomes"] == [
+        {
+            "key": outcome.key,
+            "title": outcome.title,
+            "competencyTitle": competency.title,
+            "contributionType": "practiced",
+        }
+    ]
+
+
+@pytest.mark.django_db
 def test_locked_lesson_content_is_not_available():
     from apps.learning.models import LearningLessonContent
 
