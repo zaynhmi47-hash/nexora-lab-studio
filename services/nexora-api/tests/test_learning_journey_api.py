@@ -263,3 +263,43 @@ def test_development_journey_keeps_unmapped_verified_academic_completion_visible
     assert len(academic) == 1
     assert academic[0]["competency"] is None
     assert academic[0]["status"] == "verified"
+
+
+@pytest.mark.django_db
+def test_development_journey_includes_career_records_as_self_reported_only():
+    from apps.career.models import CareerExperience, CareerProject
+
+    user = NexoraUser.objects.create(
+        status=NexoraUser.Status.ACTIVE,
+        email="journey-career-owner@example.com",
+    )
+    CareerExperience.objects.create(
+        user=user,
+        role_title="Product Designer",
+        organization_name="Independent Studio",
+        employment_type=CareerExperience.EmploymentType.FREELANCE,
+        start_date="2025-01-01",
+        is_current=True,
+    )
+    CareerProject.objects.create(
+        user=user,
+        title="Community Learning Platform",
+        summary="Designed a learning experience.",
+        skills=["Product design", "Research"],
+        visibility=CareerProject.Visibility.PRIVATE,
+    )
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.get("/api/v1/learning/journey/?window=30")
+
+    assert response.status_code == 200
+    payload = response.json()
+    career = [item for item in payload["items"] if item["domain"] == "career"]
+    assert len(career) == 2
+    assert {item["kind"] for item in career} == {"professional_experience", "portfolio_project"}
+    assert all(item["status"] == "self_reported" for item in career)
+    assert all(item["mastery"] is None and item["competency"] is None for item in career)
+    assert payload["privacy"]["careerRecordsIncluded"] is True
+    assert payload["privacy"]["careerRecordsShared"] is False
+    assert payload["privacy"]["organizationAccessGranted"] is False
