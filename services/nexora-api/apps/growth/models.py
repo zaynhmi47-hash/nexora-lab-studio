@@ -226,8 +226,15 @@ class GrowthEvidenceEvent(models.Model):
     def save(self, *args, **kwargs):
         if not self._state.adding:
             raise ValidationError("Growth evidence events are immutable.")
-        if not isinstance(self.metadata, dict):
-            raise ValidationError({"metadata": "Event metadata must be an object."})
+        allowed_metadata_keys = {
+            "previous_status", "new_status", "entry_date", "frequency", "weekly_target",
+        }
+        if (
+            not isinstance(self.metadata, dict)
+            or set(self.metadata) - allowed_metadata_keys
+            or any(not isinstance(value, (str, int, bool)) for value in self.metadata.values())
+        ):
+            raise ValidationError({"metadata": "Event metadata contains unsupported fields or values."})
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
