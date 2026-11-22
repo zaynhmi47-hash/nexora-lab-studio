@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .habit_api import GrowthHabitCheckInView, GrowthHabitDetailView, GrowthHabitListView
+from .insights_api import GrowthInsightsView
 from .api import (
     GrowthGoalDetailView,
     GrowthGoalListView,
@@ -9,6 +10,7 @@ from .api import (
 )
 
 urlpatterns = [
+    path("insights/", GrowthInsightsView.as_view(), name="growth-insights"),
     path("goals/", GrowthGoalListView.as_view(), name="growth-goals"),
     path("goals/<uuid:goal_id>/", GrowthGoalDetailView.as_view(), name="growth-goal-detail"),
     path("journal/", GrowthJournalListView.as_view(), name="growth-journal"),
