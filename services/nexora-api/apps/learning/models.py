@@ -270,6 +270,11 @@ class LearningEvidence(AuditableBaseModel):
                 ),
                 name="learn_evidence_review_audit_ck",
             ),
+            models.UniqueConstraint(
+                fields=("source_type", "source_reference"),
+                condition=models.Q(source_reference__gt=""),
+                name="learning_evidence_source_ref_uniq",
+            ),
         ]
 
 
