@@ -49,7 +49,7 @@ export default function ResearchScreen() {
         return [project.id, payload<Output[]>(out), payload<Contribution[]>(people)] as const;
       }));
       setOutputs(Object.fromEntries(details.map(([id, out]) => [id, Array.isArray(out) ? out : []])));
-      setContributions(Object.fromEntries(details.map(([id, people]) => [id, Array.isArray(people) ? people : []])));
+      setContributions(Object.fromEntries(details.map(([id, , people]) => [id, Array.isArray(people) ? people : []])));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Tidak dapat memuat data penelitian.');
     } finally { setLoading(false); }
