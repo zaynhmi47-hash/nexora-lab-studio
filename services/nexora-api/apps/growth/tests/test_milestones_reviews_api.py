@@ -88,6 +88,14 @@ def test_milestone_create_update_and_evidence_link_are_owner_scoped(milestone_us
     assert completed.json()["achieved_at"] is not None
     assert client.get("/api/v1/growth/milestones/").json()[0]["evidenceCount"] == 1
 
+    timeline = client.get("/api/v1/growth/timeline/?window=7")
+    assert timeline.status_code == 200
+    milestone_events = [
+        item for item in timeline.json()["items"]
+        if item["evidence"]["kind"] == "milestone" and item["evidence"]["id"] == milestone_id
+    ]
+    assert {item["title"] for item in milestone_events} == {"Milestone created", "Milestone achieved"}
+
 
 @pytest.mark.django_db
 def test_development_review_snapshots_activity_without_scoring_the_person(milestone_users):
