@@ -15,7 +15,7 @@ type JourneyItem = {
   kind: string;
   title: string;
   description: string | null;
-  source: { type: string; reference?: string; evidenceType?: string; assessmentMethod?: string; contributionType?: string; verifierAttributed?: boolean };
+  source: { type: string; reference?: string; evidenceType?: string; assessmentMethod?: string; contributionType?: string; verifierAttributed?: boolean; employmentType?: string; startDate?: string; endDate?: string | null; isCurrent?: boolean; role?: string; skills?: string[]; artifactUrl?: string | null; visibility?: string; projectStatus?: string };
   competency: { key: string; title: string; outcomeKey: string; outcomeTitle: string } | null;
   status: string | null;
   mastery: { level: number; status: string } | null;
@@ -33,7 +33,7 @@ type JourneyResponse = {
     journalContentIncluded: boolean;
     habitNotesIncluded: boolean;
     privateReflectionsIncluded: boolean;
-    organizationAccessGranted: boolean;
+    organizationAccessGranted: boolean;\n    careerRecordsIncluded?: boolean;\n    careerRecordsShared?: boolean;
   };
   limitations: string[];
 };
@@ -108,7 +108,7 @@ export default function DevelopmentJourneyScreen() {
     </Pressable>
     <Text style={styles.eyebrow}>DIGNITY · DEVELOPMENT JOURNEY</Text>
     <Text style={styles.title}>Your progress, with its context.</Text>
-    <Text style={styles.subtitle}>A chronological view of learning evidence, verified formal course completions, personal growth activity and explicit competency assessments.</Text>
+    <Text style={styles.subtitle}>A chronological view of learning evidence, verified formal course completions, self-reported career records, personal growth activity and explicit competency assessments.</Text>
 
     <SurfaceCard style={styles.privacyCard}>
       <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
@@ -159,6 +159,8 @@ export default function DevelopmentJourneyScreen() {
             {item.domain === 'academic' ? <Text style={styles.source}>Formal record · Verified completion{item.source.contributionType ? ` · ${domainLabel(item.source.contributionType)}` : ''}</Text> : null}
             {item.domain === 'academic' && item.source.verifierAttributed ? <Text style={styles.source}>Verification · Attributed to an institutional verifier</Text> : null}
             {item.domain === 'academic' && !item.competency ? <Text style={styles.source}>Competency mapping has not yet been configured for this course.</Text> : null}
+            {item.domain === 'career' && item.kind === 'professional_experience' ? <Text style={styles.source}>Self-reported experience · {item.source.employmentType?.replaceAll('_', ' ')} · {item.source.startDate}{item.source.isCurrent ? ' — Present' : item.source.endDate ? ` — ${item.source.endDate}` : ''}</Text> : null}
+            {item.domain === 'career' && item.kind === 'portfolio_project' ? <Text style={styles.source}>Self-reported portfolio · {item.source.visibility ?? 'private'}{item.source.skills?.length ? ` · ${item.source.skills.join(', ')}` : ''}</Text> : null}
             {item.relatedMilestones.map((milestone) => (
               <View key={milestone.id} style={styles.milestone}>
                 <Ionicons name="flag-outline" size={13} color={colors.primaryDark} />
