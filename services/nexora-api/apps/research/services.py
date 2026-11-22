@@ -287,7 +287,8 @@ class ResearchEvidenceVerificationService:
             raise PermissionDenied("The actor lacks the research.evidence.verify permission in this organization.")
         return ResearchEvidenceVerification.objects.filter(
             Q(status=ResearchEvidenceVerification.Status.SUBMITTED)
-            | Q(status=ResearchEvidenceVerification.Status.UNDER_REVIEW, reviewer=actor),
+            | Q(status=ResearchEvidenceVerification.Status.UNDER_REVIEW, reviewer=actor)
+            | Q(status=ResearchEvidenceVerification.Status.VERIFIED, reviewer=actor),
             organization=organization,
             deleted_at__isnull=True,
             output__deleted_at__isnull=True,
