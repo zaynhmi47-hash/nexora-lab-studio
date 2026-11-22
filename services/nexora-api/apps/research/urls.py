@@ -3,7 +3,7 @@ from django.urls import path
 from .api import (
     ResearchContributionDetailView,
     ResearchContributionListView,
-    ResearchEvidenceVerificationTransitionView,
+    ResearchEvidenceVerificationTransitionView,\n    ResearchOrganizationVerificationQueueView,
     ResearchEvidenceVerificationView,
     ResearchOutputDetailView,
     ResearchOutputListView,
@@ -12,7 +12,7 @@ from .api import (
 )
 
 urlpatterns = [
-    path("projects/", ResearchProjectListView.as_view(), name="research-projects"),
+    path("projects/", ResearchProjectListView.as_view(), name="research-projects"),\n    path("organizations/<uuid:organization_id>/verifications/", ResearchOrganizationVerificationQueueView.as_view(), name="research-organization-verification-queue"),
     path("projects/<uuid:project_id>/", ResearchProjectDetailView.as_view(), name="research-project-detail"),
     path("projects/<uuid:project_id>/outputs/", ResearchOutputListView.as_view(), name="research-project-outputs"),
     path("projects/<uuid:project_id>/outputs/<uuid:output_id>/", ResearchOutputDetailView.as_view(), name="research-project-output-detail"),
