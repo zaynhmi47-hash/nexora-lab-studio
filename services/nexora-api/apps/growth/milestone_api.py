@@ -43,11 +43,10 @@ class GrowthMilestoneEvidenceInputSerializer(serializers.Serializer):
 
 class GrowthDevelopmentReviewInputSerializer(serializers.Serializer):
     period = serializers.ChoiceField(choices=GrowthDevelopmentReview.Period.choices)
-    reflection = serializers.CharField(required=False, allow_blank=True, max_length=5000, default="")
+    reflection = serializers.CharField(required=False, allow_blank=True, max_length=5000)
     next_steps = serializers.ListField(
         child=serializers.CharField(max_length=500, allow_blank=False),
         required=False,
-        default=list,
         max_length=20,
     )
 
@@ -117,7 +116,7 @@ class GrowthMilestoneEvidenceView(APIView):
                 "evidenceEventId": str(link.evidence_event_id),
                 "createdAt": link.created_at.isoformat(),
             },
-            status=status.HTTP_201_CREATED,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
 
 
@@ -149,7 +148,7 @@ class GrowthDevelopmentReviewView(APIView):
         serializer = GrowthDevelopmentReviewInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            review = GrowthDevelopmentReviewService.create_review(
+            review, created = GrowthDevelopmentReviewService.create_review(
                 user=request.user, **serializer.validated_data,
             )
         except ValidationError as exc:
