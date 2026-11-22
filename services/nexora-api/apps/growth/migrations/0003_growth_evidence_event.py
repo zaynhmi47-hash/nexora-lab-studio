@@ -11,6 +11,9 @@ def install_postgresql_immutability_trigger(apps, schema_editor):
         CREATE OR REPLACE FUNCTION growth_evidence_event_immutable()
         RETURNS trigger AS $
         BEGIN
+            IF pg_trigger_depth() > 1 THEN
+                RETURN OLD;
+            END IF;
             RAISE EXCEPTION 'growth evidence events are append-only';
         END;
         $ LANGUAGE plpgsql;
