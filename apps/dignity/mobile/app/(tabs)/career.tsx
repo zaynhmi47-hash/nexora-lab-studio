@@ -79,7 +79,7 @@ export default function CareerScreen() {
     setNotice(null);
     try {
       if (mode === 'experience') {
-        if (!role.trim() || !organization.trim() || !/^\\d{4}-\\d{2}-\\d{2}$/.test(startDate)) {
+        if (!role.trim() || !organization.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
           throw new Error('Isi posisi, organisasi, dan tanggal mulai dengan format YYYY-MM-DD.');
         }
         await api.request(editingExperienceId ? `/api/v1/career/experiences/${editingExperienceId}/` : '/api/v1/career/experiences/', {
