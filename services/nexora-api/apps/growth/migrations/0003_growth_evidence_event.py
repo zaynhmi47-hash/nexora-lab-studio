@@ -4,6 +4,31 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+def install_postgresql_immutability_trigger(apps, schema_editor):
+    if schema_editor.connection.vendor != "postgresql":
+        return
+    schema_editor.execute("""
+        CREATE OR REPLACE FUNCTION growth_evidence_event_immutable()
+        RETURNS trigger AS $
+        BEGIN
+            RAISE EXCEPTION 'growth evidence events are append-only';
+        END;
+        $ LANGUAGE plpgsql;
+    """)
+    schema_editor.execute("""
+        CREATE TRIGGER growth_evidence_event_no_mutation
+        BEFORE UPDATE OR DELETE ON growth_evidence_events
+        FOR EACH ROW EXECUTE FUNCTION growth_evidence_event_immutable();
+    """)
+
+
+def remove_postgresql_immutability_trigger(apps, schema_editor):
+    if schema_editor.connection.vendor != "postgresql":
+        return
+    schema_editor.execute("DROP TRIGGER IF EXISTS growth_evidence_event_no_mutation ON growth_evidence_events;")
+    schema_editor.execute("DROP FUNCTION IF EXISTS growth_evidence_event_immutable();")
+
+
 class Migration(migrations.Migration):
     dependencies = [
         ("growth", "0002_growth_habits"),
@@ -46,5 +71,9 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="growthevidenceevent",
             index=models.Index(fields=["subject_type", "subject_id"], name="growth_event_subject_idx"),
+        ),
+        migrations.RunPython(
+            install_postgresql_immutability_trigger,
+            remove_postgresql_immutability_trigger,
         ),
     ]
