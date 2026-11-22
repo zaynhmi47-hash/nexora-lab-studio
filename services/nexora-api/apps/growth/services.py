@@ -331,7 +331,7 @@ class GrowthMilestoneService:
 class GrowthDevelopmentReviewService:
     @staticmethod
     @transaction.atomic
-    def create_review(*, user, period, reflection="", next_steps=None, today=None):
+    def create_review(*, user, period, reflection=None, next_steps=None, today=None):
         from datetime import timedelta
         from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -378,7 +378,7 @@ class GrowthDevelopmentReviewService:
         for link in links:
             pillar = link.milestone.pillar
             pillar_activity[pillar] = pillar_activity.get(pillar, 0) + 1
-        review, _ = GrowthDevelopmentReview.objects.get_or_create(
+        review, created = GrowthDevelopmentReview.objects.get_or_create(
             user=user,
             period=period,
             period_start=period_start,
@@ -388,8 +388,21 @@ class GrowthDevelopmentReviewService:
                 "achieved_milestone_count": achieved_count,
                 "active_milestone_count": active_count,
                 "pillar_activity": pillar_activity,
-                "reflection": reflection,
+                "reflection": reflection or "",
                 "next_steps": next_steps or [],
             },
         )
-        return review
+        if not created:
+            review.evidence_count = events.count()
+            review.achieved_milestone_count = achieved_count
+            review.active_milestone_count = active_count
+            review.pillar_activity = pillar_activity
+            if reflection is not None:
+                review.reflection = reflection
+            if next_steps is not None:
+                review.next_steps = next_steps
+            review.save(update_fields=[
+                "evidence_count", "achieved_milestone_count", "active_milestone_count",
+                "pillar_activity", "reflection", "next_steps",
+            ])
+        return review, created
