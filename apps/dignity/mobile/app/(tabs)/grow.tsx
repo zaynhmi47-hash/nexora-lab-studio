@@ -16,7 +16,7 @@ interface GrowthSnapshot {
   journal: { entriesInWindow: number; contentIncluded: false; moodAnalysisIncluded: false };
   recommendations: { code: string; message: string; evidence: string }[];
 }
-interface GrowthGoal {
+interface GrowthTimelineItem { id: string; date: string; type: string; title: string; description: string | null; evidence: { kind: string; id: string }; relatedGoalId: string | null; }\ninterface GrowthTimeline { window: { days: number; startDate: string; endDate: string }; items: GrowthTimelineItem[]; total: number; hasMore: boolean; privacy: { journalContentIncluded: false; habitNotesIncluded: false; moodIncluded: false }; }\ninterface GrowthGoal {
   id: string;
   title: string;
   description: string;
@@ -71,7 +71,7 @@ export default function GrowScreen() {
   const [goals, setGoals] = useState<GrowthGoal[]>([]);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [habits, setHabits] = useState<GrowthHabit[]>([]);
-  const [snapshot, setSnapshot] = useState<GrowthSnapshot | null>(null);
+  const [snapshot, setSnapshot] = useState<GrowthSnapshot | null>(null);\n  const [timeline, setTimeline] = useState<GrowthTimeline | null>(null);
   const [habitTitle, setHabitTitle] = useState('');
   const [habitFrequency, setHabitFrequency] = useState<'daily' | 'weekly'>('daily');
   const [weeklyTarget, setWeeklyTarget] = useState(3);
@@ -95,17 +95,17 @@ export default function GrowScreen() {
     setLoading(true);
     setError(null);
     try {
-      const [goalResponse, journalResponse, habitResponse, snapshotResponse] = await Promise.all([
+      const [goalResponse, journalResponse, habitResponse, snapshotResponse, timelineResponse] = await Promise.all([
         api.request<GrowthGoal[]>('/api/v1/growth/goals/'),
         api.request<JournalEntry[]>('/api/v1/growth/journal/'),
         api.request<GrowthHabit[]>('/api/v1/growth/habits/'),
-        api.request<GrowthSnapshot>('/api/v1/growth/insights/?window=30'),
+        api.request<GrowthSnapshot>('/api/v1/growth/insights/?window=30'),\n        api.request<GrowthTimeline>('/api/v1/growth/timeline/?window=30&limit=50'),
       ]);
       const nextGoals = payload<GrowthGoal[]>(goalResponse);
       const nextEntries = payload<JournalEntry[]>(journalResponse);
       const nextHabits = payload<GrowthHabit[]>(habitResponse);
-      const nextSnapshot = payload<GrowthSnapshot>(snapshotResponse);
-      setSnapshot(nextSnapshot);
+      const nextSnapshot = payload<GrowthSnapshot>(snapshotResponse);\n      const nextTimeline = payload<GrowthTimeline>(timelineResponse);
+      setSnapshot(nextSnapshot);\n      setTimeline(nextTimeline);
       setGoals(Array.isArray(nextGoals) ? nextGoals : []);
       setEntries(Array.isArray(nextEntries) ? nextEntries : []);
       setHabits(Array.isArray(nextHabits) ? nextHabits : []);
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   subtitle: { color: colors.muted, fontSize: 13, lineHeight: 20, marginTop: 8, marginBottom: spacing.xl },
   section: { marginBottom: spacing.section },
   form: { gap: 9 },
-  snapshotCard: { gap: 12 },
+  snapshotCard: { gap: 12 },\n  timelineCard: { gap: 12 },\n  timelineHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },\n  timelineCount: { color: colors.muted, fontSize: 9, fontWeight: '800' },\n  timelineItem: { flexDirection: 'row', gap: 10, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.line },\n  timelineMarker: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },\n  timelineContent: { flex: 1, gap: 3 },\n  timelineTitle: { color: colors.ink, fontSize: 11, fontWeight: '900' },\n  timelineDescription: { color: colors.muted, fontSize: 10, lineHeight: 15 },\n  timelineDate: { color: colors.muted, fontSize: 9 },
   snapshotHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   snapshotLabel: { color: colors.primary, fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
   snapshotMetrics: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
