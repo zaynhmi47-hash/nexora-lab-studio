@@ -157,6 +157,15 @@ export default function SkillsScreen() {
       <View style={styles.flex}><Text style={styles.principleTitle}>Evidence is not an automatic mastery score</Text><Text style={styles.detail}>Course completion, self-reported work and independently reviewed competence remain separate.</Text></View>
     </SurfaceCard>
 
+    <Pressable onPress={() => router.push('/journey')} style={styles.journeyLink}>
+      <Ionicons name="trail-sign-outline" size={18} color={colors.primary} />
+      <View style={styles.flex}>
+        <Text style={styles.optionTitle}>View development journey</Text>
+        <Text style={styles.detail}>Learning, growth and assessed evidence in one timeline</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+    </Pressable>
+
     <View style={styles.section}>
       <SectionHeading title="Competency outcomes" subtitle="Mastery appears only when an explicit assessment record exists." />
       {loading ? <SurfaceCard><Text style={styles.detail}>Loading skill profile…</Text></SurfaceCard> : null}
@@ -242,6 +251,7 @@ const styles = StyleSheet.create({
   principleTitle: { color: colors.ink, fontSize: 12, fontWeight: '900', marginBottom: 4 },
   flex: { flex: 1 },
   section: { marginTop: spacing.section },
+  journeyLink: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, marginTop: spacing.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: radius.medium },
   empty: { alignItems: 'center', gap: 8, paddingVertical: 22 },
   skillCard: { marginBottom: spacing.sm, padding: spacing.md },
   domain: { color: colors.primary, fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
