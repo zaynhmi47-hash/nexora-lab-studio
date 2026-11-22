@@ -30,6 +30,7 @@ export default function RootLayout() {
               <Stack.Screen name="skills" options={{ title: "Skill profile", headerShown: false }} />
               <Stack.Screen name="journey" options={{ title: "Development journey", headerShown: false }} />
               <Stack.Screen name="evidence-review" options={{ title: "Evidence review", headerShown: false }} />
+              <Stack.Screen name="research-review" options={{ title: "Research verification", headerShown: false }} />
               </Stack>
             </OrganizationProvider>
           </DignityProfileProvider>
