@@ -1,6 +1,10 @@
 import pytest
+from django.utils import timezone
 from rest_framework.test import APIClient
 
+from apps.academic.models import AcademicCourse, AcademicCourseCompletion, AcademicCourseOutcomeMapping
+from apps.organizations.models import Membership
+from apps.organizations.services import OrganizationService
 from apps.growth.models import GrowthMilestone
 from apps.growth.services import GrowthMilestoneService, GrowthService
 from apps.identity.models import NexoraUser
@@ -160,3 +164,102 @@ def test_development_journey_paginates_without_repeating_items():
     assert not {
         item["id"] for item in first_payload["items"]
     }.intersection({item["id"] for item in second_payload["items"]})
+
+
+@pytest.mark.django_db
+def test_development_journey_includes_only_verified_academic_completion_and_mapping():
+    user = NexoraUser.objects.create(
+        status=NexoraUser.Status.ACTIVE,
+        email="journey-academic-owner@example.com",
+    )
+    organization = OrganizationService.create_organization(
+        name="Journey Academic School",
+        created_by=user,
+    )
+    membership = Membership.objects.get(organization=organization, user=user)
+    course = AcademicCourse.objects.create(
+        organization=organization,
+        code="COMM101",
+        name="Communication Foundations",
+        credit_units=3,
+    )
+    outcome = make_outcome("journey-academic-communication")
+    AcademicCourseOutcomeMapping.objects.create(
+        course=course,
+        outcome=outcome,
+        contribution_type=AcademicCourseOutcomeMapping.ContributionType.ASSESSED,
+    )
+    verified = AcademicCourseCompletion(
+        organization=organization,
+        membership=membership,
+        course=course,
+        status=AcademicCourseCompletion.Status.VERIFIED,
+        completed_at=timezone.now(),
+        verified_at=timezone.now(),
+        verified_by=user,
+        evidence_reference="transcript:COMM101",
+    )
+    verified.full_clean()
+    verified.save()
+    pending = AcademicCourseCompletion.objects.create(
+        organization=organization,
+        membership=membership,
+        course=course,
+        status=AcademicCourseCompletion.Status.PENDING,
+        evidence_reference="pending:COMM101",
+    )
+
+    client = APIClient()
+    client.force_authenticate(user=user)
+    response = client.get("/api/v1/learning/journey/?window=30")
+
+    assert response.status_code == 200
+    academic = [item for item in response.json()["items"] if item["domain"] == "academic"]
+    assert len(academic) == 1
+    assert academic[0]["kind"] == "verified_course_completion"
+    assert academic[0]["status"] == "verified"
+    assert academic[0]["competency"]["key"] == outcome.competency.key
+    assert academic[0]["source"]["reference"] == "transcript:COMM101"
+    assert academic[0]["source"]["contributionType"] == "assessed"
+    assert academic[0]["mastery"] is None
+    assert "score" not in academic[0]
+    assert pending.status == AcademicCourseCompletion.Status.PENDING
+
+
+@pytest.mark.django_db
+def test_development_journey_keeps_unmapped_verified_academic_completion_visible():
+    user = NexoraUser.objects.create(
+        status=NexoraUser.Status.ACTIVE,
+        email="journey-academic-unmapped@example.com",
+    )
+    organization = OrganizationService.create_organization(
+        name="Unmapped Academic School",
+        created_by=user,
+    )
+    membership = Membership.objects.get(organization=organization, user=user)
+    course = AcademicCourse.objects.create(
+        organization=organization,
+        code="HIST101",
+        name="History Foundations",
+        credit_units=2,
+    )
+    completion = AcademicCourseCompletion(
+        organization=organization,
+        membership=membership,
+        course=course,
+        status=AcademicCourseCompletion.Status.VERIFIED,
+        completed_at=timezone.now(),
+        verified_at=timezone.now(),
+        verified_by=user,
+    )
+    completion.full_clean()
+    completion.save()
+
+    client = APIClient()
+    client.force_authenticate(user=user)
+    response = client.get("/api/v1/learning/journey/")
+
+    academic = [item for item in response.json()["items"] if item["domain"] == "academic"]
+    assert len(academic) == 1
+    assert academic[0]["competency"] is None
+    assert academic[0]["status"] == "verified"
