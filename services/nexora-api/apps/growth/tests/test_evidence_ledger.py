@@ -115,3 +115,15 @@ def test_ledger_rejects_unapproved_metadata(growth_user):
             metadata={"journal_body": "must never be stored"},
         )
     assert GrowthEvidenceEvent.objects.count() == 0
+
+    with pytest.raises(ValidationError, match="unsupported fields or values"):
+        GrowthEvidenceEvent.objects.create(
+            user=growth_user,
+            event_type=GrowthEvidenceEvent.EventType.GOAL_CREATED,
+            subject_type="goal",
+            subject_id="goal-2",
+            event_key="goal:goal-2:created",
+            occurred_at=timezone.now(),
+            metadata={"new_status": {"nested": "private"}},
+        )
+    assert GrowthEvidenceEvent.objects.count() == 0
