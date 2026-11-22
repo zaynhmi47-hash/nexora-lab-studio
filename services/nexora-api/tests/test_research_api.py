@@ -310,3 +310,50 @@ def test_research_verification_queue_is_limited_to_authorized_organization_revie
     observer_client.force_authenticate(user=observer)
     denied = observer_client.get(queue_url)
     assert denied.status_code == 403
+
+
+@pytest.mark.django_db
+def test_research_output_owner_can_withdraw_consent_and_remove_case_from_review_queue():
+    from apps.access.models import Permission, Role, RolePermission
+    from apps.organizations.models import Membership, Organization
+    from apps.research.models import ResearchEvidenceVerificationEvent
+
+    owner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="research-withdraw-owner@example.com")
+    reviewer = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="research-withdraw-reviewer@example.com")
+    project = ResearchProject.objects.create(owner=owner, title="Consent withdrawal")
+    output = ResearchOutput.objects.create(project=project, title="Shared output")
+    organization = Organization.objects.create(name="Consent Review Organization", slug="consent-review-organization")
+    owner_role = Role.objects.create(organization=organization, name="Member", slug="member")
+    reviewer_role = Role.objects.create(organization=organization, name="Reviewer", slug="reviewer")
+    Membership.objects.create(user=owner, organization=organization, role=owner_role)
+    Membership.objects.create(user=reviewer, organization=organization, role=reviewer_role)
+    permission = Permission.objects.create(code="research.evidence.verify", name="Verify research evidence")
+    RolePermission.objects.create(role=reviewer_role, permission=permission)
+
+    owner_client = APIClient()
+    owner_client.force_authenticate(user=owner)
+    verification_url = f"/api/v1/research/projects/{project.id}/outputs/{output.id}/verification/"
+    submitted = owner_client.post(
+        verification_url, {"organization_id": str(organization.id), "consent": True}, format="json",
+    )
+    assert submitted.status_code == 201
+    case_id = submitted.json()["id"]
+
+    withdrawn = owner_client.post(
+        f"{verification_url}{case_id}/transition/",
+        {"status": "revoked", "reason": "I no longer consent to sharing this output."},
+        format="json",
+    )
+    assert withdrawn.status_code == 200
+    assert withdrawn.json()["status"] == "revoked"
+    assert withdrawn.json()["reviewed_at"] is None
+
+    event = ResearchEvidenceVerificationEvent.objects.filter(verification_id=case_id).latest("created_at")
+    assert event.actor_id == owner.id
+    assert event.to_status == "revoked"
+
+    reviewer_client = APIClient()
+    reviewer_client.force_authenticate(user=reviewer)
+    queue = reviewer_client.get(f"/api/v1/research/organizations/{organization.id}/verifications/")
+    assert queue.status_code == 200
+    assert queue.json() == []
