@@ -102,6 +102,28 @@ export default function ResearchScreen() {
     finally { setSaving(false); }
   }, [api, contributorDraft, load]);
 
+
+  const removeProject = useCallback(async (projectId: string) => {
+    setSaving(true); setError(null);
+    try { await api.request(`/api/v1/research/projects/${projectId}/`, { method: 'DELETE' }); await load(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'Gagal menghapus proyek penelitian.'); }
+    finally { setSaving(false); }
+  }, [api, load]);
+
+  const removeOutput = useCallback(async (projectId: string, outputId: string) => {
+    setSaving(true); setError(null);
+    try { await api.request(`/api/v1/research/projects/${projectId}/outputs/${outputId}/`, { method: 'DELETE' }); await load(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'Gagal menghapus luaran.'); }
+    finally { setSaving(false); }
+  }, [api, load]);
+
+  const removeContribution = useCallback(async (projectId: string, contributionId: string) => {
+    setSaving(true); setError(null);
+    try { await api.request(`/api/v1/research/projects/${projectId}/contributions/${contributionId}/`, { method: 'DELETE' }); await load(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'Gagal menghapus kontribusi.'); }
+    finally { setSaving(false); }
+  }, [api, load]);
+
   return <Screen>
     <Text style={styles.eyebrow}>DIGNITY RESEARCH</Text>
     <Text style={styles.title}>Explore questions. Create knowledge.</Text>
@@ -136,11 +158,13 @@ export default function ResearchScreen() {
         </View>
         {project.research_question ? <Text style={styles.detail}>Pertanyaan · {project.research_question}</Text> : null}
         <Text style={styles.privateLabel}>Privat · laporan mandiri</Text>
+        <Pressable disabled={saving} onPress={() => void removeProject(project.id)} style={styles.deleteAction}><Text style={styles.deleteText}>Hapus proyek</Text></Pressable>
         <View style={styles.subsection}>
           <Text style={styles.subheading}>Luaran penelitian ({outputs[project.id]?.length ?? 0})</Text>
           {(outputs[project.id] ?? []).map((item) => <View key={item.id} style={styles.record}>
             <Text style={styles.recordTitle}>{item.title}</Text>
             <Text style={styles.meta}>{item.output_type} · {item.status} · {item.provenance_status}</Text>
+            <Pressable disabled={saving} onPress={() => void removeOutput(project.id, item.id)}><Text style={styles.deleteText}>Hapus luaran</Text></Pressable>
           </View>)}
           <TextInput value={outputDraft[project.id] ?? ''} onChangeText={(value) => setOutputDraft((current) => ({ ...current, [project.id]: value }))} placeholder="Judul luaran / laporan" placeholderTextColor={colors.muted} style={styles.input} />
           <Pressable onPress={() => void addOutput(project.id)} disabled={saving} style={styles.secondary}><Text style={styles.secondaryText}>Tambah luaran sebagai draft</Text></Pressable>
@@ -150,6 +174,7 @@ export default function ResearchScreen() {
           {(contributions[project.id] ?? []).map((person) => <View key={person.id} style={styles.record}>
             <Text style={styles.recordTitle}>{person.contributor_name}{person.role ? ` · ${person.role}` : ''}</Text>
             <Text style={styles.meta}>Atribusi · {person.attribution_status}</Text>
+            <Pressable disabled={saving} onPress={() => void removeContribution(project.id, person.id)}><Text style={styles.deleteText}>Hapus kontributor</Text></Pressable>
           </View>)}
           <TextInput value={contributorDraft[project.id] ?? ''} onChangeText={(value) => setContributorDraft((current) => ({ ...current, [project.id]: value }))} placeholder="Nama kontributor" placeholderTextColor={colors.muted} style={styles.input} />
           <Pressable onPress={() => void addContribution(project.id)} disabled={saving} style={styles.secondary}><Text style={styles.secondaryText}>Catat kontributor</Text></Pressable>
@@ -188,4 +213,6 @@ const styles = StyleSheet.create({
   recordTitle: { color: colors.ink, fontSize: 10, fontWeight: '800' },
   secondary: { alignItems: 'center', paddingVertical: 10, borderRadius: radius.pill, backgroundColor: colors.surfaceMuted },
   secondaryText: { color: colors.primaryDark, fontSize: 10, fontWeight: '900' },
+  deleteAction: { alignSelf: 'flex-start', marginTop: 8 },
+  deleteText: { color: colors.danger, fontSize: 9, fontWeight: '900' },
 });
