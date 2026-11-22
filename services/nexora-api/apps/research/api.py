@@ -1,10 +1,12 @@
 from django.core.exceptions import ValidationError
 from rest_framework import serializers, status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.identity.authentication import FirebaseIdentityAuthentication
+from apps.organizations.models import Organization
 
 from .models import (
     ResearchContribution,
@@ -66,6 +68,22 @@ class ResearchVerificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = ResearchEvidenceVerification
         fields = ("id", "output_id", "organization_id", "submitted_by_id", "reviewer_id", "status", "consented_at", "reviewed_at", "decision_reason", "events", "created_at")
+        read_only_fields = fields
+
+
+class ResearchVerificationQueueSerializer(serializers.ModelSerializer):
+    output_id = serializers.UUIDField(read_only=True)
+    project_id = serializers.UUIDField(source="output.project_id", read_only=True)
+    output_title = serializers.CharField(source="output.title", read_only=True)
+    output_type = serializers.CharField(source="output.output_type", read_only=True)
+    output_abstract = serializers.CharField(source="output.abstract", read_only=True)
+    doi = serializers.CharField(source="output.doi", read_only=True)
+    resource_url = serializers.CharField(source="output.resource_url", read_only=True)
+    submitter_name = serializers.CharField(source="submitted_by.display_name", read_only=True)
+
+    class Meta:
+        model = ResearchEvidenceVerification
+        fields = ("id", "project_id", "output_id", "organization_id", "status", "output_title", "output_type", "output_abstract", "doi", "resource_url", "submitter_name", "submitted_by_id", "reviewer_id", "consented_at", "reviewed_at", "events", "created_at")
         read_only_fields = fields
 
 
@@ -266,3 +284,23 @@ class ResearchEvidenceVerificationTransitionView(APIView):
         except ValidationError as exc:
             return Response({"detail": exc.message_dict if hasattr(exc, "message_dict") else exc.messages}, status=400)
         return Response(ResearchVerificationSerializer(case).data)
+
+
+
+class ResearchOrganizationVerificationQueueView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, organization_id):
+        organization = Organization.objects.active().filter(
+            id=organization_id,
+            status=Organization.Status.ACTIVE,
+            deleted_at__isnull=True,
+        ).first()
+        if organization is None:
+            return Response({"detail": "Organization not found."}, status=404)
+        cases = ResearchEvidenceVerificationService.list_for_reviewer(
+            actor=request.user,
+            organization=organization,
+        )
+        return Response(ResearchVerificationQueueSerializer(cases, many=True).data)
