@@ -183,6 +183,8 @@ class ResearchOutputDetailView(APIView):
             ResearchService.delete_output(user=request.user, project_id=project_id, output_id=output_id)
         except (ResearchProject.DoesNotExist, ResearchOutput.DoesNotExist):
             return Response({"detail": "Research output not found."}, status=404)
+        except ValidationError as exc:
+            return Response({"detail": exc.message_dict if hasattr(exc, "message_dict") else exc.messages}, status=400)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
