@@ -80,6 +80,19 @@ class ResearchService:
     @staticmethod
     def update_output(*, user, project_id, output_id, **data):
         output = ResearchService.get_output(user=user, project_id=project_id, output_id=output_id)
+        evidence_fields = {"title", "output_type", "abstract", "doi", "resource_url", "published_on"}
+        if evidence_fields.intersection(data) and output.verification_cases.filter(
+            status__in=[
+                ResearchEvidenceVerification.Status.SUBMITTED,
+                ResearchEvidenceVerification.Status.UNDER_REVIEW,
+                ResearchEvidenceVerification.Status.VERIFIED,
+            ],
+            deleted_at__isnull=True,
+        ).exists():
+            raise DjangoValidationError(
+                "Evidence details cannot be changed while verification is pending or verified. "
+                "Complete or revoke the verification first."
+            )
         for field, value in data.items():
             setattr(output, field, value)
         output.full_clean()
@@ -89,6 +102,17 @@ class ResearchService:
     @staticmethod
     def delete_output(*, user, project_id, output_id):
         output = ResearchService.get_output(user=user, project_id=project_id, output_id=output_id)
+        if output.verification_cases.filter(
+            status__in=[
+                ResearchEvidenceVerification.Status.SUBMITTED,
+                ResearchEvidenceVerification.Status.UNDER_REVIEW,
+                ResearchEvidenceVerification.Status.VERIFIED,
+            ],
+            deleted_at__isnull=True,
+        ).exists():
+            raise DjangoValidationError(
+                "An output with pending or verified evidence cannot be deleted. Resolve verification first."
+            )
         output.soft_delete()
 
     @staticmethod
