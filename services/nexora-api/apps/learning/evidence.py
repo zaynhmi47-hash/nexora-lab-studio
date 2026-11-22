@@ -15,7 +15,7 @@ class LearningEvidenceService:
 
         from django.utils import timezone
 
-        from apps.academic.models import AcademicCourseCompletion, AcademicCourseOutcomeMapping
+        from apps.academic.models import AcademicCourseCompletion
         from apps.growth.models import (
             GrowthEvidenceEvent,
             GrowthGoal,
