@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.core.exceptions import ValidationError
@@ -343,14 +343,8 @@ class GrowthDevelopmentReviewService:
         else:
             period_start = today.replace(day=1)
             period_end = today
-        start_at = timezone.make_aware(
-            timezone.datetime.combine(period_start, timezone.datetime.min.time()),
-            user_timezone,
-        )
-        end_at = timezone.make_aware(
-            timezone.datetime.combine(period_end + timedelta(days=1), timezone.datetime.min.time()),
-            user_timezone,
-        )
+        start_at = timezone.make_aware(datetime.combine(period_start, time.min), user_timezone)
+        end_at = timezone.make_aware(datetime.combine(period_end + timedelta(days=1), time.min), user_timezone)
         events = GrowthEvidenceEvent.objects.filter(
             user=user, occurred_at__gte=start_at, occurred_at__lt=end_at,
         )
