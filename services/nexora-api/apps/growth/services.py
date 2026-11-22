@@ -266,6 +266,10 @@ class GrowthMilestoneService:
         milestone = GrowthMilestone(user=user, **data)
         milestone.full_clean()
         milestone.save()
+        GrowthEvidenceLedger.record(
+            user=user, event_type="milestone.created", subject_type="milestone", subject_id=milestone.id,
+            event_key=f"milestone:{milestone.id}:created",
+        )
         return milestone
 
     @staticmethod
@@ -280,6 +284,7 @@ class GrowthMilestoneService:
             raise GrowthMilestone.DoesNotExist
         if milestone.status == GrowthMilestone.Status.CANCELLED:
             raise ValidationError("Cancelled milestones cannot be edited.")
+        previous_status = milestone.status
         if changes.get("status") == GrowthMilestone.Status.ACHIEVED:
             changes["achieved_at"] = timezone.now()
         elif changes.get("status") in (
@@ -292,6 +297,14 @@ class GrowthMilestoneService:
             setattr(milestone, field, value)
         milestone.full_clean()
         milestone.save()
+        if milestone.status != previous_status:
+            GrowthEvidenceLedger.record(
+                user=user, event_type="milestone.status_changed", subject_type="milestone",
+                subject_id=milestone.id,
+                event_key=f"milestone:{milestone.id}:status:{milestone.updated_at.isoformat()}",
+                metadata={"previous_status": previous_status, "new_status": milestone.status},
+                occurred_at=milestone.updated_at,
+            )
         return milestone
 
     @staticmethod
@@ -319,7 +332,6 @@ class GrowthDevelopmentReviewService:
     @staticmethod
     @transaction.atomic
     def create_review(*, user, period, reflection="", next_steps=None, today=None):
-        from calendar import monthrange
         from datetime import timedelta
         from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
