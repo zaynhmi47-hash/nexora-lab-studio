@@ -16,7 +16,7 @@ def install_postgresql_immutability_trigger(apps, schema_editor):
             END IF;
             RAISE EXCEPTION 'growth evidence events are append-only';
         END;
-        $ LANGUAGE plpgsql;
+        $growth$ LANGUAGE plpgsql;
     """)
     schema_editor.execute("""
         CREATE TRIGGER growth_evidence_event_no_mutation
