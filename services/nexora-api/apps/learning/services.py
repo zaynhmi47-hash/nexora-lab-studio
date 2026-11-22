@@ -22,6 +22,8 @@ from .models import (
     LearningQuizAttempt,
     LearningAchievement,
     LearningUserAchievement,
+    LearningEvidence,
+    LearningOutcomeLessonMapping,
 )
 
 
