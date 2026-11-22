@@ -27,6 +27,7 @@ export default function ResearchScreen() {
   const [question, setQuestion] = useState('');
   const [field, setField] = useState('');
   const [methodology, setMethodology] = useState('');
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [outputDraft, setOutputDraft] = useState<Record<string, string>>({});
   const [contributorDraft, setContributorDraft] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -61,16 +62,16 @@ export default function ResearchScreen() {
     if (!title.trim()) { setError('Judul penelitian wajib diisi.'); return; }
     setSaving(true); setError(null); setNotice(null);
     try {
-      await api.request('/api/v1/research/projects/', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+      await api.request(editingProjectId ? '/api/v1/research/projects/' + editingProjectId + '/' : '/api/v1/research/projects/', {
+        method: editingProjectId ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: title.trim(), research_question: question.trim(), field_of_study: field.trim(), methodology: methodology.trim() }),
       });
-      setTitle(''); setQuestion(''); setField(''); setMethodology('');
-      setNotice('Proyek penelitian tersimpan sebagai catatan privat.');
+      setTitle(''); setQuestion(''); setField(''); setMethodology(''); setEditingProjectId(null);
+      setNotice(editingProjectId ? 'Perubahan proyek berhasil disimpan.' : 'Proyek penelitian tersimpan sebagai catatan privat.');
       await load();
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Gagal menyimpan penelitian.'); }
     finally { setSaving(false); }
-  }, [api, field, load, methodology, question, title]);
+  }, [api, editingProjectId, field, load, methodology, question, title]);
 
   const addOutput = useCallback(async (projectId: string) => {
     const outputTitle = (outputDraft[projectId] ?? '').trim();
@@ -102,6 +103,12 @@ export default function ResearchScreen() {
     finally { setSaving(false); }
   }, [api, contributorDraft, load]);
 
+
+  const startProjectEdit = useCallback((project: Project) => {
+    setEditingProjectId(project.id); setTitle(project.title); setQuestion(project.research_question ?? '');
+    setField(project.field_of_study ?? ''); setMethodology(project.methodology ?? '');
+    setNotice('Mode edit proyek aktif.');
+  }, []);
 
   const removeProject = useCallback(async (projectId: string) => {
     setSaving(true); setError(null);
@@ -136,13 +143,13 @@ export default function ResearchScreen() {
       </View>
     </SurfaceCard>
     <SurfaceCard style={styles.form}>
-      <SectionHeading title="Mulai proyek penelitian" subtitle="Pertanyaan penelitian, bidang, dan metode dapat disempurnakan nanti." />
+      <SectionHeading title={editingProjectId ? "Edit proyek penelitian" : "Mulai proyek penelitian"} subtitle="Pertanyaan penelitian, bidang, dan metode dapat disempurnakan nanti." />
       <TextInput value={title} onChangeText={setTitle} placeholder="Judul penelitian" placeholderTextColor={colors.muted} style={styles.input} />
       <TextInput value={question} onChangeText={setQuestion} placeholder="Pertanyaan penelitian" placeholderTextColor={colors.muted} multiline style={[styles.input, styles.multiline]} />
       <TextInput value={field} onChangeText={setField} placeholder="Bidang studi · mis. Pendidikan" placeholderTextColor={colors.muted} style={styles.input} />
       <TextInput value={methodology} onChangeText={setMethodology} placeholder="Metodologi · opsional" placeholderTextColor={colors.muted} style={styles.input} />
       <Pressable disabled={saving} onPress={() => void createProject()} style={[styles.save, saving && styles.disabled]}>
-        <Ionicons name="add-circle-outline" size={17} color="#FFFFFF" /><Text style={styles.saveText}>{saving ? 'Menyimpan…' : 'Simpan proyek'}</Text>
+        <Ionicons name="add-circle-outline" size={17} color="#FFFFFF" /><Text style={styles.saveText}>{saving ? 'Menyimpan…' : editingProjectId ? 'Simpan perubahan' : 'Simpan proyek'}</Text>
       </Pressable>
     </SurfaceCard>
     {notice ? <Text style={styles.notice}>{notice}</Text> : null}
@@ -158,7 +165,7 @@ export default function ResearchScreen() {
         </View>
         {project.research_question ? <Text style={styles.detail}>Pertanyaan · {project.research_question}</Text> : null}
         <Text style={styles.privateLabel}>Privat · laporan mandiri</Text>
-        <Pressable disabled={saving} onPress={() => void removeProject(project.id)} style={styles.deleteAction}><Text style={styles.deleteText}>Hapus proyek</Text></Pressable>
+        <View style={styles.actionRow}><Pressable disabled={saving} onPress={() => startProjectEdit(project)}><Text style={styles.actionText}>Edit proyek</Text></Pressable><Pressable disabled={saving} onPress={() => void removeProject(project.id)}><Text style={styles.deleteText}>Hapus proyek</Text></Pressable></View>
         <View style={styles.subsection}>
           <Text style={styles.subheading}>Luaran penelitian ({outputs[project.id]?.length ?? 0})</Text>
           {(outputs[project.id] ?? []).map((item) => <View key={item.id} style={styles.record}>
@@ -214,5 +221,7 @@ const styles = StyleSheet.create({
   secondary: { alignItems: 'center', paddingVertical: 10, borderRadius: radius.pill, backgroundColor: colors.surfaceMuted },
   secondaryText: { color: colors.primaryDark, fontSize: 10, fontWeight: '900' },
   deleteAction: { alignSelf: 'flex-start', marginTop: 8 },
+  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 8 },
+  actionText: { color: colors.primaryDark, fontSize: 9, fontWeight: '900' },
   deleteText: { color: colors.danger, fontSize: 9, fontWeight: '900' },
 });
