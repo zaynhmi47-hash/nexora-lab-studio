@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
             name="GrowthMilestone",
             fields=[
                 ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
                 ("deleted_at", models.DateTimeField(blank=True, db_index=True, null=True)),
                 ("title", models.CharField(max_length=180)),
@@ -108,7 +108,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="growthmilestoneevidence",
-            constraint=models.UniqueConstraint(fields=("milestone", "evidence_event"), name="growth_milestone_evidence_uniq"),
+            constraint=models.UniqueConstraint(fields=("milestone", "evidence_event"), name="g_milestone_ev_uniq"),
         ),
         migrations.AddIndex(
             model_name="growthmilestoneevidence",
@@ -118,7 +118,7 @@ class Migration(migrations.Migration):
             model_name="growthdevelopmentreview",
             constraint=models.UniqueConstraint(
                 fields=("user", "period", "period_start", "period_end"),
-                name="growth_development_review_period_uniq",
+                name="growth_review_period_uniq",
             ),
         ),
         migrations.AddConstraint(
