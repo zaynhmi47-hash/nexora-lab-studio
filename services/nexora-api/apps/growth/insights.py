@@ -140,11 +140,13 @@ class GrowthTimelineService:
             user_timezone = timezone.get_default_timezone()
         today = today or timezone.localdate(timezone=user_timezone)
         start_date = today - timedelta(days=window_days - 1)
+        start_at = timezone.make_aware(datetime.combine(start_date, time.min), user_timezone)
+        end_at = timezone.make_aware(datetime.combine(today + timedelta(days=1), time.min), user_timezone)
         events = []
 
         goals = GrowthGoal.objects.filter(
             user=user, deleted_at__isnull=True,
-            created_at__date__gte=start_date, created_at__date__lte=today,
+            created_at__gte=start_at, created_at__lt=end_at,
         ).only("id", "title", "created_at")
         for goal in goals:
             events.append({
@@ -160,7 +162,7 @@ class GrowthTimelineService:
         completed_goals = GrowthGoal.objects.filter(
             user=user, deleted_at__isnull=True,
             status=GrowthGoal.Status.COMPLETED,
-            completed_at__date__gte=start_date, completed_at__date__lte=today,
+            completed_at__gte=start_at, completed_at__lt=end_at,
         ).only("id", "title", "completed_at")
         for goal in completed_goals:
             events.append({
