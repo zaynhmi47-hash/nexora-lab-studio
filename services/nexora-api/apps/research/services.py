@@ -220,8 +220,33 @@ class ResearchEvidenceVerificationService:
         )
         if case is None:
             raise ResearchEvidenceVerification.DoesNotExist
-        if actor.id == case.submitted_by_id or actor.id == case.output.project.owner_id:
-            raise PermissionDenied("Research owners cannot verify or review their own evidence.")
+        current = case.status
+        is_owner = actor.id == case.submitted_by_id or actor.id == case.output.project.owner_id
+        if is_owner:
+            if target_status != ResearchEvidenceVerification.Status.REVOKED:
+                raise PermissionDenied("Research owners may withdraw consent, but cannot review their own evidence.")
+            if current not in {
+                ResearchEvidenceVerification.Status.SUBMITTED,
+                ResearchEvidenceVerification.Status.UNDER_REVIEW,
+                ResearchEvidenceVerification.Status.VERIFIED,
+            }:
+                raise ValidationError({"status": "Consent can only be withdrawn from an active or verified case."})
+            if not reason.strip():
+                raise ValidationError({"reason": "A reason is required when withdrawing consent."})
+            case.status = ResearchEvidenceVerification.Status.REVOKED
+            case.decision_reason = reason.strip()
+            case.reviewed_at = timezone.now()
+            case.full_clean()
+            case.save(update_fields=["status", "decision_reason", "reviewed_at", "updated_at"])
+            ResearchEvidenceVerificationEvent.objects.create(
+                verification=case,
+                actor=actor,
+                from_status=current,
+                to_status=case.status,
+                reason=reason.strip(),
+            )
+            return case
+
         decision = authorize(
             user=actor,
             organization=case.organization,
@@ -230,7 +255,6 @@ class ResearchEvidenceVerificationService:
         if not decision.allowed:
             raise PermissionDenied("The actor lacks the research.evidence.verify permission in this organization.")
 
-        current = case.status
         allowed = {
             ResearchEvidenceVerification.Status.SUBMITTED: {ResearchEvidenceVerification.Status.UNDER_REVIEW},
             ResearchEvidenceVerification.Status.UNDER_REVIEW: {
