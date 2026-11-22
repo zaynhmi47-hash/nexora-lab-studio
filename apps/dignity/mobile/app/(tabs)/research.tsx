@@ -145,6 +145,29 @@ export default function ResearchScreen() {
       ],
     );
   }, [api, load, organization]);
+  const withdrawVerification = useCallback((projectId: string, outputId: string, verificationId: string) => {
+    Alert.alert(
+      'Cabut persetujuan berbagi?',
+      'Organisasi tidak lagi dapat melanjutkan peninjauan bukti ini. Riwayat audit tetap disimpan.',
+      [
+        { text: 'Kembali', style: 'cancel' },
+        { text: 'Cabut persetujuan', style: 'destructive', onPress: () => {
+          void (async () => {
+            setSaving(true); setError(null);
+            try {
+              await api.request('/api/v1/research/projects/' + projectId + '/outputs/' + outputId + '/verification/' + verificationId + '/transition/', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'revoked', reason: 'Pemilik menarik persetujuan berbagi bukti kepada organisasi.' }),
+              });
+              setNotice('Persetujuan dicabut. Riwayat verifikasi tetap tersedia bagi pemilik.');
+              await load();
+            } catch (cause) { setError(cause instanceof Error ? cause.message : 'Gagal mencabut persetujuan.'); }
+            finally { setSaving(false); }
+          })();
+        } },
+      ],
+    );
+  }, [api, load]);
   const startProjectEdit = useCallback((project: Project) => {
     setEditingProjectId(project.id); setTitle(project.title); setQuestion(project.research_question ?? '');
     setField(project.field_of_study ?? ''); setMethodology(project.methodology ?? '');
@@ -248,7 +271,11 @@ export default function ResearchScreen() {
                   <Text style={styles.verificationStatus}>Verifikasi · {latest?.status ?? 'belum diajukan'}</Text>
                   {latest?.events?.slice(-3).map((event) => <Text key={event.id} style={styles.verificationEvent}>{event.to_status} · {new Date(event.created_at).toLocaleDateString()}</Text>)}
                   {latest?.decision_reason ? <Text style={styles.meta}>Catatan reviewer · {latest.decision_reason}</Text> : null}
-                  {latest && ['submitted', 'under_review', 'verified'].includes(latest.status) ? null : (
+                  {latest && ['submitted', 'under_review', 'verified'].includes(latest.status) ? (
+                    <Pressable disabled={saving} onPress={() => withdrawVerification(project.id, item.id, latest.id)} style={[styles.secondary, saving && styles.disabled]}>
+                      <Text style={styles.secondaryText}>Cabut persetujuan berbagi</Text>
+                    </Pressable>
+                  ) : (
                     <Pressable disabled={saving || !organization} onPress={() => submitVerification(project.id, item.id, item.title)} style={[styles.secondary, (!organization || saving) && styles.disabled]}>
                       <Text style={styles.secondaryText}>{organization ? 'Ajukan ke ' + organization.name : 'Pilih organisasi untuk verifikasi'}</Text>
                     </Pressable>
