@@ -214,6 +214,12 @@ def test_research_evidence_verification_uses_org_permission_and_audited_transiti
     output.refresh_from_db()
     assert output.provenance_status == "self_reported"
 
+    output_url = f"/api/v1/research/projects/{project.id}/outputs/{output.id}/"
+    blocked_edit = owner_client.patch(output_url, {"title": "Changed after verification"}, format="json")
+    assert blocked_edit.status_code == 400
+    blocked_delete = owner_client.delete(output_url)
+    assert blocked_delete.status_code == 400
+
     missing_reason = reviewer_client.post(transition_url, {"status": "revoked"}, format="json")
     assert missing_reason.status_code == 400
     revoked = reviewer_client.post(
