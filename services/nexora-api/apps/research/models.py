@@ -141,7 +141,7 @@ class ResearchEvidenceVerification(AuditableBaseModel):
         ordering = ("-created_at",)
         indexes = [
             models.Index(fields=("organization", "status"), name="research_verify_org_status_idx"),
-            models.Index(fields=("output", "status"), name="research_verify_output_status_idx"),
+            models.Index(fields=("output", "status"), name="research_ver_out_stat_idx"),
         ]
 
     def clean(self):
