@@ -377,14 +377,14 @@ export default function GrowScreen() {
     setError(null);
     setNotice(null);
     try {
+      const nextSteps = reviewNextSteps.split('\n').map((item) => item.trim()).filter(Boolean);
+      const reviewPayload: { period: 'weekly' | 'monthly'; reflection?: string; next_steps?: string[] } = { period };
+      if (reviewReflection.trim()) reviewPayload.reflection = reviewReflection.trim();
+      if (nextSteps.length > 0) reviewPayload.next_steps = nextSteps;
       await api.request('/api/v1/growth/reviews/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          period,
-          reflection: reviewReflection.trim(),
-          next_steps: reviewNextSteps.split('\n').map((item) => item.trim()).filter(Boolean),
-        }),
+        body: JSON.stringify(reviewPayload),
       });
       setNotice(`${period === 'weekly' ? 'Weekly' : 'Monthly'} development review saved.`);
       await load();
