@@ -310,7 +310,7 @@ class GrowthMilestoneEvidence(models.Model):
         ordering = ("-created_at",)
         constraints = [
             models.UniqueConstraint(
-                fields=("milestone", "evidence_event"), name="growth_milestone_evidence_uniq",
+                fields=("milestone", "evidence_event"), name="g_milestone_ev_uniq",
             ),
         ]
         indexes = [
@@ -352,7 +352,7 @@ class GrowthDevelopmentReview(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=("user", "period", "period_start", "period_end"),
-                name="growth_development_review_period_uniq",
+                name="growth_review_period_uniq",
             ),
             models.CheckConstraint(
                 condition=models.Q(period_end__gte=models.F("period_start")),
