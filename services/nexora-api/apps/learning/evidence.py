@@ -128,6 +128,7 @@ class LearningEvidenceService:
 
         career_experiences = CareerExperience.objects.filter(
             user=user, deleted_at__isnull=True,
+            created_at__gte=start_at, created_at__lte=now,
         ).order_by("-start_date", "-created_at")
         for experience in career_experiences:
             items.append({
@@ -152,6 +153,7 @@ class LearningEvidenceService:
 
         career_projects = CareerProject.objects.filter(
             user=user, deleted_at__isnull=True,
+            created_at__gte=start_at, created_at__lte=now,
         ).order_by("-updated_at", "-created_at")
         for project in career_projects:
             items.append({
