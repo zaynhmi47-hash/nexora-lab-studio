@@ -98,3 +98,53 @@ def test_career_endpoints_require_authentication():
     client = APIClient()
     assert client.get("/api/v1/career/experiences/").status_code == 401
     assert client.get("/api/v1/career/projects/").status_code == 401
+
+
+@pytest.mark.django_db
+def test_career_experience_update_and_delete_are_owner_scoped():
+    owner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="career-crud-owner@example.com")
+    other = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="career-crud-other@example.com")
+    own = CareerExperience.objects.create(
+        user=owner, role_title="Junior developer", organization_name="Studio",
+        start_date="2024-01-01",
+    )
+    foreign = CareerExperience.objects.create(
+        user=other, role_title="Private role", organization_name="Other",
+        start_date="2024-01-01",
+    )
+    client = APIClient()
+    client.force_authenticate(user=owner)
+
+    updated = client.patch(
+        f"/api/v1/career/experiences/{own.id}/",
+        {"role_title": "Software developer"},
+        format="json",
+    )
+    assert updated.status_code == 200
+    assert updated.json()["role_title"] == "Software developer"
+    assert client.delete(f"/api/v1/career/experiences/{foreign.id}/").status_code == 404
+    assert client.delete(f"/api/v1/career/experiences/{own.id}/").status_code == 204
+    own.refresh_from_db()
+    assert own.deleted_at is not None
+
+
+@pytest.mark.django_db
+def test_career_project_update_and_delete_are_owner_scoped():
+    owner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="career-project-crud-owner@example.com")
+    other = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="career-project-crud-other@example.com")
+    own = CareerProject.objects.create(user=owner, title="My portfolio")
+    foreign = CareerProject.objects.create(user=other, title="Other portfolio")
+    client = APIClient()
+    client.force_authenticate(user=owner)
+
+    updated = client.patch(
+        f"/api/v1/career/projects/{own.id}/",
+        {"summary": "Updated project summary"},
+        format="json",
+    )
+    assert updated.status_code == 200
+    assert updated.json()["summary"] == "Updated project summary"
+    assert client.delete(f"/api/v1/career/projects/{foreign.id}/").status_code == 404
+    assert client.delete(f"/api/v1/career/projects/{own.id}/").status_code == 204
+    own.refresh_from_db()
+    assert own.deleted_at is not None
