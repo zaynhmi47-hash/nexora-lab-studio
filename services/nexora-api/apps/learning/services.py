@@ -45,6 +45,7 @@ def _streak_after_completion(progress: LearningProgress, now):
 
 class LearningService:
     QUIZ_PASSING_SCORE_PERCENT = 70
+
     @staticmethod
     def _record_outcome_learning_evidence(*, user, lesson, completion):
         """Record source-attributed learning activity without asserting mastery."""
