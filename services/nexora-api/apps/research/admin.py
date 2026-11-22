@@ -54,7 +54,7 @@ class ResearchEvidenceVerificationAdmin(admin.ModelAdmin):
     list_filter = ("status", "organization")
     search_fields = ("output__title", "submitted_by__email", "reviewer__email")
     readonly_fields = ("output", "organization", "submitted_by", "reviewer", "status", "consented_at", "reviewed_at", "decision_reason")
-    inlines = (ResearchEvidenceVerificationEventInline)
+    inlines = (ResearchEvidenceVerificationEventInline,)
 
 
 @admin.register(ResearchEvidenceVerificationEvent)
