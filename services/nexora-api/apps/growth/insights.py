@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from django.db.models import Count, Q
 from django.utils import timezone
 
-from .models import GrowthEvidenceEvent, GrowthGoal, GrowthHabit, GrowthHabitCheckIn, GrowthJournalEntry
+from .models import GrowthEvidenceEvent, GrowthGoal, GrowthHabit, GrowthHabitCheckIn, GrowthJournalEntry, GrowthMilestone
 
 
 class GrowthInsightsService:
@@ -175,6 +175,18 @@ class GrowthTimelineService:
                 description = habit.title
                 related_goal_id = str(habit.goal_id) if habit.goal_id else None
                 title = "Habit created"
+            elif event.subject_type == "milestone":
+                milestone = GrowthMilestone.objects.filter(
+                    id=event.subject_id, user=user, deleted_at__isnull=True,
+                ).only("id", "title", "pillar").first()
+                if milestone is None:
+                    continue
+                description = milestone.title
+                title = (
+                    "Milestone created" if event.event_type == GrowthEvidenceEvent.EventType.MILESTONE_CREATED
+                    else "Milestone achieved" if event.metadata.get("new_status") == GrowthMilestone.Status.ACHIEVED
+                    else "Milestone status updated"
+                )
             elif event.subject_type == "habit_check_in":
                 check_in = GrowthHabitCheckIn.objects.filter(
                     id=event.subject_id, habit__user=user, habit__deleted_at__isnull=True,
