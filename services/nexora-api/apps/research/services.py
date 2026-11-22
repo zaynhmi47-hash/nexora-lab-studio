@@ -235,9 +235,8 @@ class ResearchEvidenceVerificationService:
                 raise ValidationError({"reason": "A reason is required when withdrawing consent."})
             case.status = ResearchEvidenceVerification.Status.REVOKED
             case.decision_reason = reason.strip()
-            case.reviewed_at = timezone.now()
             case.full_clean()
-            case.save(update_fields=["status", "decision_reason", "reviewed_at", "updated_at"])
+            case.save(update_fields=["status", "decision_reason", "updated_at"])
             ResearchEvidenceVerificationEvent.objects.create(
                 verification=case,
                 actor=actor,
