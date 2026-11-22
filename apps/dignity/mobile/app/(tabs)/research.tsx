@@ -28,6 +28,10 @@ export default function ResearchScreen() {
   const [field, setField] = useState('');
   const [methodology, setMethodology] = useState('');
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [editingOutput, setEditingOutput] = useState<{ projectId: string; id: string } | null>(null);
+  const [editingContribution, setEditingContribution] = useState<{ projectId: string; id: string } | null>(null);
+  const [outputEditDraft, setOutputEditDraft] = useState('');
+  const [contributionEditDraft, setContributionEditDraft] = useState('');
   const [outputDraft, setOutputDraft] = useState<Record<string, string>>({});
   const [contributorDraft, setContributorDraft] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -110,6 +114,33 @@ export default function ResearchScreen() {
     setNotice('Mode edit proyek aktif.');
   }, []);
 
+
+  const saveOutputEdit = useCallback(async () => {
+    if (!editingOutput || !outputEditDraft.trim()) { setError('Judul luaran wajib diisi.'); return; }
+    setSaving(true); setError(null);
+    try {
+      await api.request('/api/v1/research/projects/' + editingOutput.projectId + '/outputs/' + editingOutput.id + '/', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: outputEditDraft.trim() }),
+      });
+      setEditingOutput(null); setOutputEditDraft(''); setNotice('Luaran penelitian diperbarui.'); await load();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Gagal memperbarui luaran.'); }
+    finally { setSaving(false); }
+  }, [api, editingOutput, load, outputEditDraft]);
+
+  const saveContributionEdit = useCallback(async () => {
+    if (!editingContribution || !contributionEditDraft.trim()) { setError('Nama kontributor wajib diisi.'); return; }
+    setSaving(true); setError(null);
+    try {
+      await api.request('/api/v1/research/projects/' + editingContribution.projectId + '/contributions/' + editingContribution.id + '/', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contributor_name: contributionEditDraft.trim() }),
+      });
+      setEditingContribution(null); setContributionEditDraft(''); setNotice('Nama kontributor diperbarui.'); await load();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Gagal memperbarui kontributor.'); }
+    finally { setSaving(false); }
+  }, [api, contributionEditDraft, editingContribution, load]);
+
   const removeProject = useCallback(async (projectId: string) => {
     setSaving(true); setError(null);
     try { await api.request(`/api/v1/research/projects/${projectId}/`, { method: 'DELETE' }); await load(); }
@@ -171,7 +202,7 @@ export default function ResearchScreen() {
           {(outputs[project.id] ?? []).map((item) => <View key={item.id} style={styles.record}>
             <Text style={styles.recordTitle}>{item.title}</Text>
             <Text style={styles.meta}>{item.output_type} · {item.status} · {item.provenance_status}</Text>
-            <Pressable disabled={saving} onPress={() => void removeOutput(project.id, item.id)}><Text style={styles.deleteText}>Hapus luaran</Text></Pressable>
+            {editingOutput?.id === item.id ? <View style={styles.inlineEditor}><TextInput value={outputEditDraft} onChangeText={setOutputEditDraft} style={styles.input} placeholder="Judul luaran" placeholderTextColor={colors.muted} /><View style={styles.actionRow}><Pressable disabled={saving} onPress={() => void saveOutputEdit()}><Text style={styles.actionText}>Simpan</Text></Pressable><Pressable onPress={() => setEditingOutput(null)}><Text style={styles.deleteText}>Batal</Text></Pressable></View></View> : <View style={styles.actionRow}><Pressable onPress={() => { setEditingOutput({ projectId: project.id, id: item.id }); setOutputEditDraft(item.title); }}><Text style={styles.actionText}>Edit</Text></Pressable><Pressable disabled={saving} onPress={() => void removeOutput(project.id, item.id)}><Text style={styles.deleteText}>Hapus luaran</Text></Pressable></View>}
           </View>)}
           <TextInput value={outputDraft[project.id] ?? ''} onChangeText={(value) => setOutputDraft((current) => ({ ...current, [project.id]: value }))} placeholder="Judul luaran / laporan" placeholderTextColor={colors.muted} style={styles.input} />
           <Pressable onPress={() => void addOutput(project.id)} disabled={saving} style={styles.secondary}><Text style={styles.secondaryText}>Tambah luaran sebagai draft</Text></Pressable>
@@ -181,7 +212,7 @@ export default function ResearchScreen() {
           {(contributions[project.id] ?? []).map((person) => <View key={person.id} style={styles.record}>
             <Text style={styles.recordTitle}>{person.contributor_name}{person.role ? ` · ${person.role}` : ''}</Text>
             <Text style={styles.meta}>Atribusi · {person.attribution_status}</Text>
-            <Pressable disabled={saving} onPress={() => void removeContribution(project.id, person.id)}><Text style={styles.deleteText}>Hapus kontributor</Text></Pressable>
+            {editingContribution?.id === person.id ? <View style={styles.inlineEditor}><TextInput value={contributionEditDraft} onChangeText={setContributionEditDraft} style={styles.input} placeholder="Nama kontributor" placeholderTextColor={colors.muted} /><View style={styles.actionRow}><Pressable disabled={saving} onPress={() => void saveContributionEdit()}><Text style={styles.actionText}>Simpan</Text></Pressable><Pressable onPress={() => setEditingContribution(null)}><Text style={styles.deleteText}>Batal</Text></Pressable></View></View> : <View style={styles.actionRow}><Pressable onPress={() => { setEditingContribution({ projectId: project.id, id: person.id }); setContributionEditDraft(person.contributor_name); }}><Text style={styles.actionText}>Edit</Text></Pressable><Pressable disabled={saving} onPress={() => void removeContribution(project.id, person.id)}><Text style={styles.deleteText}>Hapus kontributor</Text></Pressable></View>}
           </View>)}
           <TextInput value={contributorDraft[project.id] ?? ''} onChangeText={(value) => setContributorDraft((current) => ({ ...current, [project.id]: value }))} placeholder="Nama kontributor" placeholderTextColor={colors.muted} style={styles.input} />
           <Pressable onPress={() => void addContribution(project.id)} disabled={saving} style={styles.secondary}><Text style={styles.secondaryText}>Catat kontributor</Text></Pressable>
@@ -222,6 +253,7 @@ const styles = StyleSheet.create({
   secondaryText: { color: colors.primaryDark, fontSize: 10, fontWeight: '900' },
   deleteAction: { alignSelf: 'flex-start', marginTop: 8 },
   actionRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 8 },
+  inlineEditor: { marginTop: 8, gap: 5 },
   actionText: { color: colors.primaryDark, fontSize: 9, fontWeight: '900' },
   deleteText: { color: colors.danger, fontSize: 9, fontWeight: '900' },
 });
