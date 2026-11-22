@@ -30,6 +30,7 @@ urlpatterns = [
     path("app-state/", CurrentAppStateView.as_view(), name="app-state"),
     path("learning/", include("apps.learning.urls")),
     path("career/", include("apps.career.urls")),
+    path("research/", include("apps.research.urls")),
     path("growth/", include("apps.growth.urls")),
     path("nexverse/", include("apps.nexverse.urls")),
     path("gamification/", include("apps.gamification.urls")),
