@@ -9,7 +9,7 @@ def install_postgresql_immutability_trigger(apps, schema_editor):
         return
     schema_editor.execute("""
         CREATE OR REPLACE FUNCTION growth_evidence_event_immutable()
-        RETURNS trigger AS $
+        RETURNS trigger AS $growth$
         BEGIN
             IF pg_trigger_depth() > 1 THEN
                 RETURN OLD;
