@@ -16,6 +16,7 @@ class LearningEvidenceService:
         from django.utils import timezone
 
         from apps.academic.models import AcademicCourseCompletion
+        from apps.career.models import CareerExperience, CareerProject
         from apps.growth.models import (
             GrowthEvidenceEvent,
             GrowthGoal,
@@ -124,6 +125,55 @@ class LearningEvidenceService:
                     "mastery": None,
                     "relatedMilestones": [],
                 })
+
+        career_experiences = CareerExperience.objects.filter(
+            user=user, deleted_at__isnull=True,
+        ).order_by("-start_date", "-created_at")
+        for experience in career_experiences:
+            items.append({
+                "id": f"career-experience:{experience.id}",
+                "occurredAt": experience.created_at.isoformat(),
+                "domain": "career",
+                "kind": "professional_experience",
+                "title": experience.role_title,
+                "description": experience.organization_name,
+                "source": {
+                    "type": "self_reported_career_record",
+                    "employmentType": experience.employment_type,
+                    "startDate": experience.start_date.isoformat(),
+                    "endDate": experience.end_date.isoformat() if experience.end_date else None,
+                    "isCurrent": experience.is_current,
+                },
+                "competency": None,
+                "status": "self_reported",
+                "mastery": None,
+                "relatedMilestones": [],
+            })
+
+        career_projects = CareerProject.objects.filter(
+            user=user, deleted_at__isnull=True,
+        ).order_by("-updated_at", "-created_at")
+        for project in career_projects:
+            items.append({
+                "id": f"career-project:{project.id}",
+                "occurredAt": project.created_at.isoformat(),
+                "domain": "career",
+                "kind": "portfolio_project",
+                "title": project.title,
+                "description": project.summary,
+                "source": {
+                    "type": "self_reported_portfolio",
+                    "role": project.role,
+                    "skills": project.skills,
+                    "artifactUrl": project.artifact_url or None,
+                    "visibility": project.visibility,
+                    "projectStatus": project.status,
+                },
+                "competency": None,
+                "status": "self_reported",
+                "mastery": None,
+                "relatedMilestones": [],
+            })
 
         mastery_items = LearningMastery.objects.filter(
             user=user,
@@ -254,12 +304,12 @@ class LearningEvidenceService:
                 "journalContentIncluded": False,
                 "habitNotesIncluded": False,
                 "privateReflectionsIncluded": False,
-                "organizationAccessGranted": False,
+                "organizationAccessGranted": False,\n                "careerRecordsIncluded": True,\n                "careerRecordsShared": False,
             },
             "limitations": [
                 "Activity records describe recorded evidence, not a complete measure of personal development.",
                 "Learning evidence, growth activity and explicit mastery assessments remain distinct.",
-                "Academic, career and external records appear only when an authorized source has written them to the evidence registry.",
+                "Career experience and portfolio entries are self-reported records, not independently verified credentials.\",\n                "Academic and external records appear only when an authorized source has written them to the evidence registry.",
             ],
         }
 
