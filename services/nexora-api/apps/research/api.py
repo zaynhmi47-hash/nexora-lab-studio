@@ -124,3 +124,57 @@ class ResearchContributionListView(APIView):
         except ResearchProject.DoesNotExist:
             return Response({"detail": "Research project not found."}, status=404)
         return Response(ResearchContributionSerializer(item).data, status=status.HTTP_201_CREATED)
+
+
+class ResearchOutputDetailView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, project_id, output_id):
+        serializer = ResearchOutputSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        try:
+            output = ResearchService.update_output(
+                user=request.user, project_id=project_id, output_id=output_id,
+                **serializer.validated_data,
+            )
+        except (ResearchProject.DoesNotExist, ResearchOutput.DoesNotExist):
+            return Response({"detail": "Research output not found."}, status=404)
+        except ValidationError as exc:
+            return Response({"detail": exc.message_dict if hasattr(exc, "message_dict") else exc.messages}, status=400)
+        return Response(ResearchOutputSerializer(output).data)
+
+    def delete(self, request, project_id, output_id):
+        try:
+            ResearchService.delete_output(user=request.user, project_id=project_id, output_id=output_id)
+        except (ResearchProject.DoesNotExist, ResearchOutput.DoesNotExist):
+            return Response({"detail": "Research output not found."}, status=404)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ResearchContributionDetailView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, project_id, contribution_id):
+        serializer = ResearchContributionSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        try:
+            item = ResearchService.update_contribution(
+                user=request.user, project_id=project_id, contribution_id=contribution_id,
+                **serializer.validated_data,
+            )
+        except (ResearchProject.DoesNotExist, ResearchContribution.DoesNotExist):
+            return Response({"detail": "Research contribution not found."}, status=404)
+        except ValidationError as exc:
+            return Response({"detail": exc.message_dict if hasattr(exc, "message_dict") else exc.messages}, status=400)
+        return Response(ResearchContributionSerializer(item).data)
+
+    def delete(self, request, project_id, contribution_id):
+        try:
+            ResearchService.delete_contribution(
+                user=request.user, project_id=project_id, contribution_id=contribution_id,
+            )
+        except (ResearchProject.DoesNotExist, ResearchContribution.DoesNotExist):
+            return Response({"detail": "Research contribution not found."}, status=404)
+        return Response(status=status.HTTP_204_NO_CONTENT)
