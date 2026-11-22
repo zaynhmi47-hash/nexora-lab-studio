@@ -200,6 +200,8 @@ class GrowthEvidenceEvent(models.Model):
         HABIT_CREATED = "habit.created", "Habit created"
         HABIT_CHECK_IN_RECORDED = "habit.check_in_recorded", "Habit check-in recorded"
         HABIT_CHECK_IN_CHANGED = "habit.check_in_changed", "Habit check-in changed"
+        MILESTONE_CREATED = "milestone.created", "Milestone created"
+        MILESTONE_STATUS_CHANGED = "milestone.status_changed", "Milestone status changed"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
@@ -242,6 +244,8 @@ class GrowthEvidenceEvent(models.Model):
 
     def __str__(self):
         return f"{self.event_type}:{self.subject_type}:{self.subject_id}"
+
+
 
 class GrowthMilestone(AuditableBaseModel):
     class Pillar(models.TextChoices):
