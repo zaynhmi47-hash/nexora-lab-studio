@@ -1,5 +1,5 @@
 from apps.academic.models.classroom import AcademicClassroom
-from apps.academic.models.course import AcademicCourse
+from apps.academic.models.course import AcademicCourse, AcademicCourseOutcomeMapping
 from apps.academic.models.curriculum import AcademicCurriculumCourse
 from apps.academic.models.enrollment import AcademicEnrollment
 from apps.academic.models.gradebook import (
@@ -17,7 +17,7 @@ from apps.academic.models.study_plan import AcademicStudyPlan, AcademicStudyPlan
 from apps.academic.models.term import AcademicTerm
 
 __all__ = [
-    "AcademicClassroom", "AcademicCourse", "AcademicCourseCompletion",
+    "AcademicClassroom", "AcademicCourse", "AcademicCourseCompletion", "AcademicCourseOutcomeMapping",
     "AcademicCourseOffering", "AcademicCoursePrerequisite", "AcademicOfferingSchedule",
     "AcademicCurriculumCourse", "AcademicEnrollment", "AcademicProgram",
     "AcademicStudyPlan", "AcademicStudyPlanItem", "AcademicTerm",
