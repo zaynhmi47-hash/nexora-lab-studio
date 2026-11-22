@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
@@ -274,3 +275,21 @@ class ResearchEvidenceVerificationService:
         return ResearchEvidenceVerification.objects.filter(
             output=output, deleted_at__isnull=True,
         ).prefetch_related("events")
+
+    @staticmethod
+    def list_for_reviewer(*, actor, organization):
+        decision = authorize(
+            user=actor,
+            organization=organization,
+            permission_code=ResearchEvidenceVerificationService.PERMISSION_CODE,
+        )
+        if not decision.allowed:
+            raise PermissionDenied("The actor lacks the research.evidence.verify permission in this organization.")
+        return ResearchEvidenceVerification.objects.filter(
+            Q(status=ResearchEvidenceVerification.Status.SUBMITTED)
+            | Q(status=ResearchEvidenceVerification.Status.UNDER_REVIEW, reviewer=actor),
+            organization=organization,
+            deleted_at__isnull=True,
+            output__deleted_at__isnull=True,
+            output__project__deleted_at__isnull=True,
+        ).select_related("output", "output__project", "submitted_by", "reviewer").prefetch_related("events")
