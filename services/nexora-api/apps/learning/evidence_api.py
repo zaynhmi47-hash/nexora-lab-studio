@@ -89,13 +89,16 @@ class LearningDevelopmentJourneyView(APIView):
     def get(self, request):
         raw_window = request.query_params.get("window", "30")
         raw_limit = request.query_params.get("limit", "100")
+        raw_offset = request.query_params.get("offset", "0")
         try:
             window_days = int(raw_window)
             limit = int(raw_limit)
+            offset = int(raw_offset)
             journey = LearningEvidenceService.development_journey(
                 user=request.user,
                 window_days=window_days,
                 limit=limit,
+                offset=offset,
             )
         except (TypeError, ValueError) as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
