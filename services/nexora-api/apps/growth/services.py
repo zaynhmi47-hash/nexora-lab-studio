@@ -1,8 +1,9 @@
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
+from datetime import timedelta
 
-from .models import GrowthGoal, GrowthJournalEntry
+from .models import GrowthGoal, GrowthHabit, GrowthHabitCheckIn, GrowthJournalEntry
 
 
 class GrowthService:
@@ -71,11 +72,6 @@ class GrowthService:
         if entry is None:
             raise GrowthJournalEntry.DoesNotExist
         entry.soft_delete()
-
-
-from datetime import timedelta
-
-from .models import GrowthHabit, GrowthHabitCheckIn
 
 
 class GrowthHabitService:
