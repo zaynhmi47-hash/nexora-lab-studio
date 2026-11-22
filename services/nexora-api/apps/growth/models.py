@@ -242,3 +242,132 @@ class GrowthEvidenceEvent(models.Model):
 
     def __str__(self):
         return f"{self.event_type}:{self.subject_type}:{self.subject_id}"
+
+class GrowthMilestone(AuditableBaseModel):
+    class Pillar(models.TextChoices):
+        SELF_AWARENESS = "self_awareness", "Self-awareness"
+        INTELLECTUAL = "intellectual", "Intellectual growth"
+        SKILLS = "skills", "Skills and competence"
+        HABITS = "habits", "Habits and discipline"
+        SOCIAL_EMOTIONAL = "social_emotional", "Emotional and social"
+        WELLNESS = "wellness", "Wellness"
+        CREATIVITY = "creativity", "Creativity"
+        CAREER_FINANCE = "career_finance", "Career and finance"
+        LEADERSHIP = "leadership", "Leadership and contribution"
+        VALUES_PURPOSE = "values_purpose", "Values and purpose"
+
+    class Status(models.TextChoices):
+        PLANNED = "planned", "Planned"
+        IN_PROGRESS = "in_progress", "In progress"
+        ACHIEVED = "achieved", "Achieved"
+        PAUSED = "paused", "Paused"
+        CANCELLED = "cancelled", "Cancelled"
+
+    user = models.ForeignKey(NexoraUser, on_delete=models.CASCADE, related_name="growth_milestones")
+    title = models.CharField(max_length=180)
+    description = models.TextField(blank=True)
+    pillar = models.CharField(max_length=24, choices=Pillar.choices)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PLANNED)
+    success_criteria = models.JSONField(default=list, blank=True)
+    target_date = models.DateField(null=True, blank=True)
+    achieved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "growth_milestones"
+        ordering = ("status", "target_date", "-created_at")
+        indexes = [
+            models.Index(fields=("user", "pillar", "status"), name="growth_milestone_pillar_idx"),
+            models.Index(fields=("user", "target_date"), name="growth_milestone_target_idx"),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(status="achieved") | models.Q(achieved_at__isnull=False),
+                name="growth_milestone_achieved_at_ck",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if not isinstance(self.success_criteria, list) or any(
+            not isinstance(item, str) or not item.strip() for item in self.success_criteria
+        ):
+            raise ValidationError({"success_criteria": "Each success criterion must be a non-empty string."})
+
+    def __str__(self):
+        return self.title
+
+
+class GrowthMilestoneEvidence(models.Model):
+    milestone = models.ForeignKey(GrowthMilestone, on_delete=models.CASCADE, related_name="evidence_links")
+    evidence_event = models.ForeignKey(
+        GrowthEvidenceEvent, on_delete=models.CASCADE, related_name="milestone_links",
+    )
+    user = models.ForeignKey(NexoraUser, on_delete=models.CASCADE, related_name="growth_milestone_evidence")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "growth_milestone_evidence"
+        ordering = ("-created_at",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("milestone", "evidence_event"), name="growth_milestone_evidence_uniq",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=("user", "-created_at"), name="growth_milestone_ev_user_idx"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.milestone_id and self.evidence_event_id:
+            if self.milestone.user_id != self.user_id or self.evidence_event.user_id != self.user_id:
+                raise ValidationError("Milestone evidence must belong to the same account.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+
+class GrowthDevelopmentReview(models.Model):
+    class Period(models.TextChoices):
+        WEEKLY = "weekly", "Weekly"
+        MONTHLY = "monthly", "Monthly"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(NexoraUser, on_delete=models.CASCADE, related_name="growth_development_reviews")
+    period = models.CharField(max_length=8, choices=Period.choices)
+    period_start = models.DateField()
+    period_end = models.DateField()
+    evidence_count = models.PositiveIntegerField(default=0)
+    achieved_milestone_count = models.PositiveIntegerField(default=0)
+    active_milestone_count = models.PositiveIntegerField(default=0)
+    pillar_activity = models.JSONField(default=dict, blank=True)
+    reflection = models.TextField(blank=True)
+    next_steps = models.JSONField(default=list, blank=True)
+    generated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "growth_development_reviews"
+        ordering = ("-period_end", "-generated_at")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("user", "period", "period_start", "period_end"),
+                name="growth_development_review_period_uniq",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(period_end__gte=models.F("period_start")),
+                name="growth_development_review_dates_ck",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=("user", "-period_end"), name="growth_review_user_end_idx"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if not isinstance(self.pillar_activity, dict):
+            raise ValidationError({"pillar_activity": "Pillar activity must be an object."})
+        if not isinstance(self.next_steps, list) or any(
+            not isinstance(item, str) or not item.strip() for item in self.next_steps
+        ):
+            raise ValidationError({"next_steps": "Next steps must be a list of non-empty strings."})
