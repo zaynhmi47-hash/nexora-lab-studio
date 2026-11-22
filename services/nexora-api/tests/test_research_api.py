@@ -266,3 +266,47 @@ def test_research_evidence_reviewer_without_permission_is_denied():
     transition_url = f"{base_url}{submitted.json()['id']}/transition/"
     denied = reviewer_client.post(transition_url, {"status": "under_review"}, format="json")
     assert denied.status_code == 403
+
+
+@pytest.mark.django_db
+def test_research_verification_queue_is_limited_to_authorized_organization_reviewers():
+    from apps.access.models import Permission, Role, RolePermission
+    from apps.organizations.models import Membership, Organization
+
+    owner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="research-queue-owner@example.com")
+    reviewer = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="research-queue-reviewer@example.com")
+    observer = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="research-queue-observer@example.com")
+    project = ResearchProject.objects.create(owner=owner, title="Queue privacy")
+    output = ResearchOutput.objects.create(project=project, title="Private report", abstract="Consented review content")
+    organization = Organization.objects.create(name="Queue Review Board", slug="queue-review-board")
+    owner_role = Role.objects.create(organization=organization, name="Member", slug="member")
+    reviewer_role = Role.objects.create(organization=organization, name="Reviewer", slug="reviewer")
+    observer_role = Role.objects.create(organization=organization, name="Observer", slug="observer")
+    Membership.objects.create(user=owner, organization=organization, role=owner_role)
+    Membership.objects.create(user=reviewer, organization=organization, role=reviewer_role)
+    Membership.objects.create(user=observer, organization=organization, role=observer_role)
+    permission = Permission.objects.create(code="research.evidence.verify", name="Verify research evidence")
+    RolePermission.objects.create(role=reviewer_role, permission=permission)
+
+    owner_client = APIClient()
+    owner_client.force_authenticate(user=owner)
+    submitted = owner_client.post(
+        f"/api/v1/research/projects/{project.id}/outputs/{output.id}/verification/",
+        {"organization_id": str(organization.id), "consent": True},
+        format="json",
+    )
+    assert submitted.status_code == 201
+
+    queue_url = f"/api/v1/research/organizations/{organization.id}/verifications/"
+    reviewer_client = APIClient()
+    reviewer_client.force_authenticate(user=reviewer)
+    queue = reviewer_client.get(queue_url)
+    assert queue.status_code == 200
+    assert len(queue.json()) == 1
+    assert queue.json()[0]["output_title"] == "Private report"
+    assert queue.json()[0]["output_abstract"] == "Consented review content"
+
+    observer_client = APIClient()
+    observer_client.force_authenticate(user=observer)
+    denied = observer_client.get(queue_url)
+    assert denied.status_code == 403
