@@ -197,6 +197,7 @@ def test_published_lesson_content_is_available_to_unlocked_learner():
 def test_lesson_content_discloses_curated_competency_outcomes():
     from apps.learning.models import (
         LearningCompetency,
+        LearningLessonContent,
         LearningOutcome,
         LearningOutcomeLessonMapping,
     )
