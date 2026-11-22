@@ -303,3 +303,45 @@ def test_development_journey_includes_career_records_as_self_reported_only():
     assert payload["privacy"]["careerRecordsIncluded"] is True
     assert payload["privacy"]["careerRecordsShared"] is False
     assert payload["privacy"]["organizationAccessGranted"] is False
+
+
+@pytest.mark.django_db
+def test_development_journey_includes_research_records_without_private_research_content():
+    from apps.research.models import ResearchOutput, ResearchProject
+
+    user = NexoraUser.objects.create(
+        status=NexoraUser.Status.ACTIVE,
+        email="journey-research-owner@example.com",
+    )
+    project = ResearchProject.objects.create(
+        owner=user,
+        title="Community learning access",
+        abstract="Sensitive full abstract must not enter the timeline.",
+        research_question="Private research question",
+        field_of_study="Education",
+        methodology="Qualitative",
+    )
+    ResearchOutput.objects.create(
+        project=project,
+        title="Field research report",
+        output_type=ResearchOutput.OutputType.REPORT,
+        status=ResearchOutput.Status.DRAFT,
+    )
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.get("/api/v1/learning/journey/?window=30")
+
+    assert response.status_code == 200
+    payload = response.json()
+    research = [item for item in payload["items"] if item["domain"] == "research"]
+    assert len(research) == 2
+    assert {item["kind"] for item in research} == {"research_project", "research_output"}
+    assert all(item["status"] == "self_reported" for item in research)
+    assert all(item["mastery"] is None for item in research)
+    assert payload["privacy"]["researchRecordsIncluded"] is True
+    assert payload["privacy"]["researchRecordsShared"] is False
+    assert payload["privacy"]["organizationAccessGranted"] is False
+    serialized = str(research)
+    assert "Sensitive full abstract" not in serialized
+    assert "Private research question" not in serialized
