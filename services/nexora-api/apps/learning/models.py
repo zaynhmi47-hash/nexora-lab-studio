@@ -205,6 +205,7 @@ class LearningEvidence(AuditableBaseModel):
         PRACTICE = "practice", "Practical demonstration"
         REFLECTION = "reflection", "Reflection"
         OTHER = "other", "Other"
+        LEARNING_ACTIVITY = "learning_activity", "Recorded learning activity"
 
     class Status(models.TextChoices):
         PENDING = "pending", "Pending review"
@@ -361,4 +362,41 @@ class LearningEvidenceShare(AuditableBaseModel):
         ]
         indexes = [
             models.Index(fields=("organization", "revoked_at"), name="learn_ev_share_org_idx"),
+        ]
+
+
+class LearningOutcomeLessonMapping(AuditableBaseModel):
+    """Curated link between a lesson and the outcome it supports."""
+
+    class ContributionType(models.TextChoices):
+        INTRODUCED = "introduced", "Introduces"
+        PRACTICED = "practiced", "Practices"
+        ASSESSED = "assessed", "Assesses"
+
+    lesson = models.ForeignKey(
+        LearningLesson,
+        on_delete=models.PROTECT,
+        related_name="outcome_mappings",
+    )
+    outcome = models.ForeignKey(
+        LearningOutcome,
+        on_delete=models.PROTECT,
+        related_name="lesson_mappings",
+    )
+    contribution_type = models.CharField(
+        max_length=12,
+        choices=ContributionType.choices,
+        default=ContributionType.INTRODUCED,
+    )
+    is_active = models.BooleanField(default=True, db_index=True)
+
+    class Meta:
+        db_table = "learning_outcome_lesson_mappings"
+        ordering = ("lesson__course__sort_order", "lesson__sort_order", "outcome__sort_order")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("lesson", "outcome"),
+                condition=models.Q(deleted_at__isnull=True),
+                name="learning_lesson_outcome_map_uniq",
+            ),
         ]
