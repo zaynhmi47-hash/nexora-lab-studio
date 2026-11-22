@@ -9,6 +9,10 @@ from apps.learning.models import (
     LearningLesson,
     LearningLessonCompletion,
     LearningQuizQuestion,
+    LearningCompetency,
+    LearningOutcome,
+    LearningOutcomeLessonMapping,
+    LearningEvidence,
 )
 from apps.learning.services import LearningService, level_for_xp
 
@@ -120,3 +124,93 @@ def test_quiz_lesson_requires_a_passed_attempt_before_completion(user):
     assert result["passed"] is True
     progress = LearningService.complete_lesson(user, lesson.key)
     assert progress.xp == lesson.xp_reward
+
+
+@pytest.mark.django_db
+def test_completed_lesson_records_mapped_learning_activity_without_mastery(user):
+    course = LearningCourse.objects.create(key="mapped-course", title="Mapped course")
+    lesson = LearningLesson.objects.create(
+        key="mapped-lesson", course=course, title="Mapped lesson",
+    )
+    competency = LearningCompetency.objects.create(
+        key="communication", title="Communication", domain="skills", is_published=True,
+    )
+    outcome = LearningOutcome.objects.create(
+        key="clear-writing", competency=competency, title="Write clearly", is_published=True,
+    )
+    LearningOutcomeLessonMapping.objects.create(
+        lesson=lesson,
+        outcome=outcome,
+        contribution_type=LearningOutcomeLessonMapping.ContributionType.PRACTICED,
+    )
+
+    LearningService.complete_lesson(user, lesson.key)
+    LearningService.complete_lesson(user, lesson.key)
+
+    evidence = LearningEvidence.objects.get(user=user, outcome=outcome)
+    assert evidence.source_type == LearningEvidence.SourceType.LEARNING
+    assert evidence.evidence_type == LearningEvidence.EvidenceType.LEARNING_ACTIVITY
+    assert evidence.status == LearningEvidence.Status.PENDING
+    assert evidence.source_reference.startswith("lesson_completion:")
+    assert "not a mastery decision" in evidence.description
+    assert not hasattr(user, "learning_mastery") or not user.learning_mastery.exists()
+
+
+@pytest.mark.django_db
+def test_quiz_mapping_records_evidence_only_after_pass(user):
+    course = LearningCourse.objects.create(key="mapped-quiz-course", title="Mapped quiz course")
+    lesson = LearningLesson.objects.create(
+        key="mapped-assessment", course=course, title="Mapped assessment",
+        kind=LearningLesson.Kind.QUIZ,
+    )
+    competency = LearningCompetency.objects.create(
+        key="critical-thinking", title="Critical thinking", domain="intellectual", is_published=True,
+    )
+    outcome = LearningOutcome.objects.create(
+        key="evaluate-claims", competency=competency, title="Evaluate claims", is_published=True,
+    )
+    LearningOutcomeLessonMapping.objects.create(
+        lesson=lesson,
+        outcome=outcome,
+        contribution_type=LearningOutcomeLessonMapping.ContributionType.ASSESSED,
+    )
+    LearningQuizQuestion.objects.create(
+        lesson=lesson, key="mapped-assessment-question", prompt="Choose",
+        options=["Correct", "Incorrect"], correct_option_index=0,
+    )
+
+    failed = LearningService.complete_quiz(user, lesson.key, [1])
+    assert failed["passed"] is False
+    assert not LearningEvidence.objects.filter(user=user, outcome=outcome).exists()
+
+    passed = LearningService.complete_quiz(user, lesson.key, [0])
+    assert passed["passed"] is True
+    LearningService.complete_lesson(user, lesson.key)
+
+    evidence = LearningEvidence.objects.get(user=user, outcome=outcome)
+    assert evidence.source_type == LearningEvidence.SourceType.LEARNING
+    assert evidence.status == LearningEvidence.Status.PENDING
+    assert not user.learning_mastery.exists()
+
+
+@pytest.mark.django_db
+def test_assessed_mapping_does_not_turn_regular_lesson_into_evidence(user):
+    course = LearningCourse.objects.create(key="not-assessed-course", title="Not assessed")
+    lesson = LearningLesson.objects.create(
+        key="not-assessed-lesson", course=course, title="Reading",
+    )
+    competency = LearningCompetency.objects.create(
+        key="analysis", title="Analysis", domain="intellectual", is_published=True,
+    )
+    outcome = LearningOutcome.objects.create(
+        key="analyze-sources", competency=competency, title="Analyze sources", is_published=True,
+    )
+    LearningOutcomeLessonMapping.objects.create(
+        lesson=lesson,
+        outcome=outcome,
+        contribution_type=LearningOutcomeLessonMapping.ContributionType.ASSESSED,
+    )
+
+    LearningService.complete_lesson(user, lesson.key)
+
+    assert not LearningEvidence.objects.filter(user=user, outcome=outcome).exists()
