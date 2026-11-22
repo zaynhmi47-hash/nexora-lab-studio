@@ -304,12 +304,15 @@ class LearningEvidenceService:
                 "journalContentIncluded": False,
                 "habitNotesIncluded": False,
                 "privateReflectionsIncluded": False,
-                "organizationAccessGranted": False,\n                "careerRecordsIncluded": True,\n                "careerRecordsShared": False,
+                "organizationAccessGranted": False,
+                "careerRecordsIncluded": True,
+                "careerRecordsShared": False,
             },
             "limitations": [
                 "Activity records describe recorded evidence, not a complete measure of personal development.",
                 "Learning evidence, growth activity and explicit mastery assessments remain distinct.",
-                "Career experience and portfolio entries are self-reported records, not independently verified credentials.\",\n                "Academic and external records appear only when an authorized source has written them to the evidence registry.",
+                "Career experience and portfolio entries are self-reported records, not independently verified credentials.",
+                "Academic and external records appear only when an authorized source has written them to the evidence registry.",
             ],
         }
 
