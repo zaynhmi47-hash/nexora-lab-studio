@@ -35,7 +35,9 @@ type JourneyResponse = {
     privateReflectionsIncluded: boolean;
     organizationAccessGranted: boolean;
     careerRecordsIncluded?: boolean;
-    careerRecordsShared?: boolean;\n    researchRecordsIncluded?: boolean;\n    researchRecordsShared?: boolean;
+    careerRecordsShared?: boolean;
+    researchRecordsIncluded?: boolean;
+    researchRecordsShared?: boolean;
   };
   limitations: string[];
 };
