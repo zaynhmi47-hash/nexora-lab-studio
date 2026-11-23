@@ -274,6 +274,7 @@ class LearningEvidenceService:
                             "outputType": output.output_type,
                             "verificationStatus": verification.status,
                             "organizationId": str(verification.organization_id),
+                            "organizationName": verification.organization.name,
                             "reviewerAttributed": verification.reviewer_id is not None,
                         },
                         "competency": {
