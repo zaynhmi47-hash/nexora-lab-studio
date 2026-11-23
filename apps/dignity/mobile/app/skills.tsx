@@ -196,7 +196,7 @@ export default function SkillsScreen() {
       <SectionHeading title="Cross-domain portfolio" subtitle="Your recorded development evidence across the last 90 days. Sources keep their own verification status." />
       <SurfaceCard style={styles.crossDomainCard}>
         <View style={styles.portfolioSummaryRow}>
-          <View><Text style={styles.portfolioTotal}>{journeyTotal}</Text><Text style={styles.detail}>Recorded activities · 90 days</Text></View>
+          <View><Text style={styles.portfolioTotal}>{journeyTotal}</Text><Text style={styles.detail}>Total recorded activities · 90 days</Text></View>
           <View><Text style={styles.portfolioTotal}>{domainSummary.length}</Text><Text style={styles.detail}>Active domains</Text></View>
         </View>
         {domainSummary.length === 0 ? <Text style={styles.detail}>No cross-domain activity has been recorded in this period yet.</Text> : <View style={styles.domainChips}>
