@@ -345,3 +345,93 @@ def test_development_journey_includes_research_records_without_private_research_
     serialized = str(research)
     assert "Sensitive full abstract" not in serialized
     assert "Private research question" not in serialized
+
+
+@pytest.mark.django_db
+def test_research_competency_journey_attributes_each_active_verification_and_excludes_revoked_cases():
+    from apps.research.models import (
+        ResearchEvidenceVerification,
+        ResearchOutput,
+        ResearchOutputOutcomeMapping,
+        ResearchProject,
+    )
+
+    owner = NexoraUser.objects.create(
+        status=NexoraUser.Status.ACTIVE,
+        email="journey-research-mapped-owner@example.com",
+    )
+    reviewer = NexoraUser.objects.create(
+        status=NexoraUser.Status.ACTIVE,
+        email="journey-research-reviewer@example.com",
+    )
+    outcome = make_outcome("journey-research-verified-outcome")
+    project = ResearchProject.objects.create(owner=owner, title="Verified research project")
+    output = ResearchOutput.objects.create(
+        project=project,
+        title="Verified field report",
+        output_type=ResearchOutput.OutputType.REPORT,
+    )
+    mapping = ResearchOutputOutcomeMapping(
+        output=output,
+        outcome=outcome,
+        created_by=owner,
+    )
+    mapping.full_clean()
+    mapping.save()
+
+    verified_cases = []
+    for index in (1, 2):
+        organization = OrganizationService.create_organization(
+            name=f"Research Verification Institution {index}",
+            created_by=owner,
+        )
+        case = ResearchEvidenceVerification(
+            output=output,
+            organization=organization,
+            submitted_by=owner,
+            reviewer=reviewer,
+            status=ResearchEvidenceVerification.Status.VERIFIED,
+            consented_at=timezone.now(),
+            reviewed_at=timezone.now(),
+        )
+        case.full_clean()
+        case.save()
+        verified_cases.append(case)
+
+    revoked_organization = OrganizationService.create_organization(
+        name="Withdrawn Research Institution",
+        created_by=owner,
+    )
+    revoked_case = ResearchEvidenceVerification(
+        output=output,
+        organization=revoked_organization,
+        submitted_by=owner,
+        status=ResearchEvidenceVerification.Status.REVOKED,
+        consented_at=timezone.now(),
+        decision_reason="Owner withdrew consent.",
+    )
+    revoked_case.full_clean()
+    revoked_case.save()
+
+    client = APIClient()
+    client.force_authenticate(user=owner)
+    response = client.get("/api/v1/learning/journey/?window=30")
+
+    assert response.status_code == 200
+    payload = response.json()
+    verified_items = [
+        item for item in payload["items"]
+        if item["kind"] == "verified_research_competency_evidence"
+    ]
+    assert len(verified_items) == 2
+    assert {item["source"]["verificationId"] for item in verified_items} == {
+        str(case.id) for case in verified_cases
+    }
+    assert {item["source"]["organizationId"] for item in verified_items} == {
+        str(case.organization_id) for case in verified_cases
+    }
+    assert all(item["competency"]["key"] == outcome.competency.key for item in verified_items)
+    assert all(item["mastery"] is None for item in verified_items)
+    assert str(revoked_case.id) not in {
+        item["source"]["verificationId"] for item in verified_items
+    }
