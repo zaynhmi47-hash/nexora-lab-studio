@@ -27,6 +27,18 @@ interface CompetencyCatalog {
   domain: string;
   outcomes: { key: string; title: string; description: string; proficiencyLevel: number }[];
 }
+interface JourneyItem {
+  id: string;
+  occurredAt: string;
+  domain: string;
+  kind: string;
+  title: string;
+  description: string | null;
+  status: string | null;
+  competency: { title: string; outcomeTitle: string } | null;
+  mastery: { level: number; status: string } | null;
+}
+interface JourneyResponse { items: JourneyItem[]; total: number; windowDays: number; }
 interface EvidenceItem {
   id: string;
   outcomeKey: string;
@@ -50,6 +62,8 @@ export default function SkillsScreen() {
   const [skills, setSkills] = useState<SkillOutcome[]>([]);
   const [catalog, setCatalog] = useState<CompetencyCatalog[]>([]);
   const [evidence, setEvidence] = useState<EvidenceItem[]>([]);
+  const [journeyItems, setJourneyItems] = useState<JourneyItem[]>([]);
+  const [journeyTotal, setJourneyTotal] = useState(0);
   const [selectedOutcome, setSelectedOutcome] = useState('');
   const [evidenceType, setEvidenceType] = useState('project');
   const [title, setTitle] = useState('');
@@ -73,17 +87,21 @@ export default function SkillsScreen() {
     setLoading(true);
     setError(null);
     try {
-      const [skillResponse, catalogResponse, evidenceResponse] = await Promise.all([
+      const [skillResponse, catalogResponse, evidenceResponse, journeyResponse] = await Promise.all([
         api.request<SkillOutcome[]>('/api/v1/learning/skills/'),
         api.request<CompetencyCatalog[]>('/api/v1/learning/competencies/'),
         api.request<EvidenceItem[]>('/api/v1/learning/evidence/'),
+        api.request<JourneyResponse>('/api/v1/learning/journey/?window=90&limit=100'),
       ]);
       const nextSkills = payload<SkillOutcome[]>(skillResponse);
       const nextCatalog = payload<CompetencyCatalog[]>(catalogResponse);
       const nextEvidence = payload<EvidenceItem[]>(evidenceResponse);
+      const nextJourney = payload<JourneyResponse>(journeyResponse);
       setSkills(Array.isArray(nextSkills) ? nextSkills : []);
       setCatalog(Array.isArray(nextCatalog) ? nextCatalog : []);
       setEvidence(Array.isArray(nextEvidence) ? nextEvidence : []);
+      setJourneyItems(Array.isArray(nextJourney?.items) ? nextJourney.items : []);
+      setJourneyTotal(typeof nextJourney?.total === 'number' ? nextJourney.total : 0);
       setSelectedOutcome((current) => current || nextCatalog?.flatMap((item) => item.outcomes)[0]?.key || '');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Unable to load your skill profile.');
@@ -93,6 +111,14 @@ export default function SkillsScreen() {
   }, [api]);
 
   useEffect(() => { void load(); }, [load]);
+
+  const domainSummary = useMemo(() => {
+    const counts = new Map<string, number>();
+    journeyItems.forEach((item) => counts.set(item.domain, (counts.get(item.domain) ?? 0) + 1));
+    return ['learning', 'academic', 'research', 'career', 'growth', 'assessment']
+      .map((domain) => ({ domain, count: counts.get(domain) ?? 0 }))
+      .filter((item) => item.count > 0);
+  }, [journeyItems]);
 
   const toggleEvidenceShare = useCallback(async (item: EvidenceItem) => {
     if (!organization) return;
@@ -165,6 +191,29 @@ export default function SkillsScreen() {
       </View>
       <Ionicons name="chevron-forward" size={16} color={colors.muted} />
     </Pressable>
+
+    <View style={styles.section}>
+      <SectionHeading title="Cross-domain portfolio" subtitle="Your recorded development evidence across the last 90 days. Sources keep their own verification status." />
+      <SurfaceCard style={styles.crossDomainCard}>
+        <View style={styles.portfolioSummaryRow}>
+          <View><Text style={styles.portfolioTotal}>{journeyTotal}</Text><Text style={styles.detail}>Recorded activities · 90 days</Text></View>
+          <View><Text style={styles.portfolioTotal}>{domainSummary.length}</Text><Text style={styles.detail}>Active domains</Text></View>
+        </View>
+        {domainSummary.length === 0 ? <Text style={styles.detail}>No cross-domain activity has been recorded in this period yet.</Text> : <View style={styles.domainChips}>
+          {domainSummary.map((item) => <View key={item.domain} style={styles.domainChip}><Text style={styles.domainChipTitle}>{item.domain}</Text><Text style={styles.domainChipCount}>{item.count}</Text></View>)}
+        </View>}
+        {journeyItems.slice(0, 5).map((item) => <View key={item.id} style={styles.portfolioEvent}>
+          <View style={styles.eventMarker} />
+          <View style={styles.flex}>
+            <Text style={styles.eventTitle}>{item.title}</Text>
+            <Text style={styles.detail}>{item.description ?? item.competency?.outcomeTitle ?? 'Development record'} · {item.domain}</Text>
+            {item.competency ? <Text style={styles.eventCompetency}>{item.competency.title} · {item.competency.outcomeTitle}</Text> : null}
+          </View>
+          {item.status ? <Text style={styles.eventStatus}>{item.status.replaceAll('_', ' ')}</Text> : null}
+        </View>)}
+        <Text style={styles.privacy}>This is an activity portfolio, not a mastery score. Private journals and habit notes are excluded; career and research records remain self-reported unless explicitly verified.</Text>
+      </SurfaceCard>
+    </View>
 
     <View style={styles.section}>
       <SectionHeading title="Competency outcomes" subtitle="Mastery appears only when an explicit assessment record exists." />
@@ -248,6 +297,18 @@ const styles = StyleSheet.create({
   title: { color: colors.ink, fontSize: 27, lineHeight: 33, fontWeight: '900', letterSpacing: -0.8, marginTop: 8 },
   subtitle: { color: colors.muted, fontSize: 13, lineHeight: 20, marginTop: 8, marginBottom: spacing.xl },
   principle: { flexDirection: 'row', gap: 12, backgroundColor: colors.primarySoft, borderColor: '#D5E5D9' },
+  crossDomainCard: { gap: 12 },
+  portfolioSummaryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: colors.line },
+  portfolioTotal: { color: colors.ink, fontSize: 22, fontWeight: '900' },
+  domainChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  domainChip: { flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: radius.pill, backgroundColor: colors.surfaceMuted, paddingHorizontal: 10, paddingVertical: 7 },
+  domainChipTitle: { color: colors.muted, fontSize: 9, fontWeight: '800', textTransform: 'capitalize' },
+  domainChipCount: { color: colors.ink, fontSize: 10, fontWeight: '900' },
+  portfolioEvent: { flexDirection: 'row', alignItems: 'flex-start', gap: 9, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.line },
+  eventMarker: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.primary, marginTop: 5 },
+  eventTitle: { color: colors.ink, fontSize: 11, fontWeight: '900' },
+  eventCompetency: { color: colors.primaryDark, fontSize: 9, fontWeight: '800', marginTop: 4 },
+  eventStatus: { color: colors.muted, fontSize: 8, fontWeight: '800', textTransform: 'capitalize', maxWidth: 75, textAlign: 'right' },
   principleTitle: { color: colors.ink, fontSize: 12, fontWeight: '900', marginBottom: 4 },
   flex: { flex: 1 },
   section: { marginTop: spacing.section },
