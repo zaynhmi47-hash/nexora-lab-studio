@@ -12,9 +12,10 @@ from .models import (
     ResearchEvidenceVerification,
     ResearchEvidenceVerificationEvent,
     ResearchOutput,
+    ResearchOutputOutcomeMapping,
     ResearchProject,
 )
-from .services import ResearchEvidenceVerificationService, ResearchService
+from .services import ResearchEvidenceVerificationService, ResearchOutputMappingService, ResearchService
 
 
 class ResearchProjectSerializer(serializers.ModelSerializer):
@@ -41,6 +42,22 @@ class ResearchContributionSerializer(serializers.ModelSerializer):
         fields = ("id", "contributor_name", "affiliation", "role", "contribution_type", "statement", "is_corresponding_author", "attribution_status", "created_at")
         read_only_fields = ("id", "attribution_status", "created_at")
 
+
+
+class ResearchOutputMappingCreateSerializer(serializers.Serializer):
+    outcome_key = serializers.SlugField(max_length=140)
+
+
+class ResearchOutputMappingSerializer(serializers.ModelSerializer):
+    outcome_key = serializers.CharField(source="outcome.key", read_only=True)
+    outcome_title = serializers.CharField(source="outcome.title", read_only=True)
+    competency_key = serializers.CharField(source="outcome.competency.key", read_only=True)
+    competency_title = serializers.CharField(source="outcome.competency.title", read_only=True)
+
+    class Meta:
+        model = ResearchOutputOutcomeMapping
+        fields = ("id", "outcome_key", "outcome_title", "competency_key", "competency_title", "created_at")
+        read_only_fields = fields
 
 class ResearchVerificationSubmitSerializer(serializers.Serializer):
     organization_id = serializers.UUIDField()
@@ -231,6 +248,43 @@ class ResearchContributionDetailView(APIView):
             )
         except (ResearchProject.DoesNotExist, ResearchContribution.DoesNotExist):
             return Response({"detail": "Research contribution not found."}, status=404)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+class ResearchOutputCompetencyMappingView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, project_id, output_id):
+        try:
+            output = ResearchService.get_output(user=request.user, project_id=project_id, output_id=output_id)
+        except (ResearchProject.DoesNotExist, ResearchOutput.DoesNotExist):
+            return Response({"detail": "Research output not found."}, status=404)
+        mappings = ResearchOutputMappingService.list_for_owner(user=request.user, output=output)
+        return Response(ResearchOutputMappingSerializer(mappings, many=True).data)
+
+    def post(self, request, project_id, output_id):
+        serializer = ResearchOutputMappingCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            output = ResearchService.get_output(user=request.user, project_id=project_id, output_id=output_id)
+            mapping = ResearchOutputMappingService.create(
+                user=request.user, output=output,
+                outcome_key=serializer.validated_data["outcome_key"],
+            )
+        except (ResearchProject.DoesNotExist, ResearchOutput.DoesNotExist):
+            return Response({"detail": "Research output not found."}, status=404)
+        except ValidationError as exc:
+            return Response({"detail": exc.detail if hasattr(exc, "detail") else exc.messages}, status=400)
+        return Response(ResearchOutputMappingSerializer(mapping).data, status=status.HTTP_201_CREATED)
+
+    def delete(self, request, project_id, output_id, mapping_id):
+        try:
+            output = ResearchService.get_output(user=request.user, project_id=project_id, output_id=output_id)
+            ResearchOutputMappingService.delete(user=request.user, output=output, mapping_id=mapping_id)
+        except (ResearchProject.DoesNotExist, ResearchOutput.DoesNotExist, ResearchOutputOutcomeMapping.DoesNotExist):
+            return Response({"detail": "Research output mapping not found."}, status=404)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
