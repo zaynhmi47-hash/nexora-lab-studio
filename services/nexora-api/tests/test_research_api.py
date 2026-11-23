@@ -357,3 +357,87 @@ def test_research_output_owner_can_withdraw_consent_and_remove_case_from_review_
     queue = reviewer_client.get(f"/api/v1/research/organizations/{organization.id}/verifications/")
     assert queue.status_code == 200
     assert queue.json() == []
+
+
+@pytest.mark.django_db
+def test_verified_research_output_can_be_mapped_to_competency_and_appears_in_private_journey():
+    from django.utils import timezone
+    from apps.learning.models import LearningCompetency, LearningOutcome
+    from apps.organizations.models import Organization
+    from apps.research.models import ResearchEvidenceVerification
+
+    owner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="research-map-owner@example.com")
+    reviewer = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="research-map-reviewer@example.com")
+    project = ResearchProject.objects.create(owner=owner, title="Verified research mapping")
+    output = ResearchOutput.objects.create(project=project, title="Verified report", output_type="report")
+    organization = Organization.objects.create(name="Mapping Review Institute", slug="mapping-review-institute")
+    ResearchEvidenceVerification.objects.create(
+        output=output,
+        organization=organization,
+        submitted_by=owner,
+        reviewer=reviewer,
+        status=ResearchEvidenceVerification.Status.VERIFIED,
+        consented_at=timezone.now(),
+        reviewed_at=timezone.now(),
+        decision_reason="Source and authorship checked.",
+    )
+    competency = LearningCompetency.objects.create(
+        key="research-methods",
+        title="Research methods",
+        domain="research",
+        is_published=True,
+    )
+    outcome = LearningOutcome.objects.create(
+        key="research-methods-analysis",
+        competency=competency,
+        title="Analyze research findings",
+        proficiency_level=3,
+        is_published=True,
+    )
+    client = APIClient()
+    client.force_authenticate(user=owner)
+    mapping_url = f"/api/v1/research/projects/{project.id}/outputs/{output.id}/competency-mappings/"
+    mapped = client.post(mapping_url, {"outcome_key": outcome.key}, format="json")
+    assert mapped.status_code == 201
+    assert mapped.json()["competency_key"] == competency.key
+
+    journey = client.get("/api/v1/learning/journey/?window=30")
+    assert journey.status_code == 200
+    linked = [item for item in journey.json()["items"] if item["kind"] == "verified_research_competency_evidence"]
+    assert len(linked) == 1
+    assert linked[0]["competency"]["outcomeKey"] == outcome.key
+    assert linked[0]["status"] == "verified_evidence"
+    assert linked[0]["mastery"] is None
+    assert linked[0]["source"]["reviewerAttributed"] is True
+
+
+@pytest.mark.django_db
+def test_unverified_research_output_cannot_be_mapped_and_mapping_is_owner_scoped():
+    from apps.learning.models import LearningCompetency, LearningOutcome
+
+    owner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="research-map-unverified-owner@example.com")
+    other = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="research-map-unverified-other@example.com")
+    project = ResearchProject.objects.create(owner=owner, title="Unverified research mapping")
+    output = ResearchOutput.objects.create(project=project, title="Unverified report")
+    competency = LearningCompetency.objects.create(
+        key="unverified-research",
+        title="Research",
+        domain="research",
+        is_published=True,
+    )
+    outcome = LearningOutcome.objects.create(
+        key="unverified-research-outcome",
+        competency=competency,
+        title="Describe research",
+        is_published=True,
+    )
+    client = APIClient()
+    client.force_authenticate(user=owner)
+    mapping_url = f"/api/v1/research/projects/{project.id}/outputs/{output.id}/competency-mappings/"
+    rejected = client.post(mapping_url, {"outcome_key": outcome.key}, format="json")
+    assert rejected.status_code == 400
+
+    other_client = APIClient()
+    other_client.force_authenticate(user=other)
+    denied = other_client.get(mapping_url)
+    assert denied.status_code == 404
