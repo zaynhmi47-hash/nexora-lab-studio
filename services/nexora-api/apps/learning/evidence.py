@@ -244,18 +244,18 @@ class LearningEvidenceService:
                 outcome__competency__deleted_at__isnull=True,
                 outcome__competency__is_published=True,
             ).select_related("outcome", "outcome__competency")
+            # A mapping is evidence only while an explicit organization verification
+            # remains active. Emit one attributed event per verified organization;
+            # never let a revoked case shadow or impersonate another review.
+            verifications = output.verification_cases.filter(
+                status=ResearchEvidenceVerification.Status.VERIFIED,
+                deleted_at__isnull=True,
+                organization__status="active",
+                organization__deleted_at__isnull=True,
+            ).select_related("organization", "reviewer").order_by(
+                "-reviewed_at", "-created_at", "id",
+            )
             for mapping in verified_mappings:
-                # A mapping is evidence only while an explicit organization verification
-                # remains active. Emit one attributed event per verified organization;
-                # never let a revoked case shadow or impersonate another review.
-                verifications = output.verification_cases.filter(
-                    status=ResearchEvidenceVerification.Status.VERIFIED,
-                    deleted_at__isnull=True,
-                    organization__status="active",
-                    organization__deleted_at__isnull=True,
-                ).select_related("organization", "reviewer").order_by(
-                    "-reviewed_at", "-created_at", "id",
-                )
                 for verification in verifications:
                     items.append({
                         "id": (
