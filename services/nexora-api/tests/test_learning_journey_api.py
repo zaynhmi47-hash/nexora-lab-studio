@@ -431,6 +431,9 @@ def test_research_competency_journey_attributes_each_active_verification_and_exc
         str(case.organization_id) for case in verified_cases
     }
     assert all(item["competency"]["key"] == outcome.competency.key for item in verified_items)
+    assert {item["source"]["organizationName"] for item in verified_items} == {
+        case.organization.name for case in verified_cases
+    }
     assert all(item["mastery"] is None for item in verified_items)
     assert str(revoked_case.id) not in {
         item["source"]["verificationId"] for item in verified_items
