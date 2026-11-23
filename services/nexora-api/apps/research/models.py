@@ -178,3 +178,42 @@ class ResearchEvidenceVerificationEvent(AuditableBaseModel):
 
     def soft_delete(self):
         raise ValidationError("Verification audit events cannot be deleted.")
+
+
+
+class ResearchOutputOutcomeMapping(AuditableBaseModel):
+    """Owner-curated link from a verified research output to a published learning outcome."""
+
+    output = models.ForeignKey(
+        ResearchOutput, on_delete=models.PROTECT, related_name="outcome_mappings",
+    )
+    outcome = models.ForeignKey(
+        "learning.LearningOutcome", on_delete=models.PROTECT, related_name="research_output_mappings",
+    )
+    created_by = models.ForeignKey(
+        NexoraUser, on_delete=models.PROTECT, related_name="research_outcome_mappings",
+    )
+
+    class Meta:
+        db_table = "research_output_outcome_mappings"
+        ordering = ("created_at",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("output", "outcome"),
+                condition=models.Q(deleted_at__isnull=True),
+                name="research_output_outcome_unique",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=("outcome", "created_at"), name="research_map_outcome_date_idx"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.output_id and self.created_by_id and self.output.project.owner_id != self.created_by_id:
+            raise ValidationError({"created_by": "Only the research output owner can map its competency outcome."})
+        if self.outcome_id and (
+            not self.outcome.is_published or self.outcome.deleted_at is not None
+            or not self.outcome.competency.is_published or self.outcome.competency.deleted_at is not None
+        ):
+            raise ValidationError({"outcome": "Only published competency outcomes can be linked."})
