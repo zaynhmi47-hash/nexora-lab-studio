@@ -15,7 +15,7 @@ type JourneyItem = {
   kind: string;
   title: string;
   description: string | null;
-  source: { type: string; reference?: string; evidenceType?: string; assessmentMethod?: string; contributionType?: string; verifierAttributed?: boolean; employmentType?: string; startDate?: string; endDate?: string | null; isCurrent?: boolean; role?: string; skills?: string[]; artifactUrl?: string | null; visibility?: string; projectStatus?: string; fieldOfStudy?: string; methodology?: string; outputType?: string; publicationStatus?: string; provenanceStatus?: string; verificationStatus?: string; organizationId?: string; reviewerAttributed?: boolean; hasDoi?: boolean; hasResourceUrl?: boolean };
+  source: { type: string; reference?: string; evidenceType?: string; assessmentMethod?: string; contributionType?: string; verifierAttributed?: boolean; employmentType?: string; startDate?: string; endDate?: string | null; isCurrent?: boolean; role?: string; skills?: string[]; artifactUrl?: string | null; visibility?: string; projectStatus?: string; fieldOfStudy?: string; methodology?: string; outputType?: string; publicationStatus?: string; provenanceStatus?: string; verificationStatus?: string; verificationId?: string; organizationId?: string; organizationName?: string; reviewerAttributed?: boolean; hasDoi?: boolean; hasResourceUrl?: boolean };
   competency: { key: string; title: string; outcomeKey: string; outcomeTitle: string } | null;
   status: string | null;
   mastery: { level: number; status: string } | null;
@@ -173,6 +173,7 @@ export default function DevelopmentJourneyScreen() {
                 <View style={styles.flex}>
                   <Text style={styles.verifiedResearchTitle}>Organization-verified research evidence</Text>
                   <Text style={styles.detail}>Verified source linked to this outcome. This is evidence provenance, not an automatic mastery decision.</Text>
+                  {item.source.organizationName ? <Text style={styles.source}>Verified by · {item.source.organizationName}</Text> : null}
                   {item.source.reviewerAttributed ? <Text style={styles.source}>Reviewer attribution recorded</Text> : null}
                 </View>
               </View>
