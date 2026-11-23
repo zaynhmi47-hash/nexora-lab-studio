@@ -15,7 +15,7 @@ type JourneyItem = {
   kind: string;
   title: string;
   description: string | null;
-  source: { type: string; reference?: string; verificationStatus?: string; organizationId?: string; reviewerAttributed?: boolean; evidenceType?: string; assessmentMethod?: string; contributionType?: string; verifierAttributed?: boolean; employmentType?: string; startDate?: string; endDate?: string | null; isCurrent?: boolean; role?: string; skills?: string[]; artifactUrl?: string | null; visibility?: string; projectStatus?: string; fieldOfStudy?: string; methodology?: string; outputType?: string; publicationStatus?: string; provenanceStatus?: string; verificationStatus?: string; organizationId?: string; reviewerAttributed?: boolean; hasDoi?: boolean; hasResourceUrl?: boolean };
+  source: { type: string; reference?: string; evidenceType?: string; assessmentMethod?: string; contributionType?: string; verifierAttributed?: boolean; employmentType?: string; startDate?: string; endDate?: string | null; isCurrent?: boolean; role?: string; skills?: string[]; artifactUrl?: string | null; visibility?: string; projectStatus?: string; fieldOfStudy?: string; methodology?: string; outputType?: string; publicationStatus?: string; provenanceStatus?: string; verificationStatus?: string; organizationId?: string; reviewerAttributed?: boolean; hasDoi?: boolean; hasResourceUrl?: boolean };
   competency: { key: string; title: string; outcomeKey: string; outcomeTitle: string } | null;
   status: string | null;
   mastery: { level: number; status: string } | null;
