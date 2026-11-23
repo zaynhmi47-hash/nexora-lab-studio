@@ -16,6 +16,9 @@ type Project = {
 };
 type Output = { id: string; title: string; output_type: string; status: string; provenance_status: string };
 type Contribution = { id: string; contributor_name: string; role: string; contribution_type: string; attribution_status: string };
+type OutcomeOption = { key: string; title: string; competencyTitle: string };
+type OutputMapping = { id: string; outcome_key: string; outcome_title: string; competency_key: string; competency_title: string };
+type CompetencyGroup = { title: string; outcomes: { key: string; title: string }[] };
 type VerificationEvent = { id: string; from_status: string; to_status: string; reason: string; created_at: string };
 type Verification = { id: string; organization_id: string; status: string; reviewer_id: string | null; decision_reason: string; events: VerificationEvent[]; created_at: string };
 function payload<T>(response: unknown): T {
@@ -30,6 +33,9 @@ export default function ResearchScreen() {
   const [outputs, setOutputs] = useState<Record<string, Output[]>>({});
   const [contributions, setContributions] = useState<Record<string, Contribution[]>>({});
   const [verifications, setVerifications] = useState<Record<string, Verification[]>>({});
+  const [mappings, setMappings] = useState<Record<string, OutputMapping[]>>({});
+  const [outcomeOptions, setOutcomeOptions] = useState<OutcomeOption[]>([]);
+  const [mappingDrafts, setMappingDrafts] = useState<Record<string, string>>({});
   const [title, setTitle] = useState('');
   const [question, setQuestion] = useState('');
   const [field, setField] = useState('');
@@ -68,6 +74,19 @@ export default function ResearchScreen() {
         return [item.id, Array.isArray(result) ? result : []] as const;
       })));
       setVerifications(Object.fromEntries(verificationRows));
+      const mappingRows = await Promise.all(details.flatMap(([projectId, rows]) => rows.map(async (item) => {
+        const response = await api.request<OutputMapping[]>('/api/v1/research/projects/' + projectId + '/outputs/' + item.id + '/competency-mappings/');
+        const result = payload<OutputMapping[]>(response);
+        return [item.id, Array.isArray(result) ? result : []] as const;
+      })));
+      setMappings(Object.fromEntries(mappingRows));
+      const catalogResponse = await api.request<CompetencyGroup[]>('/api/v1/learning/competencies/');
+      const catalog = payload<CompetencyGroup[]>(catalogResponse);
+      setOutcomeOptions((Array.isArray(catalog) ? catalog : []).flatMap((group) =>
+        (group.outcomes ?? []).map((outcome) => ({
+          key: outcome.key, title: outcome.title, competencyTitle: group.title,
+        })),
+      ));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Tidak dapat memuat data penelitian.');
     } finally { setLoading(false); }
@@ -120,6 +139,32 @@ export default function ResearchScreen() {
     finally { setSaving(false); }
   }, [api, contributorDraft, load]);
 
+
+
+  const addCompetencyMapping = useCallback(async (projectId: string, outputId: string) => {
+    const outcomeKey = (mappingDrafts[outputId] ?? '').trim();
+    if (!outcomeKey) { setError('Pilih atau masukkan outcome key kompetensi.'); return; }
+    setSaving(true); setError(null); setNotice(null);
+    try {
+      await api.request('/api/v1/research/projects/' + projectId + '/outputs/' + outputId + '/competency-mappings/', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outcome_key: outcomeKey }),
+      });
+      setMappingDrafts((current) => ({ ...current, [outputId]: '' }));
+      setNotice('Bukti penelitian terverifikasi berhasil ditautkan ke kompetensi. Ini belum menetapkan mastery.');
+      await load();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Gagal menghubungkan kompetensi.'); }
+    finally { setSaving(false); }
+  }, [api, load, mappingDrafts]);
+
+  const removeCompetencyMapping = useCallback(async (projectId: string, outputId: string, mappingId: string) => {
+    setSaving(true); setError(null);
+    try {
+      await api.request('/api/v1/research/projects/' + projectId + '/outputs/' + outputId + '/competency-mappings/' + mappingId + '/', { method: 'DELETE' });
+      await load();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Gagal melepas kompetensi.'); }
+    finally { setSaving(false); }
+  }, [api, load]);
 
   const submitVerification = useCallback((projectId: string, outputId: string, outputTitle: string) => {
     if (!organization) { setError('Pilih organisasi aktif terlebih dahulu untuk mengajukan verifikasi.'); return; }
@@ -284,6 +329,40 @@ export default function ResearchScreen() {
                 </View>
               );
             })()}
+            {verifications[item.id]?.some((verification) => verification.status === 'verified') ? (
+              <View style={styles.mappingPanel}>
+                <Text style={styles.mappingTitle}>Kompetensi yang didukung bukti terverifikasi</Text>
+                {(mappings[item.id] ?? []).map((mapping) => (
+                  <View key={mapping.id} style={styles.mappingRow}>
+                    <View style={styles.flex}>
+                      <Text style={styles.mappingName}>{mapping.competency_title}</Text>
+                      <Text style={styles.meta}>{mapping.outcome_title} · {mapping.outcome_key}</Text>
+                    </View>
+                    <Pressable disabled={saving} onPress={() => void removeCompetencyMapping(project.id, item.id, mapping.id)}>
+                      <Text style={styles.deleteText}>Lepas</Text>
+                    </Pressable>
+                  </View>
+                ))}
+                <Text style={styles.meta}>Pilih outcome yang benar-benar didukung oleh isi luaran, bukan sekadar topik yang berdekatan.</Text>
+                <TextInput
+                  value={mappingDrafts[item.id] ?? ''}
+                  onChangeText={(value) => setMappingDrafts((current) => ({ ...current, [item.id]: value }))}
+                  placeholder="Outcome key dari katalog kompetensi"
+                  placeholderTextColor={colors.muted}
+                  style={styles.input}
+                  autoCapitalize="none"
+                />
+                {outcomeOptions.filter((option) => !mappingDrafts[item.id] || (option.key + ' ' + option.title).toLowerCase().includes((mappingDrafts[item.id] ?? '').toLowerCase())).slice(0, 4).map((option) => (
+                  <Pressable key={option.key} onPress={() => setMappingDrafts((current) => ({ ...current, [item.id]: option.key }))} style={styles.outcomeOption}>
+                    <Text style={styles.mappingName}>{option.title}</Text>
+                    <Text style={styles.meta}>{option.competencyTitle} · {option.key}</Text>
+                  </Pressable>
+                ))}
+                <Pressable disabled={saving} onPress={() => void addCompetencyMapping(project.id, item.id)} style={[styles.secondary, saving && styles.disabled]}>
+                  <Text style={styles.secondaryText}>Hubungkan ke kompetensi</Text>
+                </Pressable>
+              </View>
+            ) : null}
             {editingOutput?.id === item.id ? <View style={styles.inlineEditor}><TextInput value={outputEditDraft} onChangeText={setOutputEditDraft} style={styles.input} placeholder="Judul luaran" placeholderTextColor={colors.muted} /><View style={styles.actionRow}><Pressable disabled={saving} onPress={() => void saveOutputEdit()}><Text style={styles.actionText}>Simpan</Text></Pressable><Pressable onPress={() => setEditingOutput(null)}><Text style={styles.deleteText}>Batal</Text></Pressable></View></View> : <View style={styles.actionRow}><Pressable onPress={() => { setEditingOutput({ projectId: project.id, id: item.id }); setOutputEditDraft(item.title); }}><Text style={styles.actionText}>Edit</Text></Pressable><Pressable disabled={saving} onPress={() => void removeOutput(project.id, item.id)}><Text style={styles.deleteText}>Hapus luaran</Text></Pressable></View>}
           </View>)}
           <TextInput value={outputDraft[project.id] ?? ''} onChangeText={(value) => setOutputDraft((current) => ({ ...current, [project.id]: value }))} placeholder="Judul luaran / laporan" placeholderTextColor={colors.muted} style={styles.input} />
@@ -314,6 +393,11 @@ const styles = StyleSheet.create({
   verificationPanel: { marginTop: 8, padding: 9, borderRadius: radius.small, backgroundColor: colors.surfaceMuted, gap: 5 },
   verificationStatus: { color: colors.primaryDark, fontSize: 10, fontWeight: '900', textTransform: 'capitalize' },
   verificationEvent: { color: colors.muted, fontSize: 9 },
+  mappingPanel: { marginTop: 8, padding: 9, borderRadius: radius.small, backgroundColor: colors.primarySoft, gap: 7 },
+  mappingTitle: { color: colors.primaryDark, fontSize: 10, fontWeight: '900' },
+  mappingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: colors.line },
+  mappingName: { color: colors.ink, fontSize: 10, fontWeight: '800' },
+  outcomeOption: { padding: 8, borderRadius: radius.small, backgroundColor: colors.surface },
   flex: { flex: 1 },
   cardTitle: { color: colors.ink, fontSize: 12, fontWeight: '900' },
   detail: { color: colors.muted, fontSize: 10, lineHeight: 16, marginTop: 5 },
