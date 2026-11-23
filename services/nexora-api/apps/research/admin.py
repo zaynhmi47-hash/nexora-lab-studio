@@ -5,6 +5,7 @@ from .models import (
     ResearchEvidenceVerification,
     ResearchEvidenceVerificationEvent,
     ResearchOutput,
+    ResearchOutputOutcomeMapping,
     ResearchProject,
 )
 
@@ -66,6 +67,19 @@ class ResearchEvidenceVerificationEventAdmin(admin.ModelAdmin):
         return False
 
     def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(ResearchOutputOutcomeMapping)
+class ResearchOutputOutcomeMappingAdmin(admin.ModelAdmin):
+    list_display = ("output", "outcome", "created_by", "created_at")
+    search_fields = ("output__title", "outcome__key", "outcome__title", "created_by__email")
+    readonly_fields = ("output", "outcome", "created_by", "created_at", "updated_at", "deleted_at")
+
+    def has_add_permission(self, request):
         return False
 
     def has_delete_permission(self, request, obj=None):
