@@ -13,6 +13,7 @@ from .models import (
     ResearchEvidenceVerification,
     ResearchEvidenceVerificationEvent,
     ResearchOutput,
+    ResearchOutputOutcomeMapping,
     ResearchProject,
 )
 
@@ -139,6 +140,72 @@ class ResearchService:
         )
         contribution.soft_delete()
 
+
+
+class ResearchOutputMappingService:
+    @staticmethod
+    def list_for_owner(*, user, output):
+        return ResearchOutputOutcomeMapping.objects.filter(
+            output=output,
+            created_by=user,
+            deleted_at__isnull=True,
+            outcome__deleted_at__isnull=True,
+            outcome__is_published=True,
+            outcome__competency__deleted_at__isnull=True,
+            outcome__competency__is_published=True,
+        ).select_related("outcome", "outcome__competency")
+
+    @staticmethod
+    @transaction.atomic
+    def create(*, user, output, outcome_key):
+        locked_output = ResearchOutput.objects.select_for_update().select_related("project").filter(
+            id=output.id,
+            deleted_at__isnull=True,
+            project__deleted_at__isnull=True,
+            project__owner=user,
+        ).first()
+        if locked_output is None:
+            raise PermissionDenied("Only the owner of an active research output can map its competencies.")
+        verified = locked_output.verification_cases.filter(
+            status=ResearchEvidenceVerification.Status.VERIFIED,
+            deleted_at__isnull=True,
+        ).exists()
+        if not verified:
+            raise ValidationError({"detail": "Only organization-verified research outputs can be mapped to competencies."})
+        from apps.learning.models import LearningOutcome
+
+        outcome = LearningOutcome.objects.select_related("competency").filter(
+            key=outcome_key,
+            is_published=True,
+            deleted_at__isnull=True,
+            competency__is_published=True,
+            competency__deleted_at__isnull=True,
+        ).first()
+        if outcome is None:
+            raise ValidationError({"outcome_key": "A published competency outcome is required."})
+        mapping, created = ResearchOutputOutcomeMapping.objects.get_or_create(
+            output=locked_output,
+            outcome=outcome,
+            deleted_at__isnull=True,
+            defaults={"created_by": user},
+        )
+        if not created:
+            raise ValidationError({"detail": "This competency outcome is already mapped to the research output."})
+        mapping.full_clean()
+        return mapping
+
+    @staticmethod
+    @transaction.atomic
+    def delete(*, user, output, mapping_id):
+        mapping = ResearchOutputOutcomeMapping.objects.select_for_update().filter(
+            id=mapping_id,
+            output=output,
+            created_by=user,
+            deleted_at__isnull=True,
+        ).first()
+        if mapping is None:
+            raise ResearchOutputOutcomeMapping.DoesNotExist
+        mapping.soft_delete()
 
 class ResearchEvidenceVerificationService:
     PERMISSION_CODE = "research.evidence.verify"
