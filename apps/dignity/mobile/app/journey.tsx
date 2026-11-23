@@ -15,7 +15,7 @@ type JourneyItem = {
   kind: string;
   title: string;
   description: string | null;
-  source: { type: string; reference?: string; evidenceType?: string; assessmentMethod?: string; contributionType?: string; verifierAttributed?: boolean; employmentType?: string; startDate?: string; endDate?: string | null; isCurrent?: boolean; role?: string; skills?: string[]; artifactUrl?: string | null; visibility?: string; projectStatus?: string; fieldOfStudy?: string; methodology?: string; outputType?: string; publicationStatus?: string; provenanceStatus?: string; hasDoi?: boolean; hasResourceUrl?: boolean };
+  source: { type: string; reference?: string; verificationStatus?: string; organizationId?: string; reviewerAttributed?: boolean; evidenceType?: string; assessmentMethod?: string; contributionType?: string; verifierAttributed?: boolean; employmentType?: string; startDate?: string; endDate?: string | null; isCurrent?: boolean; role?: string; skills?: string[]; artifactUrl?: string | null; visibility?: string; projectStatus?: string; fieldOfStudy?: string; methodology?: string; outputType?: string; publicationStatus?: string; provenanceStatus?: string; verificationStatus?: string; organizationId?: string; reviewerAttributed?: boolean; hasDoi?: boolean; hasResourceUrl?: boolean };
   competency: { key: string; title: string; outcomeKey: string; outcomeTitle: string } | null;
   status: string | null;
   mastery: { level: number; status: string } | null;
@@ -167,6 +167,16 @@ export default function DevelopmentJourneyScreen() {
             {item.domain === 'career' && item.kind === 'portfolio_project' ? <Text style={styles.source}>Self-reported portfolio · {item.source.visibility ?? 'private'}{item.source.skills?.length ? ` · ${item.source.skills.join(', ')}` : ''}</Text> : null}
             {item.domain === 'research' && item.kind === 'research_project' ? <Text style={styles.source}>Self-reported research · {item.source.fieldOfStudy || 'Field not specified'} · {item.source.methodology || 'Method not specified'}</Text> : null}
             {item.domain === 'research' && item.kind === 'research_output' ? <Text style={styles.source}>Self-reported output · {item.source.outputType} · {item.source.publicationStatus} · provenance {item.source.provenanceStatus}</Text> : null}
+            {item.domain === 'research' && item.kind === 'verified_research_competency_evidence' ? (
+              <View style={styles.verifiedResearch}>
+                <Ionicons name="shield-checkmark" size={14} color={colors.primaryDark} />
+                <View style={styles.flex}>
+                  <Text style={styles.verifiedResearchTitle}>Organization-verified research evidence</Text>
+                  <Text style={styles.detail}>Verified source linked to this outcome. This is evidence provenance, not an automatic mastery decision.</Text>
+                  {item.source.reviewerAttributed ? <Text style={styles.source}>Reviewer attribution recorded</Text> : null}
+                </View>
+              </View>
+            ) : null}
             {item.relatedMilestones.map((milestone) => (
               <View key={milestone.id} style={styles.milestone}>
                 <Ionicons name="flag-outline" size={13} color={colors.primaryDark} />
@@ -220,6 +230,8 @@ const styles = StyleSheet.create({
   competency: { flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: colors.surfaceMuted, borderRadius: radius.small, padding: 9, marginTop: 10 },
   competencyTitle: { color: colors.ink, fontSize: 10, fontWeight: '900' },
   status: { color: colors.primaryDark, fontSize: 9, fontWeight: '800', marginTop: 8 },
+  verifiedResearch: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: colors.primarySoft, borderRadius: radius.small, padding: 9, marginTop: 9 },
+  verifiedResearchTitle: { color: colors.primaryDark, fontSize: 10, fontWeight: '900' },
   source: { color: colors.muted, fontSize: 9, marginTop: 6 },
   milestone: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
   milestoneText: { color: colors.primaryDark, fontSize: 9, fontWeight: '800', flex: 1 },
