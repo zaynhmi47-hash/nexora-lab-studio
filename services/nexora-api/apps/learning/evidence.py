@@ -177,7 +177,12 @@ class LearningEvidenceService:
                 "relatedMilestones": [],
             })
 
-        from apps.research.models import ResearchOutput, ResearchProject
+        from apps.research.models import (
+            ResearchEvidenceVerification,
+            ResearchOutput,
+            ResearchOutputOutcomeMapping,
+            ResearchProject,
+        )
 
         research_projects = ResearchProject.objects.filter(
             owner=user, deleted_at__isnull=True,
@@ -230,6 +235,49 @@ class LearningEvidenceService:
                 "mastery": None,
                 "relatedMilestones": [],
             })
+            verified_mappings = ResearchOutputOutcomeMapping.objects.filter(
+                output=output,
+                created_by=user,
+                deleted_at__isnull=True,
+                outcome__deleted_at__isnull=True,
+                outcome__is_published=True,
+                outcome__competency__deleted_at__isnull=True,
+                outcome__competency__is_published=True,
+                output__verification_cases__status=ResearchEvidenceVerification.Status.VERIFIED,
+                output__verification_cases__deleted_at__isnull=True,
+            ).select_related("outcome", "outcome__competency").distinct()
+            for mapping in verified_mappings:
+                verification = output.verification_cases.filter(
+                    status=ResearchEvidenceVerification.Status.VERIFIED,
+                    deleted_at__isnull=True,
+                ).order_by("-reviewed_at", "-created_at").first()
+                if verification is None:
+                    continue
+                items.append({
+                    "id": f"research-verified-evidence:{output.id}:{mapping.id}",
+                    "occurredAt": (verification.reviewed_at or verification.updated_at).isoformat(),
+                    "domain": "research",
+                    "kind": "verified_research_competency_evidence",
+                    "title": output.title,
+                    "description": mapping.outcome.title,
+                    "source": {
+                        "type": "organization_verified_research_output",
+                        "reference": str(output.id),
+                        "outputType": output.output_type,
+                        "verificationStatus": verification.status,
+                        "organizationId": str(verification.organization_id),
+                        "reviewerAttributed": verification.reviewer_id is not None,
+                    },
+                    "competency": {
+                        "key": mapping.outcome.competency.key,
+                        "title": mapping.outcome.competency.title,
+                        "outcomeKey": mapping.outcome.key,
+                        "outcomeTitle": mapping.outcome.title,
+                    },
+                    "status": "verified_evidence",
+                    "mastery": None,
+                    "relatedMilestones": [],
+                })
 
         mastery_items = LearningMastery.objects.filter(
             user=user,
