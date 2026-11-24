@@ -1,4 +1,5 @@
 import pytest
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.identity.models import NexoraUser
@@ -92,7 +93,7 @@ def test_assessment_history_is_private_to_learner():
     LearningMasteryAssessmentEvent.objects.create(
         user=owner, outcome=outcome, level=3, status="verified",
         assessment_method="portfolio_review", rationale="Clear evidence of application.",
-        assessed_by=assessor,
+        assessed_by=assessor, assessed_at=timezone.now(),
     )
     client = APIClient()
     client.force_authenticate(user=other)
