@@ -9,6 +9,7 @@ from apps.learning.evidence_review import validate_rubric_scores
 from apps.learning.models import (
     LearningCompetency,
     LearningDevelopmentPlan,
+    LearningEvidence,
     LearningDevelopmentTask,
     LearningDevelopmentTaskEvidence,
     LearningMasteryAssessmentEvent,
