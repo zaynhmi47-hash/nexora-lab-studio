@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTenantApi } from '@/lib/api/tenant';
 import type { CreateGoalContributionInput, CreateGoalInput, FinanceGoal, FinanceGoalContribution, FinanceGoalProgress, FinanceGoalSummary, UpdateGoalInput } from './types';
 
@@ -21,5 +21,5 @@ export function useGoalApi(){
  const listContributions=useCallback(async(goalId:string)=>{const r=await tenantApi.request<ApiContribution[]>('/finance/goals/'+encodeURIComponent(goalId)+'/contributions/');return r.data.map(mapContribution);},[tenantApi]);
  const createContribution=useCallback(async(goalId:string,i:CreateGoalContributionInput)=>{const r=await tenantApi.request<ApiContribution>('/finance/goals/'+encodeURIComponent(goalId)+'/contributions/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount_minor:i.amountMinor,currency:i.currency??'IDR',contributed_at:i.contributedAt,note:i.note??'',reference:i.reference??'',idempotency_key:i.idempotencyKey??'',metadata:i.metadata??{}})});return mapContribution(r.data);},[tenantApi]);
  const voidContribution=useCallback(async(goalId:string,id:string)=>{const r=await tenantApi.request<ApiContribution>('/finance/goals/'+encodeURIComponent(goalId)+'/contributions/'+encodeURIComponent(id)+'/',{method:'DELETE'});return mapContribution(r.data);},[tenantApi]);
- return {...tenantApi,listGoals,getGoal,createGoal,updateGoal,archiveGoal,getSummary,listContributions,createContribution,voidContribution};
+ return useMemo(()=>({ ...tenantApi, listGoals, getGoal, createGoal, updateGoal, archiveGoal, getSummary, listContributions, createContribution, voidContribution }),[tenantApi,listGoals,getGoal,createGoal,updateGoal,archiveGoal,getSummary,listContributions,createContribution,voidContribution]);
 }
