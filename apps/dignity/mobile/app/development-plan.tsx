@@ -74,8 +74,8 @@ export default function DevelopmentPlanScreen() {
 
   const addRecommendation = useCallback((resource: Recommendation) => {
     const action = 'Selesaikan ' + resource.title + ' (' + resource.courseTitle + ')';
-    setActions((current) => current.split('\\n').map((item) => item.trim()).includes(action)
-      ? current : [current.trim(), action].filter(Boolean).join('\\n'));
+    setActions((current) => current.split('\n').map((item) => item.trim()).includes(action)
+      ? current : [current.trim(), action].filter(Boolean).join('\n'));
     setNotice('Rekomendasi ditambahkan ke langkah rencana. Buka materi untuk mulai belajar.');
   }, []);
 
