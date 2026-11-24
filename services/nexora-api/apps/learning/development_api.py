@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 from apps.identity.authentication import FirebaseIdentityAuthentication
 
 from .models import (
-    LearningDevelopmentPlan, LearningMastery, LearningMasteryAssessmentEvent,
+    LearningEvidence, LearningDevelopmentPlan, LearningMastery, LearningMasteryAssessmentEvent,
     LearningOutcome, LearningOutcomeLessonMapping, LearningLessonCompletion,
     LearningDevelopmentTask, LearningDevelopmentTaskEvidence,
 )
@@ -278,6 +278,7 @@ def _task_evidence_payload(item):
         "title": item.title,
         "description": item.description,
         "artifactUrl": item.artifact_url,
+        "portfolioEvidenceId": str(item.portfolio_evidence_id) if item.portfolio_evidence_id else None,
         "createdAt": item.created_at.isoformat(),
     }
 
@@ -414,8 +415,22 @@ class LearningDevelopmentTaskEvidenceView(APIView):
             parsed = urlparse(artifact_url)
             if parsed.scheme != "https" or not parsed.netloc or parsed.username or parsed.password:
                 return Response({"detail": "artifactUrl must be a valid HTTPS URL."}, status=status.HTTP_400_BAD_REQUEST)
-        item = LearningDevelopmentTaskEvidence.objects.create(
-            task=task, evidence_type=evidence_type, title=title.strip(),
-            description=description, artifact_url=artifact_url,
-        )
+        from django.db import transaction
+
+        with transaction.atomic():
+            portfolio_evidence = LearningEvidence.objects.create(
+                user=request.user,
+                outcome=task.plan.outcome,
+                evidence_type=evidence_type,
+                title=title.strip(),
+                description=description,
+                artifact_url=artifact_url,
+                source_type=LearningEvidence.SourceType.SELF_REPORTED,
+                source_reference=f"development-task-evidence:{task.id}:{uuid4()}",
+            )
+            item = LearningDevelopmentTaskEvidence.objects.create(
+                task=task, evidence_type=evidence_type, title=title.strip(),
+                description=description, artifact_url=artifact_url,
+                portfolio_evidence=portfolio_evidence,
+            )
         return Response(_task_evidence_payload(item), status=status.HTTP_201_CREATED)
