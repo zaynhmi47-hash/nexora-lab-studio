@@ -9,6 +9,8 @@ from apps.learning.evidence_review import validate_rubric_scores
 from apps.learning.models import (
     LearningCompetency,
     LearningDevelopmentPlan,
+    LearningDevelopmentTask,
+    LearningDevelopmentTaskEvidence,
     LearningMasteryAssessmentEvent,
     LearningOutcome,
     LearningOutcomeRubric,
@@ -363,3 +365,97 @@ def test_gap_analysis_covers_unassessed_assessed_and_planned_outcomes_privately(
     other_rows = {row["outcomeKey"]: row for row in other_response.json()["results"]}
     assert other_rows[planned.key]["assessmentStatus"] == "unassessed"
     assert other_rows[planned.key]["planId"] is None
+
+
+@pytest.mark.django_db
+def test_development_task_lifecycle_and_private_evidence_do_not_change_mastery():
+    owner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="task-owner@example.com")
+    other = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="task-other@example.com")
+    outcome = create_outcome("task-lifecycle-outcome")
+    plan = LearningDevelopmentPlan.objects.create(
+        user=owner, outcome=outcome, target_level=4, actions=["Build a working prototype"],
+    )
+    client = APIClient()
+    client.force_authenticate(user=owner)
+
+    created = client.post(
+        f"/api/v1/learning/development-plans/{plan.id}/tasks/",
+        {"title": "Build prototype", "description": "Apply the concept in a small project.", "sortOrder": 1},
+        format="json",
+    )
+    assert created.status_code == 201
+    task_id = created.json()["id"]
+    assert created.json()["status"] == "not_started"
+
+    progressed = client.patch(
+        f"/api/v1/learning/development-tasks/{task_id}/",
+        {"status": "in_progress"},
+        format="json",
+    )
+    assert progressed.status_code == 200
+    assert progressed.json()["status"] == "in_progress"
+
+    evidence = client.post(
+        f"/api/v1/learning/development-tasks/{task_id}/evidence/",
+        {
+            "evidenceType": "project",
+            "title": "Prototype demonstration",
+            "description": "A short walkthrough of the working prototype.",
+            "artifactUrl": "https://example.com/prototype",
+        },
+        format="json",
+    )
+    assert evidence.status_code == 201
+    assert evidence.json()["evidenceType"] == "project"
+    assert LearningDevelopmentTaskEvidence.objects.filter(task_id=task_id).count() == 1
+    assert not LearningMasteryAssessmentEvent.objects.filter(user=owner, outcome=outcome).exists()
+
+    client.force_authenticate(user=other)
+    assert client.get(f"/api/v1/learning/development-plans/{plan.id}/tasks/").status_code == 404
+    assert client.patch(
+        f"/api/v1/learning/development-tasks/{task_id}/",
+        {"status": "completed"},
+        format="json",
+    ).status_code == 404
+    assert client.get(f"/api/v1/learning/development-tasks/{task_id}/evidence/").status_code == 404
+
+
+@pytest.mark.django_db
+def test_development_task_evidence_rejects_non_https_artifact_urls():
+    owner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="task-url-owner@example.com")
+    outcome = create_outcome("task-url-outcome")
+    plan = LearningDevelopmentPlan.objects.create(
+        user=owner, outcome=outcome, target_level=3, actions=["Practice"],
+    )
+    task = LearningDevelopmentTask.objects.create(plan=plan, title="Practice")
+    client = APIClient()
+    client.force_authenticate(user=owner)
+
+    response = client.post(
+        f"/api/v1/learning/development-tasks/{task.id}/evidence/",
+        {"title": "Unsafe link", "artifactUrl": "http://example.com/file"},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert LearningDevelopmentTaskEvidence.objects.filter(task=task).count() == 0
+
+
+@pytest.mark.django_db
+def test_development_tasks_cannot_be_created_for_paused_or_completed_plans():
+    owner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="task-paused-owner@example.com")
+    outcome = create_outcome("task-paused-outcome")
+    plan = LearningDevelopmentPlan.objects.create(
+        user=owner, outcome=outcome, target_level=3, actions=["Practice"],
+        status=LearningDevelopmentPlan.Status.PAUSED,
+    )
+    client = APIClient()
+    client.force_authenticate(user=owner)
+
+    response = client.post(
+        f"/api/v1/learning/development-plans/{plan.id}/tasks/",
+        {"title": "New task"},
+        format="json",
+    )
+
+    assert response.status_code == 404
