@@ -483,7 +483,7 @@ def test_cross_domain_portfolio_groups_owner_evidence_without_inflating_mastery(
         status=NexoraUser.Status.ACTIVE,
         email="cross-portfolio-other@example.com",
     )
-    outcome = make_outcome("cross-portfolio-communication")
+    _, outcome = create_learning_outcome(key="cross-portfolio-communication")
     LearningEvidence.objects.create(
         user=owner,
         outcome=outcome,
