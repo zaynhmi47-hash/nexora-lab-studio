@@ -13,7 +13,7 @@ from .evidence_review_api import (
     OrganizationEvidenceReviewView,
 )
 from .mastery_api import OrganizationMasteryAssessmentView, LearningOutcomeRubricView
-from .development_api import LearningDevelopmentPlanView, LearningAssessmentHistoryView
+from .development_api import LearningDevelopmentPlanView, LearningAssessmentHistoryView, LearningDevelopmentRecommendationsView
 
 from .api import (
     LearningCompleteLessonView,
@@ -30,6 +30,7 @@ urlpatterns = [
     path("competencies/", LearningCompetencyCatalogView.as_view(), name="learning-competencies"),
     path("rubrics/", LearningOutcomeRubricView.as_view(), name="learning-outcome-rubrics"),
     path("development-plans/", LearningDevelopmentPlanView.as_view(), name="learning-development-plans"),
+    path("development-recommendations/", LearningDevelopmentRecommendationsView.as_view(), name="learning-development-recommendations"),
     path("assessment-history/", LearningAssessmentHistoryView.as_view(), name="learning-assessment-history"),
     path("evidence/", LearningEvidencePortfolioView.as_view(), name="learning-evidence"),
     path("skills/", LearningSkillProfileView.as_view(), name="learning-skills"),
