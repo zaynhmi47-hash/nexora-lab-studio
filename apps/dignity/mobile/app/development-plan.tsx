@@ -193,6 +193,7 @@ export default function DevelopmentPlanScreen() {
         <Text style={styles.detail}>Assessment status: {plan.assessmentStatus ?? 'unassessed'}{plan.lastAssessedAt ? ' · ' + new Date(plan.lastAssessedAt).toLocaleDateString() : ''}</Text>
         {plan.targetDate ? <Text style={styles.detail}>Target date: {plan.targetDate}</Text> : null}
         {plan.actions.map((action, index) => <View key={index} style={styles.action}><Ionicons name="arrow-forward-circle-outline" size={16} color={colors.primary} /><Text style={styles.detail}>{action}</Text></View>)}
+        <Pressable onPress={() => router.push(("/development-task/" + plan.id) as never)} style={styles.taskButton}><Text style={styles.taskButtonText}>Manage execution tasks and evidence</Text></Pressable>
         <Text style={styles.label}>Private reflection</Text>
         <TextInput value={reflectionDrafts[plan.id] ?? plan.reflection ?? ''} onChangeText={(value) => setReflectionDrafts((current) => ({ ...current, [plan.id]: value }))} multiline textAlignVertical="top" placeholder="What worked, what was difficult, and what will you change next?" placeholderTextColor={colors.muted} style={styles.reflectionInput} />
         <Pressable onPress={() => void saveReflection(plan)} style={styles.reflectionButton}><Text style={styles.reflectionButtonText}>Save reflection</Text></Pressable>
@@ -246,6 +247,8 @@ const styles = StyleSheet.create({
   statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm },
   status: { color: colors.primary, fontWeight: '700', fontSize: 12 },
   gapState: { color: colors.primaryDark, fontSize: 11, fontWeight: '700' },
+  taskButton: { alignSelf: "flex-start", paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.small, backgroundColor: colors.primary },
+  taskButtonText: { color: "#FFFFFF", fontSize: 11, fontWeight: "800" },
   reflectionInput: { minHeight: 70, borderWidth: 1, borderColor: colors.line, borderRadius: radius.medium, color: colors.ink, padding: spacing.sm, fontSize: 12 },
   reflectionButton: { alignSelf: 'flex-start', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.small, backgroundColor: colors.primarySoft },
   reflectionButtonText: { color: colors.primaryDark, fontSize: 11, fontWeight: '800' },
