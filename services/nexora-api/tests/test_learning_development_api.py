@@ -8,6 +8,7 @@ from apps.learning.models import (
     LearningDevelopmentPlan,
     LearningMasteryAssessmentEvent,
     LearningOutcome,
+    LearningOutcomeRubric,
 )
 
 
@@ -102,3 +103,63 @@ def test_assessment_history_is_private_to_learner():
 
     assert response.status_code == 200
     assert response.json() == []
+
+
+
+@pytest.mark.django_db
+def test_authenticated_learner_can_read_active_outcome_rubric():
+    user = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="rubric-reader@example.com")
+    outcome = create_outcome("rubric-outcome")
+    criteria = [
+        {
+            "key": "reasoning",
+            "title": "Reasoning quality",
+            "description": "Explains conclusions with relevant evidence.",
+            "weight": 1,
+            "levels": {
+                "1": "States an unsupported conclusion.",
+                "2": "Provides a partial explanation.",
+                "3": "Connects a claim to some evidence.",
+                "4": "Evaluates evidence and alternatives.",
+                "5": "Synthesizes evidence and limitations independently.",
+            },
+        },
+        {
+            "key": "communication",
+            "title": "Communication",
+            "description": "Communicates the reasoning clearly.",
+            "weight": 1,
+            "levels": {
+                "1": "Explanation is unclear.",
+                "2": "Explanation is partly understandable.",
+                "3": "Explains the main reasoning.",
+                "4": "Explains reasoning clearly for the audience.",
+                "5": "Adapts a precise explanation to complex audiences.",
+            },
+        },
+    ]
+    LearningOutcomeRubric.objects.create(outcome=outcome, version=2, criteria=criteria, is_active=True)
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.get(f"/api/v1/learning/rubrics/?outcomeKey={outcome.key}")
+
+    assert response.status_code == 200
+    assert response.json()["version"] == 2
+    assert [item["key"] for item in response.json()["criteria"]] == ["reasoning", "communication"]
+    assert len(response.json()["levelScale"]) == 5
+
+
+@pytest.mark.django_db
+def test_rubric_endpoint_does_not_expose_inactive_or_unpublished_outcomes():
+    user = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="rubric-hidden@example.com")
+    outcome = create_outcome("rubric-hidden-outcome")
+    LearningOutcomeRubric.objects.create(
+        outcome=outcome, version=1, criteria=[{"key": "reasoning"}], is_active=False,
+    )
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.get(f"/api/v1/learning/rubrics/?outcomeKey={outcome.key}")
+
+    assert response.status_code == 404
