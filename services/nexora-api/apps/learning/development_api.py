@@ -189,3 +189,66 @@ class LearningAssessmentHistoryView(APIView):
             "rubricVersion": event.rubric_version,
             "criterionScores": event.criterion_scores,
         } for event in events])
+
+
+class LearningCompetencyGapAnalysisView(APIView):
+    """Owner-only snapshot of published outcomes against explicit assessment records."""
+
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        outcomes = list(LearningOutcome.objects.filter(
+            is_published=True, deleted_at__isnull=True,
+            competency__is_published=True, competency__deleted_at__isnull=True,
+        ).select_related("competency").order_by("competency__title", "sort_order", "title"))
+        outcome_ids = [item.id for item in outcomes]
+        events = LearningMasteryAssessmentEvent.objects.filter(
+            user=request.user, outcome_id__in=outcome_ids, deleted_at__isnull=True,
+            status__in=(LearningMastery.Status.PROVISIONAL, LearningMastery.Status.VERIFIED),
+        ).select_related("assessed_by").order_by("-assessed_at", "-created_at")
+        latest_events = {}
+        for event in events:
+            latest_events.setdefault(event.outcome_id, event)
+        legacy = LearningMastery.objects.filter(
+            user=request.user, outcome_id__in=outcome_ids, deleted_at__isnull=True,
+            status__in=(LearningMastery.Status.PROVISIONAL, LearningMastery.Status.VERIFIED),
+        ).order_by("-assessed_at", "-updated_at")
+        for record in legacy:
+            latest_events.setdefault(record.outcome_id, record)
+        plans = LearningDevelopmentPlan.objects.filter(
+            user=request.user, outcome_id__in=outcome_ids, deleted_at__isnull=True,
+        ).order_by("-created_at")
+        latest_plans = {}
+        for plan in plans:
+            latest_plans.setdefault(plan.outcome_id, plan)
+
+        rows = []
+        for outcome in outcomes:
+            assessment = latest_events.get(outcome.id)
+            plan = latest_plans.get(outcome.id)
+            current_level = assessment.level if assessment else None
+            target_level = plan.target_level if plan else None
+            gap = max(0, target_level - current_level) if plan and current_level is not None else (
+                target_level if plan else None
+            )
+            gap_status = (
+                "needs_assessment" if assessment is None
+                else "plan_needed" if plan is None
+                else "target_reached" if gap == 0
+                else "development_needed"
+            )
+            rows.append({
+                "outcomeKey": outcome.key,
+                "outcomeTitle": outcome.title,
+                "competencyTitle": outcome.competency.title,
+                "currentAssessedLevel": current_level,
+                "assessmentStatus": assessment.status if assessment else "unassessed",
+                "assessedAt": assessment.assessed_at.isoformat() if assessment and assessment.assessed_at else None,
+                "targetLevel": target_level,
+                "gap": gap,
+                "gapStatus": gap_status,
+                "planId": str(plan.id) if plan else None,
+                "planStatus": plan.status if plan else None,
+            })
+        return Response({"count": len(rows), "results": rows})
