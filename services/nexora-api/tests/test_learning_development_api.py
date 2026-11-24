@@ -288,4 +288,36 @@ def test_development_gap_uses_latest_explicit_assessment_event():
     assert item["currentAssessedLevel"] == 4
     assert item["gap"] == 1
     assert item["assessmentStatus"] == "provisional"
+    assert item["gapStatus"] == "development_needed"
     assert item["lastAssessedAt"] == latest_assessed_at.isoformat()
+
+
+
+@pytest.mark.django_db
+def test_development_gap_distinguishes_unassessed_and_target_reached():
+    learner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="gap-state-learner@example.com")
+    assessor = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="gap-state-assessor@example.com")
+    unassessed_outcome = create_outcome("gap-state-unassessed")
+    reached_outcome = create_outcome("gap-state-reached")
+    unassessed_plan = LearningDevelopmentPlan.objects.create(
+        user=learner, outcome=unassessed_outcome, target_level=3, actions=["Request an assessment"],
+    )
+    reached_plan = LearningDevelopmentPlan.objects.create(
+        user=learner, outcome=reached_outcome, target_level=3, actions=["Maintain practice"],
+    )
+    LearningMasteryAssessmentEvent.objects.create(
+        user=learner, outcome=reached_outcome, level=4, status="verified",
+        assessment_method="observed_practice", rationale="Consistent independent performance.",
+        assessed_by=assessor, assessed_at=timezone.now(),
+    )
+    client = APIClient()
+    client.force_authenticate(user=learner)
+
+    response = client.get("/api/v1/learning/development-plans/")
+
+    assert response.status_code == 200
+    items = {row["id"]: row for row in response.json()}
+    assert items[str(unassessed_plan.id)]["gapStatus"] == "needs_assessment"
+    assert items[str(unassessed_plan.id)]["gap"] == 3
+    assert items[str(reached_plan.id)]["gapStatus"] == "target_reached"
+    assert items[str(reached_plan.id)]["gap"] == 0
