@@ -235,4 +235,14 @@ class LearningEvidenceReviewService:
         mastery.assessed_by = assessor
         mastery.assessed_at = timezone.now()
         mastery.save()
-        LearningMasteryAssessmentEvent.objects.create(\n            user=mastery.user,\n            outcome=mastery.outcome,\n            level=mastery.level,\n            status=mastery.status,\n            assessment_method=mastery.assessment_method,\n            rationale=mastery.rationale,\n            assessed_by=assessor,\n            assessed_at=mastery.assessed_at,\n        )\n        return mastery
+        LearningMasteryAssessmentEvent.objects.create(
+            user=mastery.user,
+            outcome=mastery.outcome,
+            level=mastery.level,
+            status=mastery.status,
+            assessment_method=mastery.assessment_method,
+            rationale=mastery.rationale,
+            assessed_by=assessor,
+            assessed_at=mastery.assessed_at,
+        )
+        return mastery
