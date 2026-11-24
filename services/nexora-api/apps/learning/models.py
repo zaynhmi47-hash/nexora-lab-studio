@@ -468,3 +468,64 @@ class LearningDevelopmentPlan(AuditableBaseModel):
         db_table = "learning_development_plans"
         ordering = ("target_date", "-created_at")
         indexes = [models.Index(fields=("user", "status"), name="learn_dev_plan_user_status_idx")]
+
+
+class LearningDevelopmentTask(AuditableBaseModel):
+    """An actionable, owner-private step within a development plan."""
+
+    class Status(models.TextChoices):
+        NOT_STARTED = "not_started", "Not started"
+        IN_PROGRESS = "in_progress", "In progress"
+        PENDING_REVIEW = "pending_review", "Pending review"
+        COMPLETED = "completed", "Completed"
+
+    plan = models.ForeignKey(
+        LearningDevelopmentPlan,
+        on_delete=models.CASCADE,
+        related_name="tasks",
+    )
+    title = models.CharField(max_length=240)
+    description = models.TextField(blank=True)
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.NOT_STARTED,
+        db_index=True,
+    )
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    due_date = models.DateField(null=True, blank=True)
+
+    class Meta:
+        db_table = "learning_development_tasks"
+        ordering = ("sort_order", "created_at")
+        indexes = [
+            models.Index(fields=("plan", "status"), name="learn_dev_task_plan_status_idx"),
+        ]
+
+
+class LearningDevelopmentTaskEvidence(AuditableBaseModel):
+    """Private learner-submitted proof of practice; never a mastery decision."""
+
+    class EvidenceType(models.TextChoices):
+        PRACTICE = "practice", "Practice"
+        PROJECT = "project", "Project"
+        ASSIGNMENT = "assignment", "Assignment"
+        CERTIFICATE = "certificate", "Certificate"
+        OTHER = "other", "Other"
+
+    task = models.ForeignKey(
+        LearningDevelopmentTask,
+        on_delete=models.CASCADE,
+        related_name="evidence_items",
+    )
+    evidence_type = models.CharField(max_length=16, choices=EvidenceType.choices)
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    artifact_url = models.URLField(max_length=1000, blank=True)
+
+    class Meta:
+        db_table = "learning_development_task_evidence"
+        ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=("task", "-created_at"), name="learn_dev_task_ev_date_idx"),
+        ]
