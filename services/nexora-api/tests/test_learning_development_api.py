@@ -408,6 +408,12 @@ def test_development_task_lifecycle_and_private_evidence_do_not_change_mastery()
     )
     assert evidence.status_code == 201
     assert evidence.json()["evidenceType"] == "project"
+    assert evidence.json()["portfolioEvidenceId"]
+    portfolio_item = LearningEvidence.objects.get(id=evidence.json()["portfolioEvidenceId"])
+    assert portfolio_item.user_id == owner.id
+    assert portfolio_item.outcome_id == outcome.id
+    assert portfolio_item.status == LearningEvidence.Status.PENDING
+    assert portfolio_item.organization_shares.count() == 0
     assert LearningDevelopmentTaskEvidence.objects.filter(task_id=task_id).count() == 1
     assert not LearningMasteryAssessmentEvent.objects.filter(user=owner, outcome=outcome).exists()
 
