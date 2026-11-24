@@ -49,7 +49,8 @@ def test_learner_can_create_and_update_private_development_plan():
     assert created.status_code == 201
     payload = created.json()
     assert payload["currentAssessedLevel"] is None
-    assert payload["gap"] == 4
+    assert payload["gap"] is None
+    assert payload["gapStatus"] == "needs_assessment"
     assert payload["targetLevel"] == 4
     plan = LearningDevelopmentPlan.objects.get(id=payload["id"], user=user)
 
