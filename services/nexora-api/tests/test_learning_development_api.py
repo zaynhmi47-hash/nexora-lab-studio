@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import pytest
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -253,3 +255,37 @@ def test_development_recommendations_require_a_published_outcome():
     response = client.get(f"/api/v1/learning/development-recommendations/?outcomeKey={outcome.key}")
 
     assert response.status_code == 404
+
+
+
+@pytest.mark.django_db
+def test_development_gap_uses_latest_explicit_assessment_event():
+    learner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="gap-learner@example.com")
+    assessor = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="gap-assessor@example.com")
+    outcome = create_outcome("gap-outcome")
+    plan = LearningDevelopmentPlan.objects.create(
+        user=learner, outcome=outcome, target_level=5, actions=["Practice and request feedback"],
+    )
+    first_assessed_at = timezone.now()
+    LearningMasteryAssessmentEvent.objects.create(
+        user=learner, outcome=outcome, level=2, status="verified",
+        assessment_method="portfolio_review", rationale="Earlier review.",
+        assessed_by=assessor, assessed_at=first_assessed_at,
+    )
+    latest_assessed_at = first_assessed_at + timedelta(days=7)
+    LearningMasteryAssessmentEvent.objects.create(
+        user=learner, outcome=outcome, level=4, status="provisional",
+        assessment_method="observed_practice", rationale="More recent review.",
+        assessed_by=assessor, assessed_at=latest_assessed_at,
+    )
+    client = APIClient()
+    client.force_authenticate(user=learner)
+
+    response = client.get("/api/v1/learning/development-plans/")
+
+    assert response.status_code == 200
+    item = next(row for row in response.json() if row["id"] == str(plan.id))
+    assert item["currentAssessedLevel"] == 4
+    assert item["gap"] == 1
+    assert item["assessmentStatus"] == "provisional"
+    assert item["lastAssessedAt"] == latest_assessed_at.isoformat()
