@@ -13,7 +13,7 @@ interface Recommendation { lessonKey: string; title: string; description: string
 interface RecommendationResponse { outcomeKey: string; outcomeTitle: string; resources: Recommendation[]; }
 interface Plan {
   id: string; outcomeKey: string; outcomeTitle: string; competencyTitle: string;
-  targetLevel: number; currentAssessedLevel: number | null; gap: number; assessmentStatus?: string; lastAssessedAt?: string | null;
+  targetLevel: number; currentAssessedLevel: number | null; gap: number; gapStatus?: "needs_assessment" | "development_needed" | "target_reached"; assessmentStatus?: string; lastAssessedAt?: string | null;
   actions: string[]; reflection: string; status: string; targetDate: string | null;
 }
 function payload<T>(value: unknown): T {
@@ -35,6 +35,7 @@ export default function DevelopmentPlanScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [reflectionDrafts, setReflectionDrafts] = useState<Record<string, string>>({});
   const outcomes = catalog.flatMap((item) => item.outcomes.map((outcome) => ({ ...outcome, competencyTitle: item.title })));
 
   const load = useCallback(async () => {
@@ -107,6 +108,18 @@ export default function DevelopmentPlanScreen() {
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Unable to update plan.'); }
   }, [api, load]);
 
+  const saveReflection = useCallback(async (plan: Plan) => {
+    setError(null);
+    try {
+      await api.request('/api/v1/learning/development-plans/', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId: plan.id, reflection: reflectionDrafts[plan.id] ?? plan.reflection ?? '' }),
+      });
+      setNotice('Reflection saved to your private development plan.');
+      await load();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Unable to save reflection.'); }
+  }, [api, load, reflectionDrafts]);
+
   return <Screen>
     <ScrollView contentContainerStyle={styles.content}>
       <Pressable onPress={() => router.back()} style={styles.back}><Ionicons name="chevron-back" size={18} color={colors.primary} /><Text style={styles.backText}>Skills</Text></Pressable>
@@ -155,11 +168,15 @@ export default function DevelopmentPlanScreen() {
         <Text style={styles.eyebrow}>{plan.competencyTitle}</Text>
         <Text style={styles.cardTitle}>{plan.outcomeTitle}</Text>
         <Text style={styles.detail}>Assessed level: {plan.currentAssessedLevel ?? 'Not assessed'} · Target: {plan.targetLevel}/5 · Gap: {plan.gap}</Text>
+        <Text style={styles.gapState}>{plan.gapStatus === 'target_reached' ? 'Target reached · consider a new stretch goal' : plan.gapStatus === 'development_needed' ? 'Development needed · keep practicing and gather evidence' : 'Assessment needed · request an authorized assessor review'}</Text>
         <Text style={styles.detail}>Assessment status: {plan.assessmentStatus ?? 'unassessed'}{plan.lastAssessedAt ? ' · ' + new Date(plan.lastAssessedAt).toLocaleDateString() : ''}</Text>
         {plan.targetDate ? <Text style={styles.detail}>Target date: {plan.targetDate}</Text> : null}
         {plan.actions.map((action, index) => <View key={index} style={styles.action}><Ionicons name="arrow-forward-circle-outline" size={16} color={colors.primary} /><Text style={styles.detail}>{action}</Text></View>)}
+        <Text style={styles.label}>Private reflection</Text>
+        <TextInput value={reflectionDrafts[plan.id] ?? plan.reflection ?? ''} onChangeText={(value) => setReflectionDrafts((current) => ({ ...current, [plan.id]: value }))} multiline textAlignVertical="top" placeholder="What worked, what was difficult, and what will you change next?" placeholderTextColor={colors.muted} style={styles.reflectionInput} />
+        <Pressable onPress={() => void saveReflection(plan)} style={styles.reflectionButton}><Text style={styles.reflectionButtonText}>Save reflection</Text></Pressable>
         <View style={styles.statusRow}><Text style={styles.status}>{plan.status.replaceAll('_', ' ')}</Text>
-          {plan.status === 'active' ? <Pressable onPress={() => void updateStatus(plan, 'completed')}><Text style={styles.actionLink}>Mark completed</Text></Pressable> : plan.status === 'completed' ? <Pressable onPress={() => void updateStatus(plan, 'active')}><Text style={styles.actionLink}>Reopen plan</Text></Pressable> : null}
+          {plan.status === 'active' ? <View style={styles.statusActions}><Pressable onPress={() => void updateStatus(plan, 'paused')}><Text style={styles.actionLink}>Pause</Text></Pressable><Pressable onPress={() => void updateStatus(plan, 'completed')}><Text style={styles.actionLink}>Mark completed</Text></Pressable></View> : <Pressable onPress={() => void updateStatus(plan, 'active')}><Text style={styles.actionLink}>{plan.status === 'completed' ? 'Reopen plan' : 'Resume plan'}</Text></Pressable>}
         </View>
       </SurfaceCard>)}
     </ScrollView>
@@ -206,6 +223,11 @@ const styles = StyleSheet.create({
   action: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
   statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm },
   status: { color: colors.primary, fontWeight: '700', fontSize: 12 },
+  gapState: { color: colors.primaryDark, fontSize: 11, fontWeight: '700' },
+  reflectionInput: { minHeight: 70, borderWidth: 1, borderColor: colors.line, borderRadius: radius.medium, color: colors.ink, padding: spacing.sm, fontSize: 12 },
+  reflectionButton: { alignSelf: 'flex-start', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.small, backgroundColor: colors.primarySoft },
+  reflectionButtonText: { color: colors.primaryDark, fontSize: 11, fontWeight: '800' },
+  statusActions: { flexDirection: 'row', gap: spacing.md },
   actionLink: { color: colors.primary, fontWeight: '700', fontSize: 12 },
   error: { color: colors.danger, fontSize: 13 },
   notice: { color: colors.success, fontSize: 13 },
