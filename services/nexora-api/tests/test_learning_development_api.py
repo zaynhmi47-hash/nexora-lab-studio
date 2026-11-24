@@ -3,6 +3,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.identity.models import NexoraUser
+from apps.learning.evidence_review import validate_rubric_scores
 from apps.learning.models import (
     LearningCompetency,
     LearningDevelopmentPlan,
@@ -163,3 +164,33 @@ def test_rubric_endpoint_does_not_expose_inactive_or_unpublished_outcomes():
     response = client.get(f"/api/v1/learning/rubrics/?outcomeKey={outcome.key}")
 
     assert response.status_code == 404
+
+
+
+def test_rubric_score_validation_requires_complete_valid_criterion_scores():
+    criteria = [
+        {
+            "key": "reasoning",
+            "title": "Reasoning",
+            "description": "Explains conclusions with evidence.",
+            "weight": 2,
+            "levels": {str(level): f"Descriptor for level {level}" for level in range(1, 6)},
+        },
+        {
+            "key": "communication",
+            "title": "Communication",
+            "description": "Communicates clearly.",
+            "weight": 1,
+            "levels": {str(level): f"Descriptor for level {level}" for level in range(1, 6)},
+        },
+    ]
+
+    assert validate_rubric_scores(criteria, {"reasoning": 4, "communication": 3}) == {
+        "reasoning": 4, "communication": 3,
+    }
+    with pytest.raises(ValueError, match="every rubric criterion"):
+        validate_rubric_scores(criteria, {"reasoning": 4})
+    with pytest.raises(ValueError, match="integer from 1 to 5"):
+        validate_rubric_scores(criteria, {"reasoning": True, "communication": 3})
+    with pytest.raises(ValueError, match="invalid key"):
+        validate_rubric_scores([criteria[0], criteria[0]], {"reasoning": 4})
