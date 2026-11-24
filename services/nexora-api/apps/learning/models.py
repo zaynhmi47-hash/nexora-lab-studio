@@ -233,6 +233,10 @@ class LearningEvidence(AuditableBaseModel):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     artifact_url = models.URLField(max_length=1000, blank=True)
+    portfolio_evidence = models.OneToOneField(
+        "learning.LearningEvidence", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="development_task_source",
+    )
     source_type = models.CharField(
         max_length=20,
         choices=SourceType.choices,
