@@ -232,6 +232,15 @@ export default function SkillsScreen() {
       <Ionicons name="chevron-forward" size={16} color={colors.muted} />
     </Pressable>
 
+    <Pressable onPress={() => router.push('/assessment-history')} style={styles.journeyLink}>
+      <Ionicons name="time-outline" size={18} color={colors.primary} />
+      <View style={styles.flex}>
+        <Text style={styles.optionTitle}>Assessment history</Text>
+        <Text style={styles.detail}>Review assessor decisions and rubric criterion scores</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+    </Pressable>
+
     <View style={styles.section}>
       <SectionHeading title="Cross-domain portfolio" subtitle="Your recorded development evidence across the last 90 days. Sources keep their own verification status." />
       <SurfaceCard style={styles.crossDomainCard}>
