@@ -10,6 +10,11 @@ from apps.learning.models import (
     LearningMasteryAssessmentEvent,
     LearningOutcome,
     LearningOutcomeRubric,
+    LearningCourse,
+    LearningLesson,
+    LearningLessonContent,
+    LearningOutcomeLessonMapping,
+    LearningLessonCompletion,
 )
 
 
@@ -199,3 +204,52 @@ def test_rubric_score_validation_requires_complete_valid_criterion_scores():
         validate_rubric_scores(criteria, {"reasoning": True, "communication": 3})
     with pytest.raises(ValueError, match="invalid key"):
         validate_rubric_scores([criteria[0], criteria[0]], {"reasoning": 4})
+
+
+
+@pytest.mark.django_db
+def test_development_recommendations_only_return_published_mapped_lessons_and_completion_state():
+    learner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="recommendation-learner@example.com")
+    outcome = create_outcome("recommendation-outcome")
+    course = LearningCourse.objects.create(key="reasoning-course", title="Reasoning foundations", is_published=True)
+    lesson = LearningLesson.objects.create(
+        key="compare-sources", course=course, title="Compare sources",
+        description="Practice comparing evidence.", kind=LearningLesson.Kind.LESSON, is_published=True,
+    )
+    LearningLessonContent.objects.create(
+        lesson=lesson, version=1, estimated_minutes=12, blocks=[{"type": "text", "text": "Compare two sources."}], is_published=True,
+    )
+    LearningOutcomeLessonMapping.objects.create(
+        lesson=lesson, outcome=outcome, contribution_type=LearningOutcomeLessonMapping.ContributionType.PRACTICED,
+        is_active=True,
+    )
+    hidden = LearningLesson.objects.create(
+        key="hidden-lesson", course=course, title="Hidden lesson", is_published=False,
+    )
+    LearningOutcomeLessonMapping.objects.create(lesson=hidden, outcome=outcome, is_active=True)
+    LearningLessonCompletion.objects.create(user=learner, lesson=lesson, completed_at=timezone.now())
+    client = APIClient()
+    client.force_authenticate(user=learner)
+
+    response = client.get(f"/api/v1/learning/development-recommendations/?outcomeKey={outcome.key}")
+
+    assert response.status_code == 200
+    assert len(response.json()["resources"]) == 1
+    resource = response.json()["resources"][0]
+    assert resource["lessonKey"] == lesson.key
+    assert resource["contributionType"] == "practiced"
+    assert resource["estimatedMinutes"] == 12
+    assert resource["completed"] is True
+    assert resource["route"] == f"/lesson/{lesson.key}"
+
+
+@pytest.mark.django_db
+def test_development_recommendations_require_a_published_outcome():
+    learner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="recommendation-private@example.com")
+    outcome = create_outcome("recommendation-unpublished", published=False)
+    client = APIClient()
+    client.force_authenticate(user=learner)
+
+    response = client.get(f"/api/v1/learning/development-recommendations/?outcomeKey={outcome.key}")
+
+    assert response.status_code == 404
