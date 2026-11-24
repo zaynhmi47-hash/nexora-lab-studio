@@ -10,6 +10,44 @@ from apps.organizations.services import MembershipService
 from .models import LearningEvidence, LearningEvidenceShare, LearningMastery, LearningMasteryAssessmentEvent, LearningOutcome, LearningOutcomeRubric
 
 
+def validate_rubric_definition(criteria: object) -> list[dict]:
+    if not isinstance(criteria, list) or not 1 <= len(criteria) <= 12:
+        raise ValueError("A rubric must contain between 1 and 12 criteria.")
+    validated = []
+    keys = set()
+    for item in criteria:
+        if not isinstance(item, dict):
+            raise ValueError("Each rubric criterion must be an object.")
+        key, title, description = item.get("key"), item.get("title"), item.get("description")
+        weight, levels = item.get("weight"), item.get("levels")
+        if (
+            not isinstance(key, str) or not key.strip() or len(key) > 64
+            or key in keys
+            or not isinstance(title, str) or not title.strip() or len(title) > 120
+            or not isinstance(description, str) or not description.strip() or len(description) > 500
+            or type(weight) is not int or not 1 <= weight <= 10
+            or not isinstance(levels, dict) or set(levels) != {"1", "2", "3", "4", "5"}
+            or any(not isinstance(value, str) or not value.strip() or len(value) > 500 for value in levels.values())
+        ):
+            raise ValueError("A rubric criterion has an invalid key, descriptor, weight or level scale.")
+        keys.add(key)
+        validated.append(item)
+    return validated
+
+
+def validate_rubric_scores(criteria: object, scores: object) -> dict[str, int]:
+    validated = validate_rubric_definition(criteria)
+    expected = {item["key"] for item in validated}
+    if not isinstance(scores, dict) or set(scores) != expected:
+        raise ValueError("A score for every rubric criterion is required.")
+    result = {}
+    for key, score in scores.items():
+        if type(score) is not int or not 1 <= score <= 5:
+            raise ValueError("Each criterion score must be an integer from 1 to 5.")
+        result[key] = score
+    return result
+
+
 class LearningEvidenceReviewService:
     @staticmethod
     @transaction.atomic
@@ -209,21 +247,8 @@ class LearningEvidenceReviewService:
         rubric = LearningOutcomeRubric.objects.filter(
             outcome=outcome, is_active=True, deleted_at__isnull=True,
         ).order_by("-version").first()
-        validated_scores = {}
-        if rubric is not None:
-            criteria = rubric.criteria
-            if not isinstance(criteria, list) or not criteria:
-                raise ValueError("The active assessment rubric has no valid criteria.")
-            expected = {item.get("key"): item for item in criteria if isinstance(item, dict) and isinstance(item.get("key"), str)}
-            if len(expected) != len(criteria) or not expected:
-                raise ValueError("The active assessment rubric contains invalid criteria.")
-            if not isinstance(criterion_scores, dict) or set(criterion_scores) != set(expected):
-                raise ValueError("A score for every rubric criterion is required.")
-            for key, score in criterion_scores.items():
-                if type(score) is not int or not 1 <= score <= 5:
-                    raise ValueError("Each criterion score must be an integer from 1 to 5.")
-                validated_scores[key] = score
-        elif criterion_scores not in (None, {}):
+        validated_scores = validate_rubric_scores(rubric.criteria, criterion_scores) if rubric else {}
+        if rubric is None and criterion_scores not in (None, {}):
             raise ValueError("No active rubric exists for this outcome.")
         if str(assessor.id) == str(learner_id):
             raise PermissionDeniedException("Assessors cannot assess their own mastery.")
