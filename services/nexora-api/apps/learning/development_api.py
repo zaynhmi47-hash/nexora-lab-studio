@@ -7,7 +7,10 @@ from rest_framework.views import APIView
 
 from apps.identity.authentication import FirebaseIdentityAuthentication
 
-from .models import (\n    LearningDevelopmentPlan, LearningMastery, LearningMasteryAssessmentEvent,\n    LearningOutcome, LearningOutcomeLessonMapping, LearningLessonCompletion,\n)
+from .models import (
+    LearningDevelopmentPlan, LearningMastery, LearningMasteryAssessmentEvent,
+    LearningOutcome, LearningOutcomeLessonMapping, LearningLessonCompletion,
+)
 
 
 def plan_payload(plan):
