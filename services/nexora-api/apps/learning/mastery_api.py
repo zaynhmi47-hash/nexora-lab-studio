@@ -7,7 +7,7 @@ from apps.core.exceptions import PermissionDeniedException
 from apps.identity.authentication import FirebaseIdentityAuthentication
 
 from .evidence_review import LearningEvidenceReviewService
-from .models import LearningEvidenceShare, LearningOutcome
+from .models import LearningEvidenceShare, LearningOutcome, LearningOutcomeRubric
 
 
 class OrganizationMasteryAssessmentView(APIView):
@@ -23,6 +23,7 @@ class OrganizationMasteryAssessmentView(APIView):
         mastery_status = request.data.get("status")
         assessment_method = request.data.get("assessmentMethod")
         rationale = request.data.get("rationale")
+        criterion_scores = request.data.get("criterionScores", {})
         if (
             not isinstance(learner_id, str)
             or not isinstance(outcome_key, str)
@@ -30,6 +31,7 @@ class OrganizationMasteryAssessmentView(APIView):
             or not isinstance(mastery_status, str)
             or not isinstance(assessment_method, str)
             or not isinstance(rationale, str)
+            or not isinstance(criterion_scores, dict)
         ):
             return Response(
                 {"detail": "learnerId, outcomeKey, level, status, assessmentMethod and rationale are required."},
@@ -45,6 +47,7 @@ class OrganizationMasteryAssessmentView(APIView):
                 status=mastery_status,
                 assessment_method=assessment_method,
                 rationale=rationale,
+                criterion_scores=criterion_scores,
             )
         except PermissionDeniedException as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_403_FORBIDDEN)
@@ -65,3 +68,39 @@ class OrganizationMasteryAssessmentView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+
+class LearningOutcomeRubricView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        outcome_key = request.query_params.get("outcomeKey", "")
+        if not outcome_key:
+            return Response({"detail": "outcomeKey is required."}, status=status.HTTP_400_BAD_REQUEST)
+        rubric = LearningOutcomeRubric.objects.filter(
+            outcome__key=outcome_key,
+            outcome__is_published=True,
+            outcome__deleted_at__isnull=True,
+            outcome__competency__is_published=True,
+            outcome__competency__deleted_at__isnull=True,
+            is_active=True,
+            deleted_at__isnull=True,
+        ).select_related("outcome", "outcome__competency").order_by("-version").first()
+        if rubric is None:
+            return Response({"detail": "No active assessment rubric is available."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({
+            "outcomeKey": rubric.outcome.key,
+            "outcomeTitle": rubric.outcome.title,
+            "competencyTitle": rubric.outcome.competency.title,
+            "version": rubric.version,
+            "criteria": rubric.criteria,
+            "levelScale": [
+                {"level": 1, "label": "Beginning"},
+                {"level": 2, "label": "Developing"},
+                {"level": 3, "label": "Capable"},
+                {"level": 4, "label": "Proficient"},
+                {"level": 5, "label": "Advanced"},
+            ],
+        })
