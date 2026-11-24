@@ -223,6 +223,14 @@ export default function SkillsScreen() {
       </View>
       <Ionicons name="chevron-forward" size={16} color={colors.muted} />
     </Pressable>
+    <Pressable onPress={() => router.push('/development-plan')} style={styles.journeyLink}>
+      <Ionicons name="flag-outline" size={18} color={colors.primary} />
+      <View style={styles.flex}>
+        <Text style={styles.optionTitle}>Build a development plan</Text>
+        <Text style={styles.detail}>Turn competency targets into practical next steps</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+    </Pressable>
 
     <View style={styles.section}>
       <SectionHeading title="Cross-domain portfolio" subtitle="Your recorded development evidence across the last 90 days. Sources keep their own verification status." />
