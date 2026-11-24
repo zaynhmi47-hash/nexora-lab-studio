@@ -56,10 +56,18 @@ export default function DevelopmentTaskScreen() {
         return [task.id, payload<Evidence[]>(result)] as const;
       }));
       setEvidence(Object.fromEntries(evidenceRows));
+      const portfolioResponse = await api.request<Array<{ id: string; sharedOrganizations?: { id: string }[] }>>('/api/v1/learning/evidence/');
+      const portfolioRows = payload<Array<{ id: string; sharedOrganizations?: { id: string }[] }>>(portfolioResponse);
+      const shared = new Set((Array.isArray(portfolioRows) ? portfolioRows : [])
+        .filter((item) => item.sharedOrganizations?.some((entry) => entry.id === organization?.id))
+        .map((item) => next.flatMap((task) => (Object.fromEntries(evidenceRows)[task.id] ?? []))
+          .find((evidenceItem) => evidenceItem.portfolioEvidenceId === item.id)?.id)
+        .filter((id): id is string => Boolean(id)));
+      setSharedEvidenceIds([...shared]);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Unable to load execution tasks.');
     } finally { setLoading(false); }
-  }, [api, planId]);
+  }, [api, organization?.id, planId]);
 
   useEffect(() => { void load(); }, [load]);
 
