@@ -58,12 +58,13 @@ export default function DevelopmentTaskScreen() {
       setEvidence(Object.fromEntries(evidenceRows));
       const portfolioResponse = await api.request<Array<{ id: string; sharedOrganizations?: { id: string }[] }>>('/api/v1/learning/evidence/');
       const portfolioRows = payload<Array<{ id: string; sharedOrganizations?: { id: string }[] }>>(portfolioResponse);
-      const shared = new Set((Array.isArray(portfolioRows) ? portfolioRows : [])
+      const sharedPortfolioIds = new Set((Array.isArray(portfolioRows) ? portfolioRows : [])
         .filter((item) => item.sharedOrganizations?.some((entry) => entry.id === organization?.id))
-        .map((item) => next.flatMap((task) => (Object.fromEntries(evidenceRows)[task.id] ?? []))
-          .find((evidenceItem) => evidenceItem.portfolioEvidenceId === item.id)?.id)
-        .filter((id): id is string => Boolean(id)));
-      setSharedEvidenceIds([...shared]);
+        .map((item) => item.id));
+      const sharedTaskEvidenceIds = evidenceRows.flatMap(([, rows]) => rows
+        .filter((item) => item.portfolioEvidenceId && sharedPortfolioIds.has(item.portfolioEvidenceId))
+        .map((item) => item.id));
+      setSharedEvidenceIds(sharedTaskEvidenceIds);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Unable to load execution tasks.');
     } finally { setLoading(false); }
