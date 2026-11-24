@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { useTenantApi } from '@/lib/api/tenant';
 import type { CreateTransactionInput, FinanceTransaction, TransactionDirection, TransactionStatus } from './types';
@@ -112,5 +112,7 @@ export function useTransactionApi() {
     return mapTransaction(response.data);
   }, [tenantApi]);
 
-  return { ...tenantApi, listTransactions, getTransaction, createTransaction, updateTransaction, voidTransaction };
+  return useMemo(() => ({
+    ...tenantApi, listTransactions, getTransaction, createTransaction, updateTransaction, voidTransaction,
+  }), [tenantApi, listTransactions, getTransaction, createTransaction, updateTransaction, voidTransaction]);
 }
