@@ -23,13 +23,13 @@ function AuthGate() {
 }
 
 function AppShell() {
-  const { mode } = useTheme();
+  const { mode, theme } = useTheme();
 
   return (
     <>
       <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
       <AuthGate />
-      <Stack screenOptions={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.background } }} />
     </>
   );
 }
