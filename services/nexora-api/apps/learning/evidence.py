@@ -602,3 +602,89 @@ class LearningEvidenceService:
                 },
             })
         return profile
+
+
+    @staticmethod
+    def cross_domain_portfolio(*, user, window_days=90):
+        """Group owner-visible evidence by competency without deriving mastery."""
+        journey = LearningEvidenceService.development_journey(
+            user=user,
+            window_days=window_days,
+            limit=100,
+            offset=0,
+        )
+        skills = LearningEvidenceService.skill_profile(user)
+        competencies = {}
+        for skill in skills:
+            key = skill["competencyKey"]
+            group = competencies.setdefault(key, {
+                "key": key,
+                "title": skill["competencyTitle"],
+                "domain": skill["domain"],
+                "outcomes": [],
+                "evidence": [],
+                "mastery": [],
+            })
+            group["outcomes"].append({
+                "key": skill["outcomeKey"],
+                "title": skill["outcomeTitle"],
+                "targetProficiencyLevel": skill["targetProficiencyLevel"],
+                "masteryLevel": skill["masteryLevel"],
+                "masteryStatus": skill["masteryStatus"],
+                "evidenceCounts": skill["evidenceCounts"],
+            })
+            if skill["masteryLevel"] is not None:
+                group["mastery"].append({
+                    "outcomeKey": skill["outcomeKey"],
+                    "level": skill["masteryLevel"],
+                    "status": skill["masteryStatus"],
+                    "assessmentMethod": skill["assessmentMethod"],
+                    "assessedAt": skill["assessedAt"],
+                })
+
+        domain_counts = {}
+        unlinked_counts = {}
+        for item in journey["items"]:
+            domain = item["domain"]
+            domain_counts[domain] = domain_counts.get(domain, 0) + 1
+            competency = item.get("competency")
+            if competency and competency["key"] in competencies:
+                competencies[competency["key"]]["evidence"].append({
+                    "id": item["id"],
+                    "occurredAt": item["occurredAt"],
+                    "domain": domain,
+                    "kind": item["kind"],
+                    "title": item["title"],
+                    "description": item["description"],
+                    "status": item["status"],
+                    "source": item["source"],
+                })
+            else:
+                unlinked_counts[domain] = unlinked_counts.get(domain, 0) + 1
+
+        for group in competencies.values():
+            group["evidence"].sort(key=lambda item: item["occurredAt"], reverse=True)
+            group["evidenceCount"] = len(group["evidence"])
+            group["mastery"] = group["mastery"] or None
+
+        return {
+            "windowDays": window_days,
+            "generatedAt": journey["generatedAt"],
+            "competencies": list(competencies.values()),
+            "domainSummary": [
+                {"domain": domain, "evidenceCount": count}
+                for domain, count in sorted(domain_counts.items())
+            ],
+            "unlinkedEvidenceByDomain": [
+                {"domain": domain, "evidenceCount": count}
+                for domain, count in sorted(unlinked_counts.items())
+            ],
+            "activityTotal": journey["total"],
+            "activityReturned": len(journey["items"]),
+            "hasMoreActivity": journey["hasMore"],
+            "privacy": journey["privacy"],
+            "limitations": journey["limitations"] + [
+                "Only evidence with an explicit competency mapping is grouped under a competency.",
+                "Evidence records do not increase mastery; mastery appears only from explicit assessment records.",
+            ],
+        }
