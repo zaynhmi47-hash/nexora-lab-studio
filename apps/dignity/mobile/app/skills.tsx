@@ -47,6 +47,11 @@ interface PortfolioEvidence {
   title: string;
   description: string | null;
   status: string | null;
+  source?: {
+    type?: string;
+    organizationName?: string;
+    reviewerAttributed?: boolean;
+  };
 }
 interface PortfolioCompetency {
   key: string;
@@ -236,7 +241,10 @@ export default function SkillsScreen() {
             <View style={styles.flex}>
               <Text style={styles.eventTitle}>{group.title}</Text>
               <Text style={styles.detail}>{group.domain} · {group.evidenceCount} linked evidence record(s)</Text>
-              {group.evidence.slice(0, 2).map((item) => <Text key={item.id} style={styles.eventCompetency}>{item.title} · {item.domain} · {item.status ?? 'recorded'}</Text>)}
+              {group.evidence.slice(0, 2).map((item) => <View key={item.id}>
+                <Text style={styles.eventCompetency}>{item.title} · {item.domain} · {item.status ?? 'recorded'}</Text>
+                {item.source?.organizationName ? <Text style={styles.detail}>Verified by · {item.source.organizationName}{item.source.reviewerAttributed ? ' · reviewer attributed' : ''}</Text> : item.status === 'self_reported' ? <Text style={styles.detail}>Self-reported record · not an independently verified credential</Text> : null}
+              </View>)}
             </View>
           </View>)}
         </View> : null}
