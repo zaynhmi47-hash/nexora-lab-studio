@@ -24,6 +24,11 @@ def plan_payload(plan):
         "targetLevel": plan.target_level,
         "currentAssessedLevel": current_level,
         "gap": max(0, plan.target_level - (current_level or 0)),
+        "gapStatus": (
+            "needs_assessment" if assessment is None
+            else "target_reached" if current_level >= plan.target_level
+            else "development_needed"
+        ),
         "assessmentStatus": assessment.status if assessment else "unassessed",
         "lastAssessedAt": assessment.assessed_at.isoformat() if assessment else None,
         "actions": plan.actions,
