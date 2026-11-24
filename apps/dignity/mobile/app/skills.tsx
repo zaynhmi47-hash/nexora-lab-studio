@@ -232,6 +232,15 @@ export default function SkillsScreen() {
       <Ionicons name="chevron-forward" size={16} color={colors.muted} />
     </Pressable>
 
+    <Pressable onPress={() => router.push('/learning-evidence-review')} style={styles.journeyLink}>
+      <Ionicons name="shield-checkmark-outline" size={18} color={colors.primary} />
+      <View style={styles.flex}>
+        <Text style={styles.optionTitle}>Learning evidence review</Text>
+        <Text style={styles.detail}>Organization reviewers · only explicitly shared submissions</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+    </Pressable>
+
     <Pressable onPress={() => router.push('/assessment-history')} style={styles.journeyLink}>
       <Ionicons name="time-outline" size={18} color={colors.primary} />
       <View style={styles.flex}>
