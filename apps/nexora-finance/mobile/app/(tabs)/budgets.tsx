@@ -15,7 +15,7 @@ import {
 
 import { AdaptiveHeader, ResponsiveContainer, ResponsiveGrid, ResponsiveScaffold } from '@/components/layout';
 import { useResponsive } from '@/lib/responsive';
-import { theme } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 import { useBudgets, type FinanceBudget, type CreateBudgetInput } from '@/lib/features/budgets';
 
 const formatIdr = (amount: number) => new Intl.NumberFormat('id-ID', {
@@ -32,6 +32,8 @@ const todayInput = () => {
 type Mode = 'detail' | 'add' | 'edit';
 
 export default function BudgetsScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { isMobile } = useResponsive();
   const [page, setPage] = useState(1);
   const { budgets, loading, error, refresh, create, update, archive, ready, pageInfo } = useBudgets({
@@ -296,7 +298,8 @@ export default function BudgetsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(theme: ReturnType<typeof useTheme>['theme']) {
+  return StyleSheet.create({
   content: { paddingTop: 20, paddingBottom: 40, gap: 16 },
   toolbar: { padding: theme.spacing.lg, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
   toolbarCopy: { flex: 1, gap: 3 },
@@ -340,4 +343,5 @@ const styles = StyleSheet.create({
   detailGrid: { gap: 12 },
   detailItem: { paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: theme.colors.border, gap: 3 },
   detailValue: { fontSize: 15, lineHeight: 21, color: theme.colors.text },
-});
+  });
+}
