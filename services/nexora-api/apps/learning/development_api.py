@@ -123,4 +123,6 @@ class LearningAssessmentHistoryView(APIView):
             "rationale": event.rationale,
             "assessedBy": event.assessed_by.display_name,
             "assessedAt": event.assessed_at.isoformat(),
+            "rubricVersion": event.rubric_version,
+            "criterionScores": event.criterion_scores,
         } for event in events])
