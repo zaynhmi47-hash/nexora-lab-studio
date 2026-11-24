@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { useTenantApi } from '@/lib/api/tenant';
 import type {
@@ -54,44 +54,27 @@ export function useBudgetApi() {
     if (filters.pageSize) params.set('page_size', String(filters.pageSize));
 
     const query = params.toString();
-    const response = await tenantApi.request<ApiBudget[]>(
-      '/finance/budgets/' + (query ? '?' + query : ''),
-    );
+    const response = await tenantApi.request<ApiBudget[]>('/finance/budgets/' + (query ? '?' + query : ''));
     const pagination = (response.meta?.pagination ?? {}) as Record<string, unknown>;
     const page = Number(pagination.page ?? filters.page ?? 1);
     const pageSize = Number(pagination.page_size ?? filters.pageSize ?? response.data.length);
     const total = Number(pagination.total ?? response.data.length);
-    const totalPages = Number(
-      pagination.total_pages ?? (total > 0 ? Math.ceil(total / Math.max(pageSize, 1)) : 1),
-    );
+    const totalPages = Number(pagination.total_pages ?? (total > 0 ? Math.ceil(total / Math.max(pageSize, 1)) : 1));
 
-    return {
-      budgets: response.data.map(mapBudget),
-      page,
-      pageSize,
-      total,
-      totalPages,
-    };
+    return { budgets: response.data.map(mapBudget), page, pageSize, total, totalPages };
   }, [tenantApi]);
 
   const getBudget = useCallback(async (id: string) => {
-    const response = await tenantApi.request<ApiBudget>(
-      '/finance/budgets/' + encodeURIComponent(id) + '/',
-    );
+    const response = await tenantApi.request<ApiBudget>('/finance/budgets/' + encodeURIComponent(id) + '/');
     return mapBudget(response.data);
   }, [tenantApi]);
 
   const createBudget = useCallback(async (input: CreateBudgetInput) => {
     const response = await tenantApi.request<ApiBudget>('/finance/budgets/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        name: input.name,
-        category: input.category,
-        amount_minor: input.amountMinor,
-        currency: input.currency ?? 'IDR',
-        start_date: input.startDate,
-        end_date: input.endDate,
+        name: input.name, category: input.category, amount_minor: input.amountMinor,
+        currency: input.currency ?? 'IDR', start_date: input.startDate, end_date: input.endDate,
         metadata: input.metadata ?? {},
       }),
     });
@@ -99,32 +82,27 @@ export function useBudgetApi() {
   }, [tenantApi]);
 
   const updateBudget = useCallback(async (id: string, input: UpdateBudgetInput) => {
-    const response = await tenantApi.request<ApiBudget>(
-      '/finance/budgets/' + encodeURIComponent(id) + '/',
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...(input.name !== undefined && { name: input.name }),
-          ...(input.category !== undefined && { category: input.category }),
-          ...(input.amountMinor !== undefined && { amount_minor: input.amountMinor }),
-          ...(input.currency !== undefined && { currency: input.currency }),
-          ...(input.startDate !== undefined && { start_date: input.startDate }),
-          ...(input.endDate !== undefined && { end_date: input.endDate }),
-          ...(input.metadata !== undefined && { metadata: input.metadata }),
-        }),
-      },
-    );
+    const response = await tenantApi.request<ApiBudget>('/finance/budgets/' + encodeURIComponent(id) + '/', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...(input.name !== undefined && { name: input.name }),
+        ...(input.category !== undefined && { category: input.category }),
+        ...(input.amountMinor !== undefined && { amount_minor: input.amountMinor }),
+        ...(input.currency !== undefined && { currency: input.currency }),
+        ...(input.startDate !== undefined && { start_date: input.startDate }),
+        ...(input.endDate !== undefined && { end_date: input.endDate }),
+        ...(input.metadata !== undefined && { metadata: input.metadata }),
+      }),
+    });
     return mapBudget(response.data);
   }, [tenantApi]);
 
   const archiveBudget = useCallback(async (id: string) => {
-    const response = await tenantApi.request<ApiBudget>(
-      '/finance/budgets/' + encodeURIComponent(id) + '/',
-      { method: 'DELETE' },
-    );
+    const response = await tenantApi.request<ApiBudget>('/finance/budgets/' + encodeURIComponent(id) + '/', { method: 'DELETE' });
     return mapBudget(response.data);
   }, [tenantApi]);
 
-  return { ...tenantApi, listBudgets, getBudget, createBudget, updateBudget, archiveBudget };
+  return useMemo(() => ({
+    ...tenantApi, listBudgets, getBudget, createBudget, updateBudget, archiveBudget,
+  }), [tenantApi, listBudgets, getBudget, createBudget, updateBudget, archiveBudget]);
 }
