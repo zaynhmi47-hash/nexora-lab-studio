@@ -14,14 +14,18 @@ from .models import (
 
 
 def plan_payload(plan):
+    assessment = _latest_assessment(plan.user_id, plan.outcome_id)
+    current_level = assessment.level if assessment else None
     return {
         "id": str(plan.id),
         "outcomeKey": plan.outcome.key,
         "outcomeTitle": plan.outcome.title,
         "competencyTitle": plan.outcome.competency.title,
         "targetLevel": plan.target_level,
-        "currentAssessedLevel": _current_level(plan.user_id, plan.outcome_id),
-        "gap": max(0, plan.target_level - (_current_level(plan.user_id, plan.outcome_id) or 0)),
+        "currentAssessedLevel": current_level,
+        "gap": max(0, plan.target_level - (current_level or 0)),
+        "assessmentStatus": assessment.status if assessment else "unassessed",
+        "lastAssessedAt": assessment.assessed_at.isoformat() if assessment else None,
         "actions": plan.actions,
         "reflection": plan.reflection,
         "status": plan.status,
@@ -31,13 +35,18 @@ def plan_payload(plan):
     }
 
 
-def _current_level(user_id, outcome_id):
-    mastery = LearningMastery.objects.filter(
+def _latest_assessment(user_id, outcome_id):
+    event = LearningMasteryAssessmentEvent.objects.filter(
         user_id=user_id, outcome_id=outcome_id, deleted_at__isnull=True,
         status__in=(LearningMastery.Status.PROVISIONAL, LearningMastery.Status.VERIFIED),
-    ).first()
-    return mastery.level if mastery else None
-
+    ).order_by("-assessed_at", "-created_at").first()
+    if event is not None:
+        return event
+    # Compatibility for assessments recorded before immutable history was introduced.
+    return LearningMastery.objects.filter(
+        user_id=user_id, outcome_id=outcome_id, deleted_at__isnull=True,
+        status__in=(LearningMastery.Status.PROVISIONAL, LearningMastery.Status.VERIFIED),
+    ).order_by("-assessed_at", "-updated_at").first()
 
 class LearningDevelopmentPlanView(APIView):
     authentication_classes = [FirebaseIdentityAuthentication]
