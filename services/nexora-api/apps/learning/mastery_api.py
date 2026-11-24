@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from apps.core.exceptions import PermissionDeniedException
 from apps.identity.authentication import FirebaseIdentityAuthentication
 
-from .evidence_review import LearningEvidenceReviewService
+from .evidence_review import LearningEvidenceReviewService, validate_rubric_definition
 from .models import LearningEvidenceShare, LearningOutcome, LearningOutcomeRubric
 
 
@@ -90,12 +90,16 @@ class LearningOutcomeRubricView(APIView):
         ).select_related("outcome", "outcome__competency").order_by("-version").first()
         if rubric is None:
             return Response({"detail": "No active assessment rubric is available."}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            criteria = validate_rubric_definition(rubric.criteria)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
         return Response({
             "outcomeKey": rubric.outcome.key,
             "outcomeTitle": rubric.outcome.title,
             "competencyTitle": rubric.outcome.competency.title,
             "version": rubric.version,
-            "criteria": rubric.criteria,
+            "criteria": criteria,
             "levelScale": [
                 {"level": 1, "label": "Beginning"},
                 {"level": 2, "label": "Developing"},
