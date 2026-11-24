@@ -39,6 +39,27 @@ interface JourneyItem {
   mastery: { level: number; status: string } | null;
 }
 interface JourneyResponse { items: JourneyItem[]; total: number; windowDays: number; }
+interface PortfolioEvidence {
+  id: string;
+  occurredAt: string;
+  domain: string;
+  kind: string;
+  title: string;
+  description: string | null;
+  status: string | null;
+}
+interface PortfolioCompetency {
+  key: string;
+  title: string;
+  domain: string;
+  evidenceCount: number;
+  evidence: PortfolioEvidence[];
+}
+interface CrossDomainPortfolio {
+  competencies: PortfolioCompetency[];
+  hasMoreActivity: boolean;
+  activityTotal: number;
+}
 interface EvidenceItem {
   id: string;
   outcomeKey: string;
@@ -63,7 +84,7 @@ export default function SkillsScreen() {
   const [catalog, setCatalog] = useState<CompetencyCatalog[]>([]);
   const [evidence, setEvidence] = useState<EvidenceItem[]>([]);
   const [journeyItems, setJourneyItems] = useState<JourneyItem[]>([]);
-  const [journeyTotal, setJourneyTotal] = useState(0);
+  const [journeyTotal, setJourneyTotal] = useState(0);\n  const [portfolioGroups, setPortfolioGroups] = useState<PortfolioCompetency[]>([]);\n  const [portfolioHasMore, setPortfolioHasMore] = useState(false);
   const [selectedOutcome, setSelectedOutcome] = useState('');
   const [evidenceType, setEvidenceType] = useState('project');
   const [title, setTitle] = useState('');
@@ -87,21 +108,21 @@ export default function SkillsScreen() {
     setLoading(true);
     setError(null);
     try {
-      const [skillResponse, catalogResponse, evidenceResponse, journeyResponse] = await Promise.all([
+      const [skillResponse, catalogResponse, evidenceResponse, journeyResponse, portfolioResponse] = await Promise.all([
         api.request<SkillOutcome[]>('/api/v1/learning/skills/'),
         api.request<CompetencyCatalog[]>('/api/v1/learning/competencies/'),
         api.request<EvidenceItem[]>('/api/v1/learning/evidence/'),
-        api.request<JourneyResponse>('/api/v1/learning/journey/?window=90&limit=100'),
+        api.request<JourneyResponse>('/api/v1/learning/journey/?window=90&limit=100'),\n        api.request<CrossDomainPortfolio>('/api/v1/learning/portfolio/cross-domain/?window=90'),
       ]);
       const nextSkills = payload<SkillOutcome[]>(skillResponse);
       const nextCatalog = payload<CompetencyCatalog[]>(catalogResponse);
       const nextEvidence = payload<EvidenceItem[]>(evidenceResponse);
-      const nextJourney = payload<JourneyResponse>(journeyResponse);
+      const nextJourney = payload<JourneyResponse>(journeyResponse);\n      const nextPortfolio = payload<CrossDomainPortfolio>(portfolioResponse);
       setSkills(Array.isArray(nextSkills) ? nextSkills : []);
       setCatalog(Array.isArray(nextCatalog) ? nextCatalog : []);
       setEvidence(Array.isArray(nextEvidence) ? nextEvidence : []);
       setJourneyItems(Array.isArray(nextJourney?.items) ? nextJourney.items : []);
-      setJourneyTotal(typeof nextJourney?.total === 'number' ? nextJourney.total : 0);
+      setJourneyTotal(typeof nextJourney?.total === 'number' ? nextJourney.total : 0);\n      setPortfolioGroups(Array.isArray(nextPortfolio?.competencies) ? nextPortfolio.competencies : []);\n      setPortfolioHasMore(nextPortfolio?.hasMoreActivity === true);
       setSelectedOutcome((current) => current || nextCatalog?.flatMap((item) => item.outcomes)[0]?.key || '');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Unable to load your skill profile.');
@@ -202,6 +223,18 @@ export default function SkillsScreen() {
         {domainSummary.length === 0 ? <Text style={styles.detail}>No cross-domain activity has been recorded in this period yet.</Text> : <View style={styles.domainChips}>
           {domainSummary.map((item) => <View key={item.domain} style={styles.domainChip}><Text style={styles.domainChipTitle}>{item.domain}</Text><Text style={styles.domainChipCount}>{item.count}</Text></View>)}
         </View>}
+        {portfolioGroups.length > 0 ? <View style={{ marginTop: spacing.md, gap: spacing.sm }}>
+          <Text style={styles.fieldLabel}>Evidence grouped by competency</Text>
+          {portfolioGroups.filter((group) => group.evidenceCount > 0).slice(0, 6).map((group) => <View key={group.key} style={styles.portfolioEvent}>
+            <View style={styles.eventMarker} />
+            <View style={styles.flex}>
+              <Text style={styles.eventTitle}>{group.title}</Text>
+              <Text style={styles.detail}>{group.domain} · {group.evidenceCount} linked evidence record(s)</Text>
+              {group.evidence.slice(0, 2).map((item) => <Text key={item.id} style={styles.eventCompetency}>{item.title} · {item.domain} · {item.status ?? 'recorded'}</Text>)}
+            </View>
+          </View>)}
+        </View> : null}
+        {portfolioHasMore ? <Text style={styles.detail}>More than 100 activity records exist in this window; the grouped preview shows the first page only.</Text> : null}
         {journeyItems.slice(0, 5).map((item) => <View key={item.id} style={styles.portfolioEvent}>
           <View style={styles.eventMarker} />
           <View style={styles.flex}>
