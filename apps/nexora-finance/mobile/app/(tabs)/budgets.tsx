@@ -301,8 +301,8 @@ export default function BudgetsScreen() {
 function createStyles(theme: ReturnType<typeof useTheme>['theme']) {
   return StyleSheet.create({
   content: { paddingTop: 20, paddingBottom: 40, gap: 16 },
-  toolbar: { padding: theme.spacing.lg, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
-  toolbarCopy: { flex: 1, gap: 3 },
+  toolbar: { padding: theme.spacing.lg, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  toolbarCopy: { flex: 1, minWidth: 140, gap: 3 },
   sectionTitle: { fontSize: 18, fontWeight: '800', color: theme.colors.text },
   hint: { fontSize: 14, lineHeight: 20, color: theme.colors.muted },
   primaryButton: { minHeight: 44, paddingHorizontal: 16, borderRadius: theme.radius.md, backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center' },
@@ -321,7 +321,7 @@ function createStyles(theme: ReturnType<typeof useTheme>['theme']) {
   budgetMain: { flex: 1, gap: 4 },
   budgetTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
   budgetAmount: { fontSize: 15, fontWeight: '800', color: theme.colors.text },
-  pagination: { minHeight: 64, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  pagination: { minHeight: 64, paddingVertical: 12, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.35)' },
   modalCard: { maxHeight: '92%', borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: theme.colors.surface },
   modalMobile: { width: '100%' },
