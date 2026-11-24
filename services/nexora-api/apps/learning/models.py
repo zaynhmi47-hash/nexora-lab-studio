@@ -405,3 +405,44 @@ class LearningOutcomeLessonMapping(AuditableBaseModel):
                 name="learning_lesson_outcome_map_uniq",
             ),
         ]
+
+
+
+class LearningMasteryAssessmentEvent(AuditableBaseModel):
+    """Immutable-by-convention snapshot of each explicit mastery decision."""
+
+    user = models.ForeignKey(NexoraUser, on_delete=models.CASCADE, related_name="mastery_assessment_history")
+    outcome = models.ForeignKey(LearningOutcome, on_delete=models.PROTECT, related_name="assessment_history")
+    level = models.PositiveSmallIntegerField()
+    status = models.CharField(max_length=12, choices=LearningMastery.Status.choices)
+    assessment_method = models.CharField(max_length=80)
+    rationale = models.TextField()
+    assessed_by = models.ForeignKey(NexoraUser, on_delete=models.PROTECT, related_name="authored_mastery_assessments")
+    assessed_at = models.DateTimeField()
+
+    class Meta:
+        db_table = "learning_mastery_assessment_events"
+        ordering = ("-assessed_at", "-id")
+        indexes = [models.Index(fields=("user", "-assessed_at"), name="learn_mastery_hist_user_idx")]
+
+
+class LearningDevelopmentPlan(AuditableBaseModel):
+    """Learner-owned plan linked to an assessed outcome and target level."""
+
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        COMPLETED = "completed", "Completed"
+        PAUSED = "paused", "Paused"
+
+    user = models.ForeignKey(NexoraUser, on_delete=models.CASCADE, related_name="learning_development_plans")
+    outcome = models.ForeignKey(LearningOutcome, on_delete=models.PROTECT, related_name="development_plans")
+    target_level = models.PositiveSmallIntegerField()
+    actions = models.JSONField(default=list)
+    reflection = models.TextField(blank=True)
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.ACTIVE, db_index=True)
+    target_date = models.DateField(null=True, blank=True)
+
+    class Meta:
+        db_table = "learning_development_plans"
+        ordering = ("target_date", "-created_at")
+        indexes = [models.Index(fields=("user", "status"), name="learn_dev_plan_user_status_idx")]
