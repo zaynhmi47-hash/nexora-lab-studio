@@ -9,9 +9,11 @@ import { colors, radius, spacing } from '@/theme/tokens';
 
 interface Outcome { key: string; title: string; proficiencyLevel: number; }
 interface Competency { key: string; title: string; outcomes: Outcome[]; }
+interface Recommendation { lessonKey: string; title: string; description: string; courseTitle: string; kind: string; contributionType: string; estimatedMinutes: number; completed: boolean; route: string; }
+interface RecommendationResponse { outcomeKey: string; outcomeTitle: string; resources: Recommendation[]; }
 interface Plan {
   id: string; outcomeKey: string; outcomeTitle: string; competencyTitle: string;
-  targetLevel: number; currentAssessedLevel: number | null; gap: number;
+  targetLevel: number; currentAssessedLevel: number | null; gap: number; assessmentStatus?: string; lastAssessedAt?: string | null;
   actions: string[]; reflection: string; status: string; targetDate: string | null;
 }
 function payload<T>(value: unknown): T {
@@ -23,6 +25,8 @@ export default function DevelopmentPlanScreen() {
   const api = useNexoraApi();
   const [catalog, setCatalog] = useState<Competency[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const [outcomeKey, setOutcomeKey] = useState('');
   const [targetLevel, setTargetLevel] = useState(3);
   const [actions, setActions] = useState('');
@@ -51,6 +55,29 @@ export default function DevelopmentPlanScreen() {
   }, [api]);
 
   useEffect(() => { void load(); }, [load]);
+
+  const loadRecommendations = useCallback(async () => {
+    if (!outcomeKey) { setRecommendations([]); return; }
+    setLoadingRecommendations(true);
+    try {
+      const response = await api.request<RecommendationResponse>(
+        '/api/v1/learning/development-recommendations/?outcomeKey=' + encodeURIComponent(outcomeKey),
+      );
+      const result = payload<RecommendationResponse>(response);
+      setRecommendations(Array.isArray(result.resources) ? result.resources : []);
+    } catch {
+      setRecommendations([]);
+    } finally { setLoadingRecommendations(false); }
+  }, [api, outcomeKey]);
+
+  useEffect(() => { void loadRecommendations(); }, [loadRecommendations]);
+
+  const addRecommendation = useCallback((resource: Recommendation) => {
+    const action = 'Selesaikan ' + resource.title + ' (' + resource.courseTitle + ')';
+    setActions((current) => current.split('\\n').map((item) => item.trim()).includes(action)
+      ? current : [current.trim(), action].filter(Boolean).join('\\n'));
+    setNotice('Rekomendasi ditambahkan ke langkah rencana. Buka materi untuk mulai belajar.');
+  }, []);
 
   const createPlan = useCallback(async () => {
     const steps = actions.split('\n').map((item) => item.trim()).filter(Boolean);
@@ -100,6 +127,21 @@ export default function DevelopmentPlanScreen() {
           <Text style={styles.optionText}>{item.title}</Text>
         </Pressable>)}
         {outcomes.length === 0 ? <Text style={styles.detail}>No published outcomes are available yet.</Text> : null}
+        <Text style={styles.label}>Curated learning resources</Text>
+        {loadingRecommendations ? <Text style={styles.detail}>Loading mapped resources…</Text> : recommendations.length === 0 ? <Text style={styles.detail}>No published learning resources are mapped to this outcome yet. You can still define your own practice steps.</Text> : recommendations.map((resource) => <View key={resource.lessonKey} style={styles.recommendation}>
+          <View style={styles.recommendationHeader}>
+            <View style={styles.flex}>
+              <Text style={styles.recommendationTitle}>{resource.title}</Text>
+              <Text style={styles.detail}>{resource.courseTitle} · {resource.estimatedMinutes} min · {resource.contributionType}</Text>
+            </View>
+            <Text style={styles.completion}>{resource.completed ? 'Completed' : 'Not started'}</Text>
+          </View>
+          {resource.description ? <Text style={styles.detail}>{resource.description}</Text> : null}
+          <View style={styles.resourceActions}>
+            <Pressable onPress={() => router.push(resource.route as never)} style={styles.resourceButton}><Text style={styles.resourceButtonText}>{resource.kind === 'quiz' ? 'Open quiz' : 'Open lesson'}</Text></Pressable>
+            <Pressable onPress={() => addRecommendation(resource)} style={styles.addButton}><Text style={styles.addButtonText}>Add to plan</Text></Pressable>
+          </View>
+        </View>)}
         <Text style={styles.label}>Target proficiency level</Text>
         <View style={styles.levelRow}>{[1, 2, 3, 4, 5].map((level) => <Pressable key={level} onPress={() => setTargetLevel(level)} style={[styles.levelChip, targetLevel === level && styles.levelSelected]}><Text style={[styles.levelText, targetLevel === level && styles.levelTextSelected]}>{level}</Text></Pressable>)}</View>
         <Text style={styles.label}>Action steps (one per line)</Text>
@@ -113,6 +155,7 @@ export default function DevelopmentPlanScreen() {
         <Text style={styles.eyebrow}>{plan.competencyTitle}</Text>
         <Text style={styles.cardTitle}>{plan.outcomeTitle}</Text>
         <Text style={styles.detail}>Assessed level: {plan.currentAssessedLevel ?? 'Not assessed'} · Target: {plan.targetLevel}/5 · Gap: {plan.gap}</Text>
+        <Text style={styles.detail}>Assessment status: {plan.assessmentStatus ?? 'unassessed'}{plan.lastAssessedAt ? ' · ' + new Date(plan.lastAssessedAt).toLocaleDateString() : ''}</Text>
         {plan.targetDate ? <Text style={styles.detail}>Target date: {plan.targetDate}</Text> : null}
         {plan.actions.map((action, index) => <View key={index} style={styles.action}><Ionicons name="arrow-forward-circle-outline" size={16} color={colors.primary} /><Text style={styles.detail}>{action}</Text></View>)}
         <View style={styles.statusRow}><Text style={styles.status}>{plan.status.replaceAll('_', ' ')}</Text>
@@ -151,6 +194,15 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.45 },
   submitText: { color: '#FFFFFF', fontWeight: '800' },
   planCard: { gap: spacing.sm },
+  recommendation: { borderWidth: 1, borderColor: colors.line, borderRadius: radius.medium, padding: spacing.sm, gap: spacing.xs },
+  recommendationHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  recommendationTitle: { color: colors.ink, fontSize: 13, fontWeight: '800' },
+  completion: { color: colors.primary, fontSize: 10, fontWeight: '800' },
+  resourceActions: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
+  resourceButton: { backgroundColor: colors.primarySoft, borderRadius: radius.small, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  resourceButtonText: { color: colors.primaryDark, fontSize: 11, fontWeight: '800' },
+  addButton: { borderWidth: 1, borderColor: colors.line, borderRadius: radius.small, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  addButtonText: { color: colors.ink, fontSize: 11, fontWeight: '800' },
   action: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
   statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm },
   status: { color: colors.primary, fontWeight: '700', fontSize: 12 },
