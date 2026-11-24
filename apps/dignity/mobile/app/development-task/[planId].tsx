@@ -10,7 +10,7 @@ import { colors, radius, spacing } from '@/theme/tokens';
 type TaskStatus = 'not_started' | 'in_progress' | 'pending_review' | 'completed';
 interface Task {
   id: string; title: string; description: string; status: TaskStatus;
-  dueDate: string | null; evidenceCount: number;
+  dueDate: string | null; evidenceCount: number; sortOrder?: number;
 }
 interface Evidence {
   id: string; evidenceType: string; title: string; description: string; artifactUrl: string;
@@ -19,10 +19,7 @@ function payload<T>(value: unknown): T {
   if (value && typeof value === 'object' && 'data' in value) return (value as { data: T }).data;
   return value as T;
 }
-const nextStatus: Record<TaskStatus, TaskStatus> = {
-  not_started: 'in_progress', in_progress: 'pending_review',
-  pending_review: 'completed', completed: 'not_started',
-};
+const statuses: TaskStatus[] = ['not_started', 'in_progress', 'pending_review', 'completed'];
 const statusLabel: Record<TaskStatus, string> = {
   not_started: 'Not started', in_progress: 'In progress',
   pending_review: 'Pending review', completed: 'Completed',
@@ -35,6 +32,7 @@ export default function DevelopmentTaskScreen() {
   const [evidence, setEvidence] = useState<Record<string, Evidence[]>>({});
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [dueDate, setDueDate] = useState('');
   const [evidenceDrafts, setEvidenceDrafts] = useState<Record<string, { title: string; description: string; url: string }>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -67,20 +65,20 @@ export default function DevelopmentTaskScreen() {
     try {
       await api.request('/api/v1/learning/development-plans/' + planId + '/tasks/', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title.trim(), description: description.trim(), sortOrder: tasks.length }),
+        body: JSON.stringify({ title: title.trim(), description: description.trim(), sortOrder: tasks.length, dueDate: dueDate.trim() || null }),
       });
-      setTitle(''); setDescription(''); setNotice('Task added to your private development plan.');
+      setTitle(''); setDescription(''); setDueDate(''); setNotice('Task added to your private development plan.');
       await load();
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Unable to add task.'); }
     finally { setSaving(false); }
   }, [api, description, load, planId, tasks.length, title]);
 
-  const updateTask = useCallback(async (task: Task) => {
+  const updateTask = useCallback(async (task: Task, status: TaskStatus) => {
     setError(null);
     try {
       await api.request('/api/v1/learning/development-tasks/' + task.id + '/', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: nextStatus[task.status] }),
+        body: JSON.stringify({ status }),
       });
       await load();
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Unable to update task.'); }
@@ -126,6 +124,7 @@ export default function DevelopmentTaskScreen() {
       <SurfaceCard style={styles.form}>
         <TextInput value={title} onChangeText={setTitle} placeholder="e.g. Build a prototype" placeholderTextColor={colors.muted} style={styles.input} />
         <TextInput value={description} onChangeText={setDescription} multiline placeholder="Describe what you will do and what success looks like" placeholderTextColor={colors.muted} style={[styles.input, styles.multiline]} />
+        <TextInput value={dueDate} onChangeText={setDueDate} placeholder="Due date · YYYY-MM-DD (optional)" placeholderTextColor={colors.muted} style={styles.input} />
         <Pressable disabled={!title.trim() || saving} onPress={() => void addTask()} style={[styles.submit, (!title.trim() || saving) && styles.disabled]}>
           <Text style={styles.submitText}>{saving ? 'Saving…' : 'Add task'}</Text>
         </Pressable>
@@ -139,11 +138,14 @@ export default function DevelopmentTaskScreen() {
               <Text style={styles.cardTitle}>{task.title}</Text>
               {task.description ? <Text style={styles.detail}>{task.description}</Text> : null}
             </View>
-            <Text style={styles.count}>{task.evidenceCount} evidence</Text>
+            <Text style={styles.count}>{evidence[task.id]?.length ?? task.evidenceCount} evidence</Text>
           </View>
-          <Pressable onPress={() => void updateTask(task)} style={styles.statusButton}>
-            <Text style={styles.statusText}>{statusLabel[task.status]} · Tap to advance</Text>
-          </Pressable>
+          {task.dueDate ? <Text style={styles.detail}>Due: {task.dueDate}</Text> : null}
+          <View style={styles.statusOptions}>
+            {statuses.map((status) => <Pressable key={status} onPress={() => void updateTask(task, status)} style={[styles.statusButton, task.status === status && styles.statusSelected]}>
+              <Text style={[styles.statusText, task.status === status && styles.statusSelectedText]}>{statusLabel[status]}</Text>
+            </Pressable>)}
+          </View>
           <Text style={styles.label}>Add practice evidence</Text>
           <TextInput value={draft.title} onChangeText={(value) => setEvidenceDrafts((current) => ({ ...current, [task.id]: { ...draft, title: value } }))} placeholder="Evidence title" placeholderTextColor={colors.muted} style={styles.input} />
           <TextInput value={draft.description} onChangeText={(value) => setEvidenceDrafts((current) => ({ ...current, [task.id]: { ...draft, description: value } }))} placeholder="What did you make, try or learn?" placeholderTextColor={colors.muted} style={styles.input} />
@@ -185,6 +187,9 @@ const styles = StyleSheet.create({
   count: { color: colors.primary, fontSize: 10, fontWeight: '800' },
   statusButton: { alignSelf: 'flex-start', backgroundColor: colors.primarySoft, borderRadius: radius.small, padding: spacing.sm },
   statusText: { color: colors.primaryDark, fontSize: 11, fontWeight: '800' },
+  statusOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  statusSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  statusSelectedText: { color: '#FFFFFF' },
   label: { color: colors.ink, fontSize: 12, fontWeight: '700' },
   evidenceButton: { alignSelf: 'flex-start', backgroundColor: colors.primary, borderRadius: radius.small, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   evidenceButtonText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
