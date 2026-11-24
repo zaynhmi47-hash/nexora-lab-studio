@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/dignity/Screen';
 import { SurfaceCard } from '@/components/dignity/SurfaceCard';
 import { useNexoraApi } from '@/lib/api/NexoraApiProvider';
+import { useOrganization } from '@/lib/organization/OrganizationProvider';
 import { colors, radius, spacing } from '@/theme/tokens';
 
 type TaskStatus = 'not_started' | 'in_progress' | 'pending_review' | 'completed';
@@ -13,7 +14,7 @@ interface Task {
   dueDate: string | null; evidenceCount: number; sortOrder?: number;
 }
 interface Evidence {
-  id: string; evidenceType: string; title: string; description: string; artifactUrl: string;
+  id: string; evidenceType: string; title: string; description: string; artifactUrl: string; portfolioEvidenceId?: string | null;
 }
 function payload<T>(value: unknown): T {
   if (value && typeof value === 'object' && 'data' in value) return (value as { data: T }).data;
@@ -28,6 +29,7 @@ const statusLabel: Record<TaskStatus, string> = {
 export default function DevelopmentTaskScreen() {
   const { planId } = useLocalSearchParams<{ planId: string }>();
   const api = useNexoraApi();
+  const { organization } = useOrganization();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [evidence, setEvidence] = useState<Record<string, Evidence[]>>({});
   const [title, setTitle] = useState('');
@@ -36,6 +38,8 @@ export default function DevelopmentTaskScreen() {
   const [evidenceDrafts, setEvidenceDrafts] = useState<Record<string, { title: string; description: string; url: string }>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sharingId, setSharingId] = useState<string | null>(null);
+  const [sharedEvidenceIds, setSharedEvidenceIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -102,6 +106,27 @@ export default function DevelopmentTaskScreen() {
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Unable to save evidence.'); }
   }, [api, evidenceDrafts, load]);
 
+  const toggleShare = useCallback(async (item: Evidence) => {
+    if (!organization || !item.portfolioEvidenceId) return;
+    const alreadyShared = sharedEvidenceIds.includes(item.id);
+    setSharingId(item.id); setError(null); setNotice(null);
+    try {
+      await api.request('/api/v1/learning/evidence/shares/', {
+        method: alreadyShared ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ evidenceId: item.portfolioEvidenceId, organizationId: organization.id }),
+      });
+      setSharedEvidenceIds((current) => alreadyShared
+        ? current.filter((id) => id !== item.id)
+        : [...current, item.id]);
+      setNotice(alreadyShared
+        ? 'Access revoked. This evidence is private to your account again.'
+        : 'Evidence shared with ' + organization.name + '. You can revoke access at any time.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to update evidence sharing.');
+    } finally { setSharingId(null); }
+  }, [api, organization, sharedEvidenceIds]);
+
   return <Screen>
     <ScrollView contentContainerStyle={styles.content}>
       <Pressable onPress={() => router.back()} style={styles.back}>
@@ -157,6 +182,16 @@ export default function DevelopmentTaskScreen() {
             <Text style={styles.evidenceTitle}>{item.title}</Text>
             {item.description ? <Text style={styles.detail}>{item.description}</Text> : null}
             {item.artifactUrl ? <Text style={styles.detail}>{item.artifactUrl}</Text> : null}
+            <View style={styles.shareRow}>
+              <Text style={styles.shareHint}>{sharedEvidenceIds.includes(item.id) ? 'Shared with ' + (organization?.name ?? 'organization') : 'Private · not shared'}</Text>
+              <Pressable
+                disabled={!organization || !item.portfolioEvidenceId || sharingId === item.id}
+                onPress={() => void toggleShare(item)}
+                style={[styles.shareEvidenceButton, (!organization || !item.portfolioEvidenceId || sharingId === item.id) && styles.disabled]}
+              >
+                <Text style={styles.evidenceButtonText}>{sharingId === item.id ? 'Updating…' : sharedEvidenceIds.includes(item.id) ? 'Revoke access' : 'Share with organization'}</Text>
+              </Pressable>
+            </View>
           </View>)}
         </SurfaceCard>;
       })}
@@ -194,6 +229,9 @@ const styles = StyleSheet.create({
   evidenceButton: { alignSelf: 'flex-start', backgroundColor: colors.primary, borderRadius: radius.small, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   evidenceButtonText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
   evidenceItem: { borderTopWidth: 1, borderTopColor: colors.line, paddingTop: spacing.sm, gap: 2 },
+  shareRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginTop: spacing.xs },
+  shareHint: { color: colors.muted, fontSize: 10, flex: 1 },
+  shareEvidenceButton: { backgroundColor: colors.primarySoft, borderRadius: radius.small, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
   evidenceTitle: { color: colors.ink, fontSize: 12, fontWeight: '800' },
   error: { color: colors.danger, fontSize: 13 },
   notice: { color: colors.success, fontSize: 13 },
