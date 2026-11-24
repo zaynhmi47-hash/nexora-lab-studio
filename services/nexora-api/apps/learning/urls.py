@@ -12,7 +12,8 @@ from .evidence_review_api import (
     OrganizationEvidenceReviewQueueView,
     OrganizationEvidenceReviewView,
 )
-from .mastery_api import OrganizationMasteryAssessmentView\nfrom .development_api import LearningDevelopmentPlanView, LearningAssessmentHistoryView
+from .mastery_api import OrganizationMasteryAssessmentView
+from .development_api import LearningDevelopmentPlanView, LearningAssessmentHistoryView
 
 from .api import (
     LearningCompleteLessonView,
@@ -26,7 +27,9 @@ from .api import (
 )
 
 urlpatterns = [
-    path("competencies/", LearningCompetencyCatalogView.as_view(), name="learning-competencies"),\n    path("development-plans/", LearningDevelopmentPlanView.as_view(), name="learning-development-plans"),\n    path("assessment-history/", LearningAssessmentHistoryView.as_view(), name="learning-assessment-history"),
+    path("competencies/", LearningCompetencyCatalogView.as_view(), name="learning-competencies"),
+    path("development-plans/", LearningDevelopmentPlanView.as_view(), name="learning-development-plans"),
+    path("assessment-history/", LearningAssessmentHistoryView.as_view(), name="learning-assessment-history"),
     path("evidence/", LearningEvidencePortfolioView.as_view(), name="learning-evidence"),
     path("skills/", LearningSkillProfileView.as_view(), name="learning-skills"),
     path("journey/", LearningDevelopmentJourneyView.as_view(), name="learning-development-journey"),
