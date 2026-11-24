@@ -7,7 +7,7 @@ from apps.access.services import authorize
 from apps.core.exceptions import PermissionDeniedException
 from apps.organizations.services import MembershipService
 
-from .models import LearningEvidence, LearningEvidenceShare, LearningMastery, LearningOutcome
+from .models import LearningEvidence, LearningEvidenceShare, LearningMastery, LearningMasteryAssessmentEvent, LearningOutcome
 
 
 class LearningEvidenceReviewService:
@@ -235,4 +235,4 @@ class LearningEvidenceReviewService:
         mastery.assessed_by = assessor
         mastery.assessed_at = timezone.now()
         mastery.save()
-        return mastery
+        LearningMasteryAssessmentEvent.objects.create(\n            user=mastery.user,\n            outcome=mastery.outcome,\n            level=mastery.level,\n            status=mastery.status,\n            assessment_method=mastery.assessment_method,\n            rationale=mastery.rationale,\n            assessed_by=assessor,\n            assessed_at=mastery.assessed_at,\n        )\n        return mastery
