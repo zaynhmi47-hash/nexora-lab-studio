@@ -7,7 +7,7 @@ from apps.access.services import authorize
 from apps.core.exceptions import PermissionDeniedException
 from apps.organizations.services import MembershipService
 
-from .models import LearningEvidence, LearningEvidenceShare, LearningMastery, LearningMasteryAssessmentEvent, LearningOutcome
+from .models import LearningEvidence, LearningEvidenceShare, LearningMastery, LearningMasteryAssessmentEvent, LearningOutcome, LearningOutcomeRubric
 
 
 class LearningEvidenceReviewService:
@@ -172,6 +172,7 @@ class LearningEvidenceReviewService:
         status: str,
         assessment_method: str,
         rationale: str,
+        criterion_scores: dict | None = None,
     ) -> LearningMastery:
         from apps.organizations.models import Organization
 
@@ -194,6 +195,8 @@ class LearningEvidenceReviewService:
             raise ValueError("Mastery status must be provisional or verified.")
         if not assessment_method.strip() or not rationale.strip():
             raise ValueError("Assessment method and rationale are required.")
+        if len(assessment_method.strip()) > 80 or len(rationale.strip()) > 3000:
+            raise ValueError("Assessment method or rationale exceeds the allowed length.")
         outcome = LearningOutcome.objects.filter(
             key=outcome_key,
             is_published=True,
@@ -203,6 +206,25 @@ class LearningEvidenceReviewService:
         ).first()
         if outcome is None:
             raise LearningOutcome.DoesNotExist
+        rubric = LearningOutcomeRubric.objects.filter(
+            outcome=outcome, is_active=True, deleted_at__isnull=True,
+        ).order_by("-version").first()
+        validated_scores = {}
+        if rubric is not None:
+            criteria = rubric.criteria
+            if not isinstance(criteria, list) or not criteria:
+                raise ValueError("The active assessment rubric has no valid criteria.")
+            expected = {item.get("key"): item for item in criteria if isinstance(item, dict) and isinstance(item.get("key"), str)}
+            if len(expected) != len(criteria) or not expected:
+                raise ValueError("The active assessment rubric contains invalid criteria.")
+            if not isinstance(criterion_scores, dict) or set(criterion_scores) != set(expected):
+                raise ValueError("A score for every rubric criterion is required.")
+            for key, score in criterion_scores.items():
+                if type(score) is not int or not 1 <= score <= 5:
+                    raise ValueError("Each criterion score must be an integer from 1 to 5.")
+                validated_scores[key] = score
+        elif criterion_scores not in (None, {}):
+            raise ValueError("No active rubric exists for this outcome.")
         if str(assessor.id) == str(learner_id):
             raise PermissionDeniedException("Assessors cannot assess their own mastery.")
         has_verified_shared_evidence = LearningEvidence.objects.filter(
@@ -244,5 +266,7 @@ class LearningEvidenceReviewService:
             rationale=mastery.rationale,
             assessed_by=assessor,
             assessed_at=mastery.assessed_at,
+            rubric_version=rubric.version if rubric else None,
+            criterion_scores=validated_scores,
         )
         return mastery
