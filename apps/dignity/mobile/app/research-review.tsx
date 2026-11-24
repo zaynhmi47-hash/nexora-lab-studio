@@ -123,6 +123,14 @@ export default function ResearchReviewScreen() {
         <Text style={styles.detail}>Keanggotaan saja tidak cukup. Akun harus memiliki izin research.evidence.verify.</Text>
       </View>
     </SurfaceCard>
+    <Pressable onPress={() => router.push('/assessment-workspace')} style={styles.assessmentLink}>
+      <Ionicons name="clipboard-outline" size={18} color={colors.primary} />
+      <View style={styles.flex}>
+        <Text style={styles.cardTitle}>Competency assessment workspace</Text>
+        <Text style={styles.detail}>Gunakan rubrik untuk menilai outcome kompetensi peserta</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+    </Pressable>
 
     <View style={styles.section}>
       <SectionHeading title="Kasus verifikasi" subtitle={items.length + ' kasus yang dapat ditindaklanjuti oleh akun ini'} />
@@ -217,6 +225,7 @@ const styles = StyleSheet.create({
   title: { color: colors.ink, fontSize: 26, lineHeight: 32, fontWeight: '900', marginTop: 8 },
   subtitle: { color: colors.muted, fontSize: 12, lineHeight: 19, marginTop: 8, marginBottom: spacing.xl },
   context: { flexDirection: 'row', gap: 10, backgroundColor: colors.primarySoft },
+  assessmentLink: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 13, borderRadius: radius.medium, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
   flex: { flex: 1 },
   cardTitle: { color: colors.ink, fontSize: 13, lineHeight: 19, fontWeight: '900', marginTop: 4 },
   detail: { color: colors.muted, fontSize: 10, lineHeight: 15, marginTop: 5 },
