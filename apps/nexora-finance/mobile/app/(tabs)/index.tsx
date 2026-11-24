@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 
 import { AdaptiveHeader, ResponsiveContainer, ResponsiveGrid, ResponsiveScaffold } from '@/components/layout';
 import { useResponsive } from '@/lib/responsive';
-import { theme } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 import { useGoals } from '@/lib/features/goals';
 import { useFinanceBudgetSummary, useFinanceCategoryBreakdown, useFinanceCashFlow, useFinanceComparison, useFinanceInsights, useFinancePlanning, useFinanceProfitLoss, useFinanceSummary, useFinanceTrend } from '@/lib/features/summary';
 import { useTransactions } from '@/lib/features/transactions';
@@ -68,6 +68,8 @@ const compactIdr = (value: number) => {
 };
 
 export default function HomeScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { isMobile } = useResponsive();
   const router = useRouter();
   const [periodKey, setPeriodKey] = useState<PeriodKey>('this_month');
@@ -542,7 +544,8 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(theme: ReturnType<typeof useTheme>['theme']) {
+  return StyleSheet.create({
   goalsCard: { padding: 20, borderRadius: 16, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, gap: 14 },
   goalSummaryItem: { padding: 16, borderRadius: 14, borderWidth: 1, borderColor: theme.colors.border, gap: 5 },
   goalName: { fontSize: 15, fontWeight: '800', color: theme.colors.text },
@@ -656,4 +659,5 @@ const styles = StyleSheet.create({
   transactionTitle: { fontSize: 15, fontWeight: '600', color: theme.colors.text },
   transactionAmount: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
   expenseAmount: { color: theme.colors.muted },
-});
+  });
+}
