@@ -23,7 +23,7 @@ def plan_payload(plan):
         "competencyTitle": plan.outcome.competency.title,
         "targetLevel": plan.target_level,
         "currentAssessedLevel": current_level,
-        "gap": max(0, plan.target_level - (current_level or 0)),
+        "gap": max(0, plan.target_level - current_level) if assessment is not None else None,
         "gapStatus": (
             "needs_assessment" if assessment is None
             else "target_reached" if current_level >= plan.target_level
@@ -229,9 +229,7 @@ class LearningCompetencyGapAnalysisView(APIView):
             plan = latest_plans.get(outcome.id)
             current_level = assessment.level if assessment else None
             target_level = plan.target_level if plan else None
-            gap = max(0, target_level - current_level) if plan and current_level is not None else (
-                target_level if plan else None
-            )
+            gap = max(0, target_level - current_level) if plan and current_level is not None else None
             gap_status = (
                 "needs_assessment" if assessment is None
                 else "plan_needed" if plan is None
