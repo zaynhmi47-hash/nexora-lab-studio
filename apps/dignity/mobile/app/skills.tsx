@@ -84,7 +84,9 @@ export default function SkillsScreen() {
   const [catalog, setCatalog] = useState<CompetencyCatalog[]>([]);
   const [evidence, setEvidence] = useState<EvidenceItem[]>([]);
   const [journeyItems, setJourneyItems] = useState<JourneyItem[]>([]);
-  const [journeyTotal, setJourneyTotal] = useState(0);\n  const [portfolioGroups, setPortfolioGroups] = useState<PortfolioCompetency[]>([]);\n  const [portfolioHasMore, setPortfolioHasMore] = useState(false);
+  const [journeyTotal, setJourneyTotal] = useState(0);
+  const [portfolioGroups, setPortfolioGroups] = useState<PortfolioCompetency[]>([]);
+  const [portfolioHasMore, setPortfolioHasMore] = useState(false);
   const [selectedOutcome, setSelectedOutcome] = useState('');
   const [evidenceType, setEvidenceType] = useState('project');
   const [title, setTitle] = useState('');
@@ -112,17 +114,21 @@ export default function SkillsScreen() {
         api.request<SkillOutcome[]>('/api/v1/learning/skills/'),
         api.request<CompetencyCatalog[]>('/api/v1/learning/competencies/'),
         api.request<EvidenceItem[]>('/api/v1/learning/evidence/'),
-        api.request<JourneyResponse>('/api/v1/learning/journey/?window=90&limit=100'),\n        api.request<CrossDomainPortfolio>('/api/v1/learning/portfolio/cross-domain/?window=90'),
+        api.request<JourneyResponse>('/api/v1/learning/journey/?window=90&limit=100'),
+        api.request<CrossDomainPortfolio>('/api/v1/learning/portfolio/cross-domain/?window=90'),
       ]);
       const nextSkills = payload<SkillOutcome[]>(skillResponse);
       const nextCatalog = payload<CompetencyCatalog[]>(catalogResponse);
       const nextEvidence = payload<EvidenceItem[]>(evidenceResponse);
-      const nextJourney = payload<JourneyResponse>(journeyResponse);\n      const nextPortfolio = payload<CrossDomainPortfolio>(portfolioResponse);
+      const nextJourney = payload<JourneyResponse>(journeyResponse);
+      const nextPortfolio = payload<CrossDomainPortfolio>(portfolioResponse);
       setSkills(Array.isArray(nextSkills) ? nextSkills : []);
       setCatalog(Array.isArray(nextCatalog) ? nextCatalog : []);
       setEvidence(Array.isArray(nextEvidence) ? nextEvidence : []);
       setJourneyItems(Array.isArray(nextJourney?.items) ? nextJourney.items : []);
-      setJourneyTotal(typeof nextJourney?.total === 'number' ? nextJourney.total : 0);\n      setPortfolioGroups(Array.isArray(nextPortfolio?.competencies) ? nextPortfolio.competencies : []);\n      setPortfolioHasMore(nextPortfolio?.hasMoreActivity === true);
+      setJourneyTotal(typeof nextJourney?.total === 'number' ? nextJourney.total : 0);
+      setPortfolioGroups(Array.isArray(nextPortfolio?.competencies) ? nextPortfolio.competencies : []);
+      setPortfolioHasMore(nextPortfolio?.hasMoreActivity === true);
       setSelectedOutcome((current) => current || nextCatalog?.flatMap((item) => item.outcomes)[0]?.key || '');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Unable to load your skill profile.');
