@@ -103,3 +103,22 @@ class LearningDevelopmentJourneyView(APIView):
         except (TypeError, ValueError) as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(journey)
+
+
+class LearningCrossDomainPortfolioView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        raw_window = request.query_params.get("window", "90")
+        try:
+            window_days = int(raw_window)
+            if window_days not in (7, 30, 90):
+                raise ValueError("window must be 7, 30 or 90.")
+            portfolio = LearningEvidenceService.cross_domain_portfolio(
+                user=request.user,
+                window_days=window_days,
+            )
+        except (TypeError, ValueError) as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(portfolio)
