@@ -1,4 +1,5 @@
 from datetime import date
+from urllib.parse import urlparse
 
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -10,6 +11,7 @@ from apps.identity.authentication import FirebaseIdentityAuthentication
 from .models import (
     LearningDevelopmentPlan, LearningMastery, LearningMasteryAssessmentEvent,
     LearningOutcome, LearningOutcomeLessonMapping, LearningLessonCompletion,
+    LearningDevelopmentTask, LearningDevelopmentTaskEvidence,
 )
 
 
@@ -250,3 +252,169 @@ class LearningCompetencyGapAnalysisView(APIView):
                 "planStatus": plan.status if plan else None,
             })
         return Response({"count": len(rows), "results": rows})
+
+
+def _task_payload(task):
+    return {
+        "id": str(task.id),
+        "planId": str(task.plan_id),
+        "title": task.title,
+        "description": task.description,
+        "status": task.status,
+        "sortOrder": task.sort_order,
+        "dueDate": task.due_date.isoformat() if task.due_date else None,
+        "evidenceCount": task.evidence_items.filter(deleted_at__isnull=True).count(),
+        "createdAt": task.created_at.isoformat(),
+        "updatedAt": task.updated_at.isoformat(),
+    }
+
+
+def _task_evidence_payload(item):
+    return {
+        "id": str(item.id),
+        "taskId": str(item.task_id),
+        "evidenceType": item.evidence_type,
+        "title": item.title,
+        "description": item.description,
+        "artifactUrl": item.artifact_url,
+        "createdAt": item.created_at.isoformat(),
+    }
+
+
+class LearningDevelopmentPlanTasksView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, plan_id):
+        plan = LearningDevelopmentPlan.objects.filter(
+            id=plan_id, user=request.user, deleted_at__isnull=True,
+        ).first()
+        if plan is None:
+            return Response({"detail": "Development plan not found."}, status=status.HTTP_404_NOT_FOUND)
+        tasks = LearningDevelopmentTask.objects.filter(
+            plan=plan, deleted_at__isnull=True,
+        ).prefetch_related("evidence_items")
+        return Response([_task_payload(task) for task in tasks])
+
+    def post(self, request, plan_id):
+        plan = LearningDevelopmentPlan.objects.filter(
+            id=plan_id, user=request.user, deleted_at__isnull=True,
+            status=LearningDevelopmentPlan.Status.ACTIVE,
+        ).first()
+        if plan is None:
+            return Response({"detail": "Active development plan not found."}, status=status.HTTP_404_NOT_FOUND)
+        data = request.data
+        if not isinstance(data, dict):
+            return Response({"detail": "Request body must be a JSON object."}, status=status.HTTP_400_BAD_REQUEST)
+        title = data.get("title")
+        description = data.get("description", "")
+        sort_order = data.get("sortOrder", 0)
+        due_date = data.get("dueDate")
+        if not isinstance(title, str) or not title.strip() or len(title.strip()) > 240:
+            return Response({"detail": "title is required and must be at most 240 characters."}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(description, str) or len(description) > 2000:
+            return Response({"detail": "description must be text up to 2000 characters."}, status=status.HTTP_400_BAD_REQUEST)
+        if type(sort_order) is not int or not 0 <= sort_order <= 1000:
+            return Response({"detail": "sortOrder must be an integer from 0 to 1000."}, status=status.HTTP_400_BAD_REQUEST)
+        parsed_date = None
+        if due_date is not None:
+            try:
+                parsed_date = date.fromisoformat(due_date) if isinstance(due_date, str) else None
+            except ValueError:
+                parsed_date = None
+            if parsed_date is None:
+                return Response({"detail": "dueDate must be a valid ISO date."}, status=status.HTTP_400_BAD_REQUEST)
+        task = LearningDevelopmentTask.objects.create(
+            plan=plan, title=title.strip(), description=description,
+            sort_order=sort_order, due_date=parsed_date,
+        )
+        return Response(_task_payload(task), status=status.HTTP_201_CREATED)
+
+
+class LearningDevelopmentTaskDetailView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, task_id):
+        task = LearningDevelopmentTask.objects.filter(
+            id=task_id, plan__user=request.user, plan__deleted_at__isnull=True,
+            deleted_at__isnull=True,
+        ).first()
+        if task is None:
+            return Response({"detail": "Development task not found."}, status=status.HTTP_404_NOT_FOUND)
+        data = request.data
+        if not isinstance(data, dict):
+            return Response({"detail": "Request body must be a JSON object."}, status=status.HTTP_400_BAD_REQUEST)
+        if "status" in data:
+            if data["status"] not in LearningDevelopmentTask.Status.values:
+                return Response({"detail": "Invalid task status."}, status=status.HTTP_400_BAD_REQUEST)
+            task.status = data["status"]
+        if "title" in data:
+            if not isinstance(data["title"], str) or not data["title"].strip() or len(data["title"].strip()) > 240:
+                return Response({"detail": "title must be non-empty text up to 240 characters."}, status=status.HTTP_400_BAD_REQUEST)
+            task.title = data["title"].strip()
+        if "description" in data:
+            if not isinstance(data["description"], str) or len(data["description"]) > 2000:
+                return Response({"detail": "description must be text up to 2000 characters."}, status=status.HTTP_400_BAD_REQUEST)
+            task.description = data["description"]
+        if "dueDate" in data:
+            value = data["dueDate"]
+            if value is None:
+                task.due_date = None
+            else:
+                try:
+                    parsed = date.fromisoformat(value) if isinstance(value, str) else None
+                except ValueError:
+                    parsed = None
+                if parsed is None:
+                    return Response({"detail": "dueDate must be a valid ISO date or null."}, status=status.HTTP_400_BAD_REQUEST)
+                task.due_date = parsed
+        task.save()
+        return Response(_task_payload(task))
+
+
+class LearningDevelopmentTaskEvidenceView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, task_id):
+        task = LearningDevelopmentTask.objects.filter(
+            id=task_id, plan__user=request.user, plan__deleted_at__isnull=True,
+            deleted_at__isnull=True,
+        ).first()
+        if task is None:
+            return Response({"detail": "Development task not found."}, status=status.HTTP_404_NOT_FOUND)
+        items = task.evidence_items.filter(deleted_at__isnull=True)
+        return Response([_task_evidence_payload(item) for item in items])
+
+    def post(self, request, task_id):
+        task = LearningDevelopmentTask.objects.filter(
+            id=task_id, plan__user=request.user, plan__deleted_at__isnull=True,
+            deleted_at__isnull=True,
+        ).first()
+        if task is None:
+            return Response({"detail": "Development task not found."}, status=status.HTTP_404_NOT_FOUND)
+        data = request.data
+        if not isinstance(data, dict):
+            return Response({"detail": "Request body must be a JSON object."}, status=status.HTTP_400_BAD_REQUEST)
+        evidence_type = data.get("evidenceType", LearningDevelopmentTaskEvidence.EvidenceType.PRACTICE)
+        title = data.get("title")
+        description = data.get("description", "")
+        artifact_url = data.get("artifactUrl", "")
+        if evidence_type not in LearningDevelopmentTaskEvidence.EvidenceType.values:
+            return Response({"detail": "Invalid evidenceType."}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(title, str) or not title.strip() or len(title.strip()) > 255:
+            return Response({"detail": "title is required and must be at most 255 characters."}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(description, str) or len(description) > 3000:
+            return Response({"detail": "description must be text up to 3000 characters."}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(artifact_url, str) or len(artifact_url) > 1000:
+            return Response({"detail": "artifactUrl must be a URL up to 1000 characters."}, status=status.HTTP_400_BAD_REQUEST)
+        if artifact_url:
+            parsed = urlparse(artifact_url)
+            if parsed.scheme != "https" or not parsed.netloc or parsed.username or parsed.password:
+                return Response({"detail": "artifactUrl must be a valid HTTPS URL."}, status=status.HTTP_400_BAD_REQUEST)
+        item = LearningDevelopmentTaskEvidence.objects.create(
+            task=task, evidence_type=evidence_type, title=title.strip(),
+            description=description, artifact_url=artifact_url,
+        )
+        return Response(_task_evidence_payload(item), status=status.HTTP_201_CREATED)
