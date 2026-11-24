@@ -13,7 +13,7 @@ from .evidence_review_api import (
     OrganizationEvidenceReviewView,
 )
 from .mastery_api import OrganizationMasteryAssessmentView, LearningOutcomeRubricView
-from .development_api import LearningDevelopmentPlanView, LearningAssessmentHistoryView, LearningDevelopmentRecommendationsView, LearningCompetencyGapAnalysisView
+from .development_api import LearningDevelopmentPlanView, LearningAssessmentHistoryView, LearningDevelopmentRecommendationsView, LearningCompetencyGapAnalysisView, LearningDevelopmentPlanTasksView, LearningDevelopmentTaskDetailView, LearningDevelopmentTaskEvidenceView
 
 from .api import (
     LearningCompleteLessonView,
@@ -30,6 +30,9 @@ urlpatterns = [
     path("competencies/", LearningCompetencyCatalogView.as_view(), name="learning-competencies"),
     path("rubrics/", LearningOutcomeRubricView.as_view(), name="learning-outcome-rubrics"),
     path("development-plans/", LearningDevelopmentPlanView.as_view(), name="learning-development-plans"),
+    path("development-plans/<uuid:plan_id>/tasks/", LearningDevelopmentPlanTasksView.as_view(), name="learning-development-plan-tasks"),
+    path("development-tasks/<uuid:task_id>/", LearningDevelopmentTaskDetailView.as_view(), name="learning-development-task-detail"),
+    path("development-tasks/<uuid:task_id>/evidence/", LearningDevelopmentTaskEvidenceView.as_view(), name="learning-development-task-evidence"),
     path("development-gap-analysis/", LearningCompetencyGapAnalysisView.as_view(), name="learning-development-gap-analysis"),
     path("development-recommendations/", LearningDevelopmentRecommendationsView.as_view(), name="learning-development-recommendations"),
     path("assessment-history/", LearningAssessmentHistoryView.as_view(), name="learning-assessment-history"),
