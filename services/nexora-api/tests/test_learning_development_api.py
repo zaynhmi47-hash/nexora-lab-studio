@@ -95,7 +95,7 @@ def test_assessment_history_is_private_to_learner():
     LearningMasteryAssessmentEvent.objects.create(
         user=owner, outcome=outcome, level=3, status="verified",
         assessment_method="portfolio_review", rationale="Clear evidence of application.",
-        assessed_by=assessor, assessed_at=timezone.now(),
+        assessed_by=assessor, assessed_at=timezone.now(), rubric_version=2, criterion_scores={"reasoning": 4},
     )
     client = APIClient()
     client.force_authenticate(user=other)
@@ -105,6 +105,11 @@ def test_assessment_history_is_private_to_learner():
     assert response.status_code == 200
     assert response.json() == []
 
+    client.force_authenticate(user=owner)
+    owner_history = client.get("/api/v1/learning/assessment-history/")
+    assert owner_history.status_code == 200
+    assert owner_history.json()[0]["rubricVersion"] == 2
+    assert owner_history.json()[0]["criterionScores"] == {"reasoning": 4}
 
 
 @pytest.mark.django_db
