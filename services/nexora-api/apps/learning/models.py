@@ -437,6 +437,8 @@ class LearningMasteryAssessmentEvent(AuditableBaseModel):
     status = models.CharField(max_length=12, choices=LearningMastery.Status.choices)
     assessment_method = models.CharField(max_length=80)
     rationale = models.TextField()
+    rubric_version = models.PositiveIntegerField(null=True, blank=True)
+    criterion_scores = models.JSONField(default=dict)
     assessed_by = models.ForeignKey(NexoraUser, on_delete=models.PROTECT, related_name="authored_mastery_assessments")
     assessed_at = models.DateTimeField()
 
