@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useResponsive } from '@/lib/responsive';
-import { theme } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 
 interface Props {
   title: string;
@@ -11,12 +11,13 @@ interface Props {
 
 export function AdaptiveHeader({ title, subtitle }: Props) {
   const { isMobile } = useResponsive();
+  const { theme } = useTheme();
 
   return (
     <View style={styles.header}>
       <View style={styles.copy}>
-        <Text style={[styles.title, isMobile && styles.mobileTitle]}>{title}</Text>
-        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        <Text style={[styles.title, { color: theme.colors.text }, isMobile && styles.mobileTitle]}>{title}</Text>
+        {subtitle ? <Text style={[styles.subtitle, { color: theme.colors.muted }]}>{subtitle}</Text> : null}
       </View>
       {!isMobile ? (
         <View style={styles.actions}>
@@ -37,8 +38,8 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   copy: { flex: 1, gap: 4 },
-  title: { fontSize: 26, fontWeight: '800', color: theme.colors.text },
+  title: { fontSize: 26, fontWeight: '800' },
   mobileTitle: { fontSize: 22 },
-  subtitle: { fontSize: 14, color: theme.colors.muted },
+  subtitle: { fontSize: 14 },
   actions: { flexDirection: 'row', gap: 20 },
 });
