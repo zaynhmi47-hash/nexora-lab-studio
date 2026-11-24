@@ -20,7 +20,7 @@ interface GapItem {
 interface GapResponse { count: number; results: GapItem[]; }
 interface Plan {
   id: string; outcomeKey: string; outcomeTitle: string; competencyTitle: string;
-  targetLevel: number; currentAssessedLevel: number | null; gap: number; gapStatus?: "needs_assessment" | "development_needed" | "target_reached"; assessmentStatus?: string; lastAssessedAt?: string | null;
+  targetLevel: number; currentAssessedLevel: number | null; gap: number | null; gapStatus?: "needs_assessment" | "development_needed" | "target_reached"; assessmentStatus?: string; lastAssessedAt?: string | null;
   actions: string[]; reflection: string; status: string; targetDate: string | null;
 }
 function payload<T>(value: unknown): T {
@@ -188,7 +188,7 @@ export default function DevelopmentPlanScreen() {
       {loading ? <Text style={styles.detail}>Loading plans…</Text> : plans.length === 0 ? <SurfaceCard><Text style={styles.detail}>No plans yet. Create one after reviewing your competency profile.</Text></SurfaceCard> : plans.map((plan) => <SurfaceCard key={plan.id} style={styles.planCard}>
         <Text style={styles.eyebrow}>{plan.competencyTitle}</Text>
         <Text style={styles.cardTitle}>{plan.outcomeTitle}</Text>
-        <Text style={styles.detail}>Assessed level: {plan.currentAssessedLevel ?? 'Not assessed'} · Target: {plan.targetLevel}/5 · Gap: {plan.gap}</Text>
+        <Text style={styles.detail}>Assessed level: {plan.currentAssessedLevel ?? 'Not assessed'} · Target: {plan.targetLevel}/5 · Gap: {plan.gap === null ? "Awaiting assessment" : plan.gap}</Text>
         <Text style={styles.gapState}>{plan.gapStatus === 'target_reached' ? 'Target reached · consider a new stretch goal' : plan.gapStatus === 'development_needed' ? 'Development needed · keep practicing and gather evidence' : 'Assessment needed · request an authorized assessor review'}</Text>
         <Text style={styles.detail}>Assessment status: {plan.assessmentStatus ?? 'unassessed'}{plan.lastAssessedAt ? ' · ' + new Date(plan.lastAssessedAt).toLocaleDateString() : ''}</Text>
         {plan.targetDate ? <Text style={styles.detail}>Target date: {plan.targetDate}</Text> : null}
