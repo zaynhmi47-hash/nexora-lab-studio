@@ -11,6 +11,13 @@ interface Outcome { key: string; title: string; proficiencyLevel: number; }
 interface Competency { key: string; title: string; outcomes: Outcome[]; }
 interface Recommendation { lessonKey: string; title: string; description: string; courseTitle: string; kind: string; contributionType: string; estimatedMinutes: number; completed: boolean; route: string; }
 interface RecommendationResponse { outcomeKey: string; outcomeTitle: string; resources: Recommendation[]; }
+interface GapItem {
+  outcomeKey: string; outcomeTitle: string; competencyTitle: string;
+  currentAssessedLevel: number | null; assessmentStatus: string; targetLevel: number | null;
+  gap: number | null; gapStatus: 'needs_assessment' | 'plan_needed' | 'development_needed' | 'target_reached';
+  planId: string | null; planStatus: string | null;
+}
+interface GapResponse { count: number; results: GapItem[]; }
 interface Plan {
   id: string; outcomeKey: string; outcomeTitle: string; competencyTitle: string;
   targetLevel: number; currentAssessedLevel: number | null; gap: number; gapStatus?: "needs_assessment" | "development_needed" | "target_reached"; assessmentStatus?: string; lastAssessedAt?: string | null;
@@ -25,6 +32,7 @@ export default function DevelopmentPlanScreen() {
   const api = useNexoraApi();
   const [catalog, setCatalog] = useState<Competency[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [gapRows, setGapRows] = useState<GapItem[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const [outcomeKey, setOutcomeKey] = useState('');
@@ -41,14 +49,17 @@ export default function DevelopmentPlanScreen() {
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const [catalogResponse, planResponse] = await Promise.all([
+      const [catalogResponse, planResponse, gapResponse] = await Promise.all([
         api.request<Competency[]>('/api/v1/learning/competencies/'),
         api.request<Plan[]>('/api/v1/learning/development-plans/'),
+        api.request<GapResponse>('/api/v1/learning/development-gap-analysis/'),
       ]);
       const nextCatalog = payload<Competency[]>(catalogResponse);
       const nextPlans = payload<Plan[]>(planResponse);
+      const nextGaps = payload<GapResponse>(gapResponse);
       setCatalog(Array.isArray(nextCatalog) ? nextCatalog : []);
       setPlans(Array.isArray(nextPlans) ? nextPlans : []);
+      setGapRows(Array.isArray(nextGaps?.results) ? nextGaps.results : []);
       setOutcomeKey((current) => current || nextCatalog?.flatMap((item) => item.outcomes)[0]?.key || '');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Unable to load development plans.');
@@ -163,6 +174,16 @@ export default function DevelopmentPlanScreen() {
         <TextInput value={targetDate} onChangeText={setTargetDate} placeholder="2027-01-31" placeholderTextColor={colors.muted} style={styles.input} />
         <Pressable disabled={!outcomeKey || !actions.trim() || saving} onPress={() => void createPlan()} style={[styles.submit, (!outcomeKey || !actions.trim() || saving) && styles.disabled]}><Text style={styles.submitText}>{saving ? 'Saving…' : 'Save development plan'}</Text></Pressable>
       </SurfaceCard>
+      <Text style={styles.sectionTitle}>Competency gap analysis</Text>
+      <Text style={styles.detail}>Status ini hanya menggunakan hasil assessment eksplisit. Aktivitas belajar tidak otomatis mengubah level kompetensi.</Text>
+      {loading ? <Text style={styles.detail}>Analyzing published outcomes…</Text> : gapRows.length === 0 ? <SurfaceCard><Text style={styles.detail}>No published competency outcomes are available yet.</Text></SurfaceCard> : gapRows.map((item) => <Pressable key={item.outcomeKey} onPress={() => setOutcomeKey(item.outcomeKey)} style={styles.gapCard}>
+        <Text style={styles.eyebrow}>{item.competencyTitle}</Text>
+        <Text style={styles.cardTitle}>{item.outcomeTitle}</Text>
+        <Text style={styles.detail}>Assessed level: {item.currentAssessedLevel ?? 'Not assessed'} · Target: {item.targetLevel ?? 'Not set'}{item.targetLevel ? '/5' : ''}</Text>
+        <Text style={styles.gapState}>{item.gapStatus === 'needs_assessment' ? 'Needs an authorized assessment' : item.gapStatus === 'plan_needed' ? 'Assessed · development plan needed' : item.gapStatus === 'target_reached' ? 'Target reached' : 'Development needed · gap ' + item.gap}</Text>
+        {item.planStatus ? <Text style={styles.detail}>Plan status: {item.planStatus}</Text> : null}
+        <Text style={styles.actionLink}>Select outcome for a plan</Text>
+      </Pressable>)}
       <Text style={styles.sectionTitle}>Your active plans</Text>
       {loading ? <Text style={styles.detail}>Loading plans…</Text> : plans.length === 0 ? <SurfaceCard><Text style={styles.detail}>No plans yet. Create one after reviewing your competency profile.</Text></SurfaceCard> : plans.map((plan) => <SurfaceCard key={plan.id} style={styles.planCard}>
         <Text style={styles.eyebrow}>{plan.competencyTitle}</Text>
@@ -211,6 +232,7 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.45 },
   submitText: { color: '#FFFFFF', fontWeight: '800' },
   planCard: { gap: spacing.sm },
+  gapCard: { gap: spacing.xs, padding: spacing.md, borderWidth: 1, borderColor: colors.line, borderRadius: radius.medium, backgroundColor: colors.surface },
   recommendation: { borderWidth: 1, borderColor: colors.line, borderRadius: radius.medium, padding: spacing.sm, gap: spacing.xs },
   recommendationHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   recommendationTitle: { color: colors.ink, fontSize: 13, fontWeight: '800' },
