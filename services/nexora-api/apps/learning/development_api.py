@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 
 from apps.identity.authentication import FirebaseIdentityAuthentication
 
-from .models import LearningDevelopmentPlan, LearningMastery, LearningMasteryAssessmentEvent, LearningOutcome
+from .models import (\n    LearningDevelopmentPlan, LearningMastery, LearningMasteryAssessmentEvent,\n    LearningOutcome, LearningOutcomeLessonMapping, LearningLessonCompletion,\n)
 
 
 def plan_payload(plan):
@@ -101,6 +101,52 @@ class LearningDevelopmentPlanView(APIView):
             plan.actions = [item.strip() for item in actions]
         plan.save()
         return Response(plan_payload(plan))
+
+
+class LearningDevelopmentRecommendationsView(APIView):
+    """Returns curated, published learning resources mapped to one outcome."""
+
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        outcome_key = request.query_params.get("outcomeKey", "").strip()
+        if not outcome_key:
+            return Response({"detail": "outcomeKey is required."}, status=status.HTTP_400_BAD_REQUEST)
+        outcome = LearningOutcome.objects.filter(
+            key=outcome_key, is_published=True, deleted_at__isnull=True,
+            competency__is_published=True, competency__deleted_at__isnull=True,
+        ).first()
+        if outcome is None:
+            return Response({"detail": "Published learning outcome not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        mappings = LearningOutcomeLessonMapping.objects.filter(
+            outcome=outcome, is_active=True, deleted_at__isnull=True,
+            lesson__is_published=True, lesson__deleted_at__isnull=True,
+            lesson__course__is_published=True, lesson__course__deleted_at__isnull=True,
+            lesson__content__is_published=True, lesson__content__deleted_at__isnull=True,
+        ).select_related("lesson", "lesson__course", "lesson__content").order_by(
+            "lesson__course__sort_order", "lesson__sort_order",
+        )
+        lessons = [mapping.lesson for mapping in mappings]
+        completed_ids = set(LearningLessonCompletion.objects.filter(
+            user=request.user, lesson_id__in=[lesson.id for lesson in lessons],
+        ).values_list("lesson_id", flat=True))
+        return Response({
+            "outcomeKey": outcome.key,
+            "outcomeTitle": outcome.title,
+            "resources": [{
+                "lessonKey": lesson.key,
+                "title": lesson.title,
+                "description": lesson.description,
+                "courseTitle": lesson.course.title,
+                "kind": lesson.kind,
+                "contributionType": mapping.contribution_type,
+                "estimatedMinutes": lesson.content.estimated_minutes,
+                "completed": lesson.id in completed_ids,
+                "route": f"/quiz/{lesson.key}" if lesson.kind == "quiz" else f"/lesson/{lesson.key}",
+            } for mapping, lesson in zip(mappings, lessons)],
+        })
 
 
 class LearningAssessmentHistoryView(APIView):
