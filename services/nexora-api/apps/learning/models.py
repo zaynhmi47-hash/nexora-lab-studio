@@ -408,6 +408,26 @@ class LearningOutcomeLessonMapping(AuditableBaseModel):
 
 
 
+class LearningOutcomeRubric(AuditableBaseModel):
+    """Versioned, curated criteria for an explicit outcome assessment."""
+
+    outcome = models.ForeignKey(LearningOutcome, on_delete=models.PROTECT, related_name="rubrics")
+    version = models.PositiveIntegerField(default=1)
+    criteria = models.JSONField(default=list)
+    is_active = models.BooleanField(default=True, db_index=True)
+
+    class Meta:
+        db_table = "learning_outcome_rubrics"
+        ordering = ("outcome", "-version")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("outcome", "version"),
+                condition=models.Q(deleted_at__isnull=True),
+                name="learn_outcome_rubric_version_uniq",
+            ),
+        ]
+
+
 class LearningMasteryAssessmentEvent(AuditableBaseModel):
     """Immutable-by-convention snapshot of each explicit mastery decision."""
 
