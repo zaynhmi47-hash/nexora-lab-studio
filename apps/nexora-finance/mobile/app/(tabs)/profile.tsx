@@ -19,7 +19,7 @@ import { useTheme } from '@/lib/theme';
 function getInitials(name: string | null | undefined, email: string | null | undefined) {
   const source = name?.trim() || email?.trim() || 'N';
   return source
-    .split(/[\\s._@-]+/)
+    .split(/[\s._@-]+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? '')
@@ -204,7 +204,7 @@ export default function ProfileScreen() {
             <Text style={styles.sectionTitle}>Account & security</Text>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Account status</Text>
-              <Text style={styles.infoValue}>{status.replaceAll('_', ' ')}</Text>
+              <Text style={styles.infoValue}>{status.replace(/_/g, ' ')}</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Authentication provider</Text>
