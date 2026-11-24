@@ -321,3 +321,44 @@ def test_development_gap_distinguishes_unassessed_and_target_reached():
     assert items[str(unassessed_plan.id)]["gap"] == 3
     assert items[str(reached_plan.id)]["gapStatus"] == "target_reached"
     assert items[str(reached_plan.id)]["gap"] == 0
+
+
+@pytest.mark.django_db
+def test_gap_analysis_covers_unassessed_assessed_and_planned_outcomes_privately():
+    learner = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="gap-analysis-owner@example.com")
+    other = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="gap-analysis-other@example.com")
+    assessor = NexoraUser.objects.create(status=NexoraUser.Status.ACTIVE, email="gap-analysis-assessor@example.com")
+    unassessed = create_outcome("gap-analysis-unassessed")
+    assessed = create_outcome("gap-analysis-assessed")
+    planned = create_outcome("gap-analysis-planned")
+    LearningMasteryAssessmentEvent.objects.create(
+        user=learner, outcome=assessed, level=2, status="verified",
+        assessment_method="portfolio_review", rationale="Evidence reviewed.",
+        assessed_by=assessor, assessed_at=timezone.now(),
+    )
+    LearningMasteryAssessmentEvent.objects.create(
+        user=learner, outcome=planned, level=3, status="provisional",
+        assessment_method="observed_practice", rationale="Observed performance.",
+        assessed_by=assessor, assessed_at=timezone.now(),
+    )
+    LearningDevelopmentPlan.objects.create(
+        user=learner, outcome=planned, target_level=5, actions=["Practice with feedback"],
+    )
+    client = APIClient()
+    client.force_authenticate(user=learner)
+
+    response = client.get("/api/v1/learning/development-gap-analysis/")
+
+    assert response.status_code == 200
+    rows = {row["outcomeKey"]: row for row in response.json()["results"]}
+    assert rows[unassessed.key]["gapStatus"] == "needs_assessment"
+    assert rows[assessed.key]["gapStatus"] == "plan_needed"
+    assert rows[planned.key]["gapStatus"] == "development_needed"
+    assert rows[planned.key]["currentAssessedLevel"] == 3
+    assert rows[planned.key]["gap"] == 2
+
+    client.force_authenticate(user=other)
+    other_response = client.get("/api/v1/learning/development-gap-analysis/")
+    other_rows = {row["outcomeKey"]: row for row in other_response.json()["results"]}
+    assert other_rows[planned.key]["assessmentStatus"] == "unassessed"
+    assert other_rows[planned.key]["planId"] is None
