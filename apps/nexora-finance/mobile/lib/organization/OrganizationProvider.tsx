@@ -58,10 +58,15 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
 
   const loadOrganizations = useCallback(async () => {
     const operation = ++operationRef.current;
+    if (status === 'unknown' || status === 'authenticating') {
+      setLoading(true);
+      return;
+    }
     if (status !== 'authenticated') {
       setOrganizations([]); setActiveOrganization(null); setActiveMembership(null);
       setError(null); setLoading(false);
-      await AsyncStorage.removeItem(ACTIVE_ORGANIZATION_KEY);
+      // Keep the last selected ID as a preference only; it is re-verified with
+      // the server before it can become the active organization after login.
       return;
     }
     setLoading(true); setError(null);
@@ -72,7 +77,6 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
       const nextOrganizations = response.data;
       setOrganizations(nextOrganizations);
       if (nextOrganizations.length === 0) {
-        await AsyncStorage.removeItem(ACTIVE_ORGANIZATION_KEY);
         if (operation === operationRef.current) { setActiveOrganization(null); setActiveMembership(null); }
         return;
       }
