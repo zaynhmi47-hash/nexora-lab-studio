@@ -217,6 +217,9 @@ class NexverseCreatorChapterListView(APIView):
         if number < 1 or not title or len(title) > 255 or not content or len(content) > 500000:
             return Response({"detail": "Valid number, title, and content are required."}, status=400)
         chapter_slug = f"{slugify(title)[:140] or 'chapter'}-{uuid4().hex[:8]}"
+        free_preview = request.data.get("freePreview", False)
+        if not isinstance(free_preview, bool):
+            return Response({"detail": "freePreview must be a boolean."}, status=400)
         try:
             chapter = NexverseChapter.objects.create(
                 work=work,
@@ -225,7 +228,7 @@ class NexverseCreatorChapterListView(APIView):
                 title=title,
                 summary=str(request.data.get("summary", ""))[:500],
                 content=content,
-                is_free_preview=bool(request.data.get("freePreview", False)),
+                is_free_preview=free_preview,
             )
         except IntegrityError:
             return Response({"detail": "Chapter number already exists for this work."}, status=409)
@@ -260,7 +263,9 @@ class NexverseCreatorChapterDetailView(APIView):
                     return Response({"detail": f"Invalid {key}."}, status=400)
                 setattr(chapter, key, value)
         if "freePreview" in request.data:
-            chapter.is_free_preview = bool(request.data["freePreview"])
+            if not isinstance(request.data["freePreview"], bool):
+                return Response({"detail": "freePreview must be a boolean."}, status=400)
+            chapter.is_free_preview = request.data["freePreview"]
         chapter.save()
         if work.review_status == NexverseWork.ReviewStatus.REJECTED:
             work.review_status = NexverseWork.ReviewStatus.DRAFT

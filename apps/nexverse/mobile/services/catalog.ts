@@ -1,4 +1,5 @@
 import type { Story, StoryChapter, StoryStatus } from '@/data/catalog';
+import { getNexoraCoreAccessToken } from './firebaseAuth';
 
 export type CatalogPage = {
   items: Story[];
@@ -22,7 +23,7 @@ export type ChapterContent = {
   number: number;
   title: string;
   content: string;
-  freePreview: true;
+  freePreview: boolean;
 };
 
 export class NexverseApiError extends Error {
@@ -90,12 +91,15 @@ function apiBaseUrl() {
   return value.endsWith('/api/v1') ? value : value + '/api/v1';
 }
 
-async function request<T>(path: string): Promise<T> {
+async function request<T>(path: string, accessToken: string | null = null): Promise<T> {
   let response: Response;
   try {
     response = await fetch(apiBaseUrl() + path, {
       method: 'GET',
-      headers: { Accept: 'application/json' },
+      headers: {
+        Accept: 'application/json',
+        ...(accessToken ? { Authorization: 'Bearer ' + accessToken } : {}),
+      },
     });
   } catch {
     throw new NexverseApiError(
@@ -181,8 +185,27 @@ export async function getWorkDetail(slug: string): Promise<WorkDetail> {
 }
 
 export async function getChapterContent(slug: string, chapterId: string): Promise<ChapterContent> {
+  // Free previews remain available anonymously; signed-in readers send the
+  // current Firebase ID token so the API can verify paid chapter entitlements.
+  let accessToken: string | null;
+  try {
+    accessToken = await getNexoraCoreAccessToken();
+  } catch (error) {
+    // A missing Firebase configuration must not block public free previews.
+    // Token refresh/session failures for configured accounts must remain visible
+    // instead of silently downgrading a premium reader to anonymous access.
+    if (
+      error instanceof Error &&
+      error.message.includes('Konfigurasi Firebase belum lengkap')
+    ) {
+      accessToken = null;
+    } else {
+      throw error;
+    }
+  }
   return request<ChapterContent>(
     '/nexverse/works/' + encodeURIComponent(slug) + '/chapters/' + encodeURIComponent(chapterId) + '/',
+    accessToken,
   );
 }
 

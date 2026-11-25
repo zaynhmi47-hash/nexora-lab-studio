@@ -6,7 +6,7 @@ import {
 
 import { AdaptiveHeader, ResponsiveContainer, ResponsiveGrid, ResponsiveScaffold } from '@/components/layout';
 import { useResponsive } from '@/lib/responsive';
-import { theme } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 import { useTransactions } from '@/lib/features/transactions';
 import type { FinanceTransaction, TransactionDirection, TransactionStatus } from '@/lib/features/transactions';
 import type { TransactionListFilters } from '@/lib/features/transactions/transactionApi';
@@ -26,6 +26,8 @@ const createIdempotencyKey = () => `finance-${Date.now()}-${Math.random().toStri
 type ModalMode = 'detail' | 'add' | 'edit';
 
 export default function TransactionsScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { isMobile } = useResponsive();
   const [filterDirection, setFilterDirection] = useState<TransactionDirection | undefined>();
   const [filterStatus, setFilterStatus] = useState<TransactionStatus | undefined>();
@@ -305,16 +307,17 @@ export default function TransactionsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(theme: ReturnType<typeof useTheme>['theme']) {
+  return StyleSheet.create({
   content: { paddingTop: 20, paddingBottom: 40, gap: 16 },
   filterBar: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   filterChip: { minHeight: 38, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, alignItems: 'center', justifyContent: 'center' },
   filterChipActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
   filterChipText: { fontSize: 13, fontWeight: '700', color: theme.colors.text },
   filterChipTextActive: { color: theme.colors.surface },
-  pagination: { minHeight: 64, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  toolbar: { padding: theme.spacing.lg, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
-  toolbarCopy: { flex: 1, gap: 3 },
+  pagination: { minHeight: 64, paddingVertical: 12, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  toolbar: { padding: theme.spacing.lg, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  toolbarCopy: { flex: 1, minWidth: 140, gap: 3 },
   sectionTitle: { fontSize: 18, fontWeight: '800', color: theme.colors.text },
   hint: { fontSize: 14, lineHeight: 20, color: theme.colors.muted },
   primaryButton: { minHeight: 44, paddingHorizontal: 16, borderRadius: theme.radius.md, backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center' },
@@ -330,10 +333,10 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.text },
   listCard: { paddingHorizontal: theme.spacing.lg, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface },
   transactionRow: { minHeight: 76, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
-  transactionMain: { flex: 1, gap: 4 },
+  transactionMain: { flex: 1, minWidth: 0, gap: 4 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   transactionTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: theme.colors.text },
-  transactionAmount: { fontSize: 15, fontWeight: '800', color: theme.colors.text },
+  transactionAmount: { maxWidth: '44%', flexShrink: 1, fontSize: 14, fontWeight: '800', textAlign: 'right', color: theme.colors.text },
   expenseAmount: { color: theme.colors.muted },
   directionBadge: { minWidth: 32, height: 24, paddingHorizontal: 7, borderRadius: 8, backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center' },
   expenseBadge: { opacity: 0.65 },
@@ -366,4 +369,5 @@ const styles = StyleSheet.create({
   detailGrid: { gap: 12 },
   detailItem: { paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: theme.colors.border, gap: 3 },
   detailValue: { fontSize: 15, lineHeight: 21, color: theme.colors.text },
-});
+  });
+}

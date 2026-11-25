@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -11,8 +13,10 @@ from apps.identity.authentication import FirebaseIdentityAuthentication
 
 from .models import (
     NexverseBookmark,
+    NexverseEntitlement,
     NexverseChapter,
     NexverseReadingProgress,
+    NexversePurchase,
     NexverseWork,
 )
 
@@ -25,11 +29,28 @@ def _readable_work_queryset():
     )
 
 
-def _readable_progress_queryset():
-    return NexverseReadingProgress.objects.filter(
-        chapter__status=NexverseChapter.Status.PUBLISHED,
-        chapter__is_free_preview=True,
-        work__in=_readable_work_queryset(),
+def _readable_progress_queryset(user):
+    now = timezone.now()
+    active_entitlement = (
+        Q(
+            chapter__entitlements__user=user,
+            chapter__entitlements__status=NexverseEntitlement.Status.ACTIVE,
+            chapter__entitlements__purchase__status=NexversePurchase.Status.PAID,
+            chapter__entitlements__starts_at__lte=now,
+            chapter__entitlements__deleted_at__isnull=True,
+        )
+        & (
+            Q(chapter__entitlements__expires_at__isnull=True)
+            | Q(chapter__entitlements__expires_at__gt=now)
+        )
+    )
+    return (
+        NexverseReadingProgress.objects.filter(
+            chapter__status=NexverseChapter.Status.PUBLISHED,
+            work__in=_readable_work_queryset(),
+        )
+        .filter(Q(chapter__is_free_preview=True) | active_entitlement)
+        .distinct()
     )
 
 
@@ -53,7 +74,7 @@ class NexverseReadingProgressListView(APIView):
 
     def get(self, request):
         progress_items = (
-            _readable_progress_queryset()
+            _readable_progress_queryset(request.user)
             .filter(user=request.user)
             .select_related("work", "chapter")
             .order_by("-updated_at")[:100]
@@ -68,7 +89,7 @@ class NexverseReadingProgressDetailView(APIView):
     def get(self, request, work_id):
         work = get_object_or_404(_readable_work_queryset(), pk=work_id)
         progress = (
-            _readable_progress_queryset()
+            _readable_progress_queryset(request.user)
             .filter(user=request.user, work=work)
             .select_related("work", "chapter")
             .first()
@@ -94,12 +115,20 @@ class NexverseReadingProgressDetailView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        now = timezone.now()
+        entitled_chapter = (
+            Q(entitlements__user=request.user)
+            & Q(entitlements__status=NexverseEntitlement.Status.ACTIVE)
+            & Q(entitlements__purchase__status=NexversePurchase.Status.PAID)
+            & Q(entitlements__starts_at__lte=now)
+            & Q(entitlements__deleted_at__isnull=True)
+            & (Q(entitlements__expires_at__isnull=True) | Q(entitlements__expires_at__gt=now))
+        )
         chapter = get_object_or_404(
             NexverseChapter.objects.filter(
                 work=work,
                 status=NexverseChapter.Status.PUBLISHED,
-                is_free_preview=True,
-            ),
+            ).filter(Q(is_free_preview=True) | entitled_chapter).distinct(),
             pk=chapter_id,
         )
         if position_chars > len(chapter.content):

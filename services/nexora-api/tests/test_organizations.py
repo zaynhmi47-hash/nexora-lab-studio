@@ -71,3 +71,27 @@ def test_suspended_organization_is_not_visible_or_authorized():
     decision = authorize(user=user, organization=organization, permission_code="organization.read")
     assert decision.allowed is False
     assert decision.reason == "organization_inactive"
+
+
+@pytest.mark.django_db
+def test_membership_endpoint_returns_tenant_id_and_role():
+    from rest_framework.test import APIRequestFactory, force_authenticate
+
+    from api.v1.organizations import OrganizationMembershipView
+
+    user = make_user("membership@example.com")
+    organization = OrganizationService.create_organization(name="Membership Org", created_by=user)
+    membership = get_active_membership(user=user, organization_id=organization.id)
+    assert membership is not None
+
+    request = APIRequestFactory().get(f"/api/v1/organizations/{organization.id}/membership/")
+    force_authenticate(request, user=user)
+    response = OrganizationMembershipView.as_view()(request, organization_id=organization.id)
+
+    assert response.status_code == 200
+    assert response.data["data"] == {
+        "id": str(membership.id),
+        "organization_id": str(organization.id),
+        "role": membership.role.slug,
+        "status": "active",
+    }

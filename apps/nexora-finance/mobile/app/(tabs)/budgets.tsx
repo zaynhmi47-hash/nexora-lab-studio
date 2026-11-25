@@ -15,7 +15,7 @@ import {
 
 import { AdaptiveHeader, ResponsiveContainer, ResponsiveGrid, ResponsiveScaffold } from '@/components/layout';
 import { useResponsive } from '@/lib/responsive';
-import { theme } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 import { useBudgets, type FinanceBudget, type CreateBudgetInput } from '@/lib/features/budgets';
 
 const formatIdr = (amount: number) => new Intl.NumberFormat('id-ID', {
@@ -32,6 +32,8 @@ const todayInput = () => {
 type Mode = 'detail' | 'add' | 'edit';
 
 export default function BudgetsScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { isMobile } = useResponsive();
   const [page, setPage] = useState(1);
   const { budgets, loading, error, refresh, create, update, archive, ready, pageInfo } = useBudgets({
@@ -296,10 +298,11 @@ export default function BudgetsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(theme: ReturnType<typeof useTheme>['theme']) {
+  return StyleSheet.create({
   content: { paddingTop: 20, paddingBottom: 40, gap: 16 },
-  toolbar: { padding: theme.spacing.lg, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
-  toolbarCopy: { flex: 1, gap: 3 },
+  toolbar: { padding: theme.spacing.lg, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  toolbarCopy: { flex: 1, minWidth: 140, gap: 3 },
   sectionTitle: { fontSize: 18, fontWeight: '800', color: theme.colors.text },
   hint: { fontSize: 14, lineHeight: 20, color: theme.colors.muted },
   primaryButton: { minHeight: 44, paddingHorizontal: 16, borderRadius: theme.radius.md, backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center' },
@@ -315,10 +318,10 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.text },
   listCard: { paddingHorizontal: theme.spacing.lg, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface },
   budgetRow: { minHeight: 76, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
-  budgetMain: { flex: 1, gap: 4 },
+  budgetMain: { flex: 1, minWidth: 0, gap: 4 },
   budgetTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
-  budgetAmount: { fontSize: 15, fontWeight: '800', color: theme.colors.text },
-  pagination: { minHeight: 64, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  budgetAmount: { maxWidth: '44%', flexShrink: 1, fontSize: 14, fontWeight: '800', textAlign: 'right', color: theme.colors.text },
+  pagination: { minHeight: 64, paddingVertical: 12, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.35)' },
   modalCard: { maxHeight: '92%', borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: theme.colors.surface },
   modalMobile: { width: '100%' },
@@ -340,4 +343,5 @@ const styles = StyleSheet.create({
   detailGrid: { gap: 12 },
   detailItem: { paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: theme.colors.border, gap: 3 },
   detailValue: { fontSize: 15, lineHeight: 21, color: theme.colors.text },
-});
+  });
+}
