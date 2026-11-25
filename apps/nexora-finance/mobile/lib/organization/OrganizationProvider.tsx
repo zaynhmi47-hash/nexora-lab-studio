@@ -18,8 +18,20 @@ interface OrganizationContextValue {
   selectOrganization: (organizationId: string) => Promise<void>;
 }
 
+interface ApiMembership { id: string; organization_id: string; role: string; status: OrganizationMembership['status']; }
 const ACTIVE_ORGANIZATION_KEY = '@nexora-finance/active-organization-id';
+const KNOWN_ROLES = new Set<OrganizationRole>(['OWNER', 'ADMIN', 'MANAGER', 'ACCOUNTANT', 'CASHIER', 'MARKETING', 'STAFF', 'VIEWER']);
 const OrganizationContext = createContext<OrganizationContextValue | null>(null);
+
+function mapMembership(value: ApiMembership): OrganizationMembership {
+  const normalizedRole = value.role.toUpperCase();
+  return {
+    id: value.id,
+    organizationId: value.organization_id,
+    role: KNOWN_ROLES.has(normalizedRole as OrganizationRole) ? normalizedRole as OrganizationRole : 'STAFF',
+    status: value.status,
+  };
+}
 
 export function OrganizationProvider({ children }: PropsWithChildren) {
   const { status } = useAuth();
@@ -32,60 +44,46 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
   const [error, setError] = useState<Error | null>(null);
 
   const verifyAndSelect = useCallback(async (organization: Organization, operation: number) => {
-    const response = await api.request<OrganizationMembership>(
-      `/api/v1/organizations/${encodeURIComponent(organization.id)}/membership/`,
-    );
+    const response = await api.request<ApiMembership>(`/api/v1/organizations/${encodeURIComponent(organization.id)}/membership/`);
     if (operation !== operationRef.current) return;
-    if (response.data.status !== 'active') throw new Error('Membership for this organization is not active.');
-
+    const membership = mapMembership(response.data);
+    if (membership.organizationId !== organization.id || membership.status !== 'active') {
+      throw new Error('Active membership for the selected organization could not be verified.');
+    }
     await AsyncStorage.setItem(ACTIVE_ORGANIZATION_KEY, organization.id);
     if (operation !== operationRef.current) return;
     setActiveOrganization(organization);
-    setActiveMembership(response.data);
+    setActiveMembership(membership);
   }, [api]);
 
   const loadOrganizations = useCallback(async () => {
     const operation = ++operationRef.current;
     if (status !== 'authenticated') {
-      setOrganizations([]);
-      setActiveOrganization(null);
-      setActiveMembership(null);
-      setError(null);
-      setLoading(false);
+      setOrganizations([]); setActiveOrganization(null); setActiveMembership(null);
+      setError(null); setLoading(false);
       await AsyncStorage.removeItem(ACTIVE_ORGANIZATION_KEY);
       return;
     }
-
-    setLoading(true);
-    setError(null);
-    // Do not keep a previous tenant visible while the new membership is verified.
-    setActiveOrganization(null);
-    setActiveMembership(null);
+    setLoading(true); setError(null);
+    setActiveOrganization(null); setActiveMembership(null);
     try {
       const response = await api.request<Organization[]>('/api/v1/organizations/');
       if (operation !== operationRef.current) return;
       const nextOrganizations = response.data;
       setOrganizations(nextOrganizations);
-
       if (nextOrganizations.length === 0) {
         await AsyncStorage.removeItem(ACTIVE_ORGANIZATION_KEY);
-        if (operation === operationRef.current) {
-          setActiveOrganization(null);
-          setActiveMembership(null);
-        }
+        if (operation === operationRef.current) { setActiveOrganization(null); setActiveMembership(null); }
         return;
       }
-
       const storedId = await AsyncStorage.getItem(ACTIVE_ORGANIZATION_KEY);
       if (operation !== operationRef.current) return;
       const preferred = nextOrganizations.find((item) => item.id === storedId) ?? nextOrganizations[0];
       await verifyAndSelect(preferred, operation);
     } catch (cause) {
       if (operation !== operationRef.current) return;
-      const nextError = cause instanceof Error ? cause : new Error('Failed to load organizations.');
-      setError(nextError);
-      setActiveOrganization(null);
-      setActiveMembership(null);
+      setError(cause instanceof Error ? cause : new Error('Failed to load organizations.'));
+      setActiveOrganization(null); setActiveMembership(null);
     } finally {
       if (operation === operationRef.current) setLoading(false);
     }
@@ -94,20 +92,14 @@ export function OrganizationProvider({ children }: PropsWithChildren) {
   const selectOrganization = useCallback(async (organizationId: string) => {
     const organization = organizations.find((item) => item.id === organizationId);
     if (!organization) throw new Error('The selected organization is not available to this account.');
-
     const operation = ++operationRef.current;
-    setLoading(true);
-    setError(null);
-    setActiveOrganization(null);
-    setActiveMembership(null);
+    setLoading(true); setError(null); setActiveOrganization(null); setActiveMembership(null);
     try {
       await verifyAndSelect(organization, operation);
     } catch (cause) {
       if (operation !== operationRef.current) return;
       const nextError = cause instanceof Error ? cause : new Error('Failed to verify organization membership.');
-      setError(nextError);
-      setActiveOrganization(null);
-      setActiveMembership(null);
+      setError(nextError); setActiveOrganization(null); setActiveMembership(null);
       throw nextError;
     } finally {
       if (operation === operationRef.current) setLoading(false);
