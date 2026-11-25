@@ -13,7 +13,7 @@ def get_organization_by_slug(slug: str) -> Organization | None:
 def get_active_membership(*, user: NexoraUser, organization_id) -> Membership | None:
     return (
         Membership.objects.active()
-        .select_related("organization")
+        .select_related("organization", "role")
         .filter(
             user=user,
             organization_id=organization_id,
