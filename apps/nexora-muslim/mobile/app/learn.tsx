@@ -64,6 +64,16 @@ export default function LearnScreen() {
           </>
         )}
 
+        <View style={styles.knowledgeHeader}>
+          <View style={styles.knowledgeCopy}>
+            <Text style={styles.sectionTitle}>Knowledge</Text>
+            <Text style={styles.muted}>Hadith, sirah, fiqh, and Islamic learning with source metadata.</Text>
+          </View>
+          <Pressable style={styles.knowledgeButton} onPress={() => router.push('/knowledge')}>
+            <Text style={styles.knowledgeButtonText}>Explore</Text>
+          </Pressable>
+        </View>
+
         <Text style={styles.sectionTitle}>Learning paths</Text>
         {courses.map((course) => (
           <Card key={course.id} style={styles.courseCard}>
@@ -115,6 +125,10 @@ const styles = StyleSheet.create({
   ctaRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.lg },
   cta: { fontWeight: '800', color: colors.primary },
   reward: { fontWeight: '800', color: colors.success },
+  knowledgeHeader: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.md },
+  knowledgeCopy: { flex: 1 },
+  knowledgeButton: { marginBottom: spacing.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: 999, backgroundColor: colors.primary },
+  knowledgeButtonText: { color: colors.white, fontWeight: '800' },
   courseCard: { marginBottom: spacing.md },
   courseInfo: { flex: 1, paddingRight: spacing.md },
   courseTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 4 },

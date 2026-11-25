@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { SectionTitle } from '@/components/SectionTitle';
@@ -40,6 +41,19 @@ export default function PrayerScreen() {
         <Text style={styles.nextName}>{nextPrayer?.name ?? 'Completed'}</Text>
         <Text style={styles.nextTime}>{nextPrayer?.time ?? '—'}</Text>
         <Text style={styles.nextHint}>Take a moment to prepare before the adhan.</Text>
+      </View>
+
+      <View style={styles.quickActions}>
+        <Pressable onPress={() => router.push('/qibla')} style={styles.quickAction} accessibilityRole="button">
+          <Text style={styles.quickIcon}>◉</Text>
+          <Text style={styles.quickTitle}>Qibla</Text>
+          <Text style={styles.quickText}>Find direction</Text>
+        </Pressable>
+        <Pressable onPress={() => router.push('/dhikr')} style={styles.quickAction} accessibilityRole="button">
+          <Text style={styles.quickIcon}>✦</Text>
+          <Text style={styles.quickTitle}>Dhikr</Text>
+          <Text style={styles.quickText}>Open full counter</Text>
+        </Pressable>
       </View>
 
       <SectionTitle title="Today's prayers" />
@@ -105,6 +119,11 @@ const styles = StyleSheet.create({
   nextName: { marginTop: spacing.sm, color: colors.white, fontSize: 26, fontWeight: '800' },
   nextTime: { color: colors.white, fontSize: 44, fontWeight: '300' },
   nextHint: { marginTop: spacing.sm, color: '#D8F1ED', lineHeight: 20 },
+  quickActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg },
+  quickAction: { flex: 1, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg },
+  quickIcon: { color: colors.primary, fontSize: 22 },
+  quickTitle: { color: colors.text, fontSize: typography.body, fontWeight: '800', marginTop: spacing.sm },
+  quickText: { color: colors.textMuted, fontSize: typography.small, marginTop: 2 },
   prayerRow: { minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
   status: { width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
