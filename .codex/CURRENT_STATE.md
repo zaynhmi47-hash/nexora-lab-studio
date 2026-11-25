@@ -311,3 +311,14 @@ No application runtime code was changed by this audit. Test execution was not pe
 - Added an API regression test proving the answer key and explanation are not returned to an authenticated learner.
 - Expanded Backend CI to lint and run the learning service/API tests. The migration drift check remains scoped to its pre-existing domains because the learning/gamification migrations currently report unrelated `deleted_at` drift.
 - This change has been committed to `fix/dignity-quiz-answer-key-security`; execution of the test suite must still be confirmed by CI before merge.
+
+## Dignity mobile Nexora Identity integration — 2026-11-16
+
+- Added Firebase email/password sign-in, registration, password-reset and sign-out behind the provider-neutral AuthPort.
+- Firebase Auth configuration and SDK initialization are lazy, so missing public environment values no longer crash module import; the app exposes an unavailable auth state with setup guidance.
+- Firebase ID-token changes resolve the backend session again; Dignity consumes the Nexora UUID returned by GET /api/v1/identity/session/.
+- Corrected the client route to the actual Django URL mount: /api/v1/identity/session/ (Django mounts api/v1 below /api/).
+- Added a mobile sign-in/register screen and route guards for the tab navigator.
+- Added the Dignity mobile TypeScript check to Frontend CI.
+- The Dignity Web auth flow remains demo/local-storage based and is not yet integrated; organization membership and server-side Dignity role authorization are also still pending.
+- Validation is pending the new GitHub Actions run. Firebase project settings and a reachable API URL must be supplied in the local Expo environment before runtime sign-in can be exercised.

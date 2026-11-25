@@ -19,7 +19,7 @@ export function createFirebaseNexoraIdentityPort(baseUrl: string): NexoraIdentit
       }
 
       const api = createNexoraApiClient(baseUrl, { tokenPort });
-      const response = await api.request<IdentityResponse>('/v1/identity/session/');
+      const response = await api.request<IdentityResponse>('/api/v1/identity/session/');
       return {
         status: 'signed_in',
         identity: response.data,
