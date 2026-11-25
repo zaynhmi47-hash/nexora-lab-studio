@@ -74,14 +74,14 @@ class LearningQuizView(APIView):
         questions = LearningService.quiz(lesson_key)
         if not questions:
             return Response({"detail": "Quiz not found."}, status=status.HTTP_404_NOT_FOUND)
+        # Never send answer keys or explanations before an attempt is submitted.
+        # Keeping this response intentionally limited protects quiz integrity.
         return Response([
             {
                 "id": question.key,
                 "lessonId": lesson_key,
                 "prompt": question.prompt,
                 "options": question.options,
-                "correctOptionIndex": question.correct_option_index,
-                "explanation": question.explanation,
             }
             for question in questions
         ])

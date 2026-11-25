@@ -303,3 +303,22 @@ No application runtime code was changed by this audit. Test execution was not pe
 
 - Login history is also populated by the Firebase authentication backend: verified Firebase `auth_time` values create one `login_verified` event per sign-in time, with an optional association to a registered device supplied via `X-Nexora-Device-ID`. Device registration/seen and trust/revocation actions are separate auditable events. This records a verified provider sign-in, not a geo-location or IP-based login inference.
 - Identity migrations now include `0003_login_verified_event.py`. Clients should send the same opaque device ID in `X-Nexora-Device-ID` on authenticated API calls after registering the device.
+
+## Dignity learning quiz security — 2026-11-15
+
+- Fixed the authenticated learning quiz read endpoint so pre-attempt responses include only question ID, lesson ID, prompt, and options.
+- Removed `correctOptionIndex` and `explanation` from the pre-attempt payload; answer evaluation remains server-side in `LearningService.complete_quiz`.
+- Added an API regression test proving the answer key and explanation are not returned to an authenticated learner.
+- Expanded Backend CI to lint and run the learning service/API tests. The migration drift check remains scoped to its pre-existing domains because the learning/gamification migrations currently report unrelated `deleted_at` drift.
+- This change has been committed to `fix/dignity-quiz-answer-key-security`; execution of the test suite must still be confirmed by CI before merge.
+
+## Dignity mobile Nexora Identity integration — 2026-11-16
+
+- Added Firebase email/password sign-in, registration, password-reset and sign-out behind the provider-neutral AuthPort.
+- Firebase Auth configuration and SDK initialization are lazy, so missing public environment values no longer crash module import; the app exposes an unavailable auth state with setup guidance.
+- Firebase ID-token changes resolve the backend session again; Dignity consumes the Nexora UUID returned by GET /api/v1/identity/session/.
+- Corrected the client route to the actual Django URL mount: /api/v1/identity/session/ (Django mounts api/v1 below /api/).
+- Added a mobile sign-in/register screen and route guards for the tab navigator.
+- Added the Dignity mobile TypeScript check to Frontend CI.
+- The Dignity Web auth flow remains demo/local-storage based and is not yet integrated; organization membership and server-side Dignity role authorization are also still pending.
+- Validation is pending the new GitHub Actions run. Firebase project settings and a reachable API URL must be supplied in the local Expo environment before runtime sign-in can be exercised.

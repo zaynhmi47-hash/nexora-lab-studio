@@ -1,8 +1,8 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '@/lib/auth';
 
 export default function ProfileScreen() {
-  const { status, identity } = useAuth();
+  const { status, identity, signOut } = useAuth();
 
   return (
     <View style={styles.container}>
@@ -14,6 +14,11 @@ export default function ProfileScreen() {
       <Text style={styles.body}>
         Identity is represented by the Nexora user UUID. External authentication providers remain behind the auth boundary.
       </Text>
+      {identity && (
+        <Pressable onPress={() => void signOut()} style={styles.signOut}>
+          <Text style={styles.signOutText}>Sign out</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -24,4 +29,6 @@ const styles = StyleSheet.create({
   label: { marginTop: 20, fontSize: 13, fontWeight: '600', textTransform: 'uppercase' },
   value: { marginTop: 4, fontSize: 17 },
   body: { marginTop: 24, fontSize: 15, lineHeight: 22 },
+  signOut: { marginTop: 32, backgroundColor: '#fee2e2', borderRadius: 12, padding: 14, alignItems: 'center' },
+  signOutText: { color: '#991b1b', fontWeight: '700' },
 });
