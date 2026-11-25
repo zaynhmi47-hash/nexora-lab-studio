@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useGoalApi } from './goalApi';
 import type { CreateGoalContributionInput, FinanceGoalContribution } from './types';
@@ -6,17 +6,27 @@ import type { CreateGoalContributionInput, FinanceGoalContribution } from './typ
 export function useGoalContributions(goalId: string | null) {
   const { status } = useAuth();
   const api = useGoalApi();
+  const requestRef = useRef(0);
   const [contributions, setContributions] = useState<FinanceGoalContribution[]>([]);
+  const [dataScope, setDataScope] = useState<{ organizationId: string; goalId: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   const refresh = useCallback(async () => {
-    if (!goalId || status !== 'authenticated' || !api.ready) { setContributions([]); return; }
+    const requestId = ++requestRef.current;
+    const organizationId = api.organizationId;
+    if (!goalId || status !== 'authenticated' || !api.ready || !organizationId) {
+      setContributions([]); setDataScope(null); setLoading(false); return;
+    }
     setLoading(true); setError(null);
-    try { setContributions(await api.listContributions(goalId)); }
-    catch (cause) { setError(cause instanceof Error ? cause : new Error('Failed to load contributions.')); }
-    finally { setLoading(false); }
+    try {
+      const result = await api.listContributions(goalId);
+      if (requestId !== requestRef.current || api.organizationId !== organizationId) return;
+      setContributions(result); setDataScope({ organizationId, goalId });
+    } catch (cause) {
+      if (requestId === requestRef.current && api.organizationId === organizationId) setError(cause instanceof Error ? cause : new Error('Failed to load contributions.'));
+    } finally { if (requestId === requestRef.current) setLoading(false); }
   }, [api, goalId, status]);
 
   const add = useCallback(async (input: CreateGoalContributionInput) => {
@@ -35,6 +45,7 @@ export function useGoalContributions(goalId: string | null) {
     finally { setSubmitting(false); }
   }, [api, goalId, refresh]);
 
-  useEffect(() => { void refresh(); }, [refresh]);
-  return { contributions, loading, submitting, error, refresh, add, voidContribution, ready: api.ready };
+  useEffect(() => { void refresh(); return () => { requestRef.current += 1; }; }, [refresh]);
+  const scopeMatches = dataScope?.organizationId === api.organizationId && dataScope?.goalId === goalId;
+  return { contributions: scopeMatches ? contributions : [], loading, submitting, error, refresh, add, voidContribution, ready: api.ready };
 }
