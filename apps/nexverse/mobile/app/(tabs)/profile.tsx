@@ -61,7 +61,7 @@ export default function ProfileScreen() {
           {signingOut ? <ActivityIndicator color="#FFFFFF" /> : <><Ionicons name="log-out-outline" size={17} color="#FFFFFF" /><Text style={styles.signOutText}>Keluar dari akun Nexora</Text></>}
         </Pressable>
       ) : (
-        <Pressable onPress={() => router.push('/publisher/login')} style={styles.signIn}>
+        <Pressable onPress={() => router.push('/auth/login')} style={styles.signIn}>
           <Ionicons name="log-in-outline" size={17} color={palette.green} /><Text style={styles.signInText}>Masuk dengan akun Nexora</Text>
         </Pressable>
       )}

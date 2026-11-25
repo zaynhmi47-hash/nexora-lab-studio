@@ -22,6 +22,7 @@ const readerThemes = {
 export default function ReaderScreen() {
   const { slug, chapterId, workId } = useLocalSearchParams<{ slug: string; chapterId: string; workId: string }>();
   const scrollRef = useRef<ScrollView>(null);
+  const progressSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [chapter, setChapter] = useState<ChapterContent | null>(null);
   const [preferences, setPreferences] = useState<ReaderPreferences>(DEFAULT_READER_PREFERENCES);
   const [preferencesReady, setPreferencesReady] = useState(false);
@@ -77,6 +78,10 @@ export default function ReaderScreen() {
 
   useEffect(() => { void loadChapter(); }, [loadChapter]);
 
+  useEffect(() => () => {
+    if (progressSaveTimer.current) clearTimeout(progressSaveTimer.current);
+  }, []);
+
   useEffect(() => {
     if (resumeRatio !== null && contentHeight > 0 && viewportHeight > 0) {
       scrollRef.current?.scrollTo({ y: Math.max(0, (contentHeight - viewportHeight) * resumeRatio), animated: false });
@@ -129,6 +134,7 @@ export default function ReaderScreen() {
           <Ionicons name={premiumRequired ? 'lock-closed-outline' : 'cloud-offline-outline'} size={32} color={theme.muted} />
           <Text style={[styles.stateTitle, { color: theme.text }]}>{premiumRequired ? 'Akses premium diperlukan' : 'Bab belum dapat dibuka'}</Text>
           <Text style={[styles.stateText, { color: theme.muted }]}>{error || 'Konten bab tidak tersedia.'}</Text>
+          {premiumRequired ? <Text style={[styles.stateText, { color: theme.muted }]}>Jika Anda sudah membeli bab ini, masuk menggunakan akun Nexora yang sama. Pembelian baru belum tersedia di aplikasi.</Text> : null}
           <Pressable onPress={() => premiumRequired ? router.back() : void loadChapter()} style={styles.retry}>
             <Text style={styles.retryText}>{premiumRequired ? 'Kembali ke cerita' : 'Coba lagi'}</Text>
           </Pressable>
@@ -143,10 +149,25 @@ export default function ReaderScreen() {
             onContentSizeChange={(_, height) => setContentHeight(height)}
             onScroll={event => setScrollY(event.nativeEvent.contentOffset.y)}
             scrollEventThrottle={100}
-            onScrollEndDrag={event => void saveProgress(event.nativeEvent.contentOffset.y, contentHeight, viewportHeight)}
-            onMomentumScrollEnd={event => void saveProgress(event.nativeEvent.contentOffset.y, contentHeight, viewportHeight)}
+            onScrollEndDrag={event => {
+              if (progressSaveTimer.current) clearTimeout(progressSaveTimer.current);
+              const offset = event.nativeEvent.contentOffset.y;
+              progressSaveTimer.current = setTimeout(() => {
+                progressSaveTimer.current = null;
+                void saveProgress(offset, contentHeight, viewportHeight);
+              }, 350);
+            }}
+            onMomentumScrollBegin={() => {
+              if (progressSaveTimer.current) clearTimeout(progressSaveTimer.current);
+              progressSaveTimer.current = null;
+            }}
+            onMomentumScrollEnd={event => {
+              if (progressSaveTimer.current) clearTimeout(progressSaveTimer.current);
+              progressSaveTimer.current = null;
+              void saveProgress(event.nativeEvent.contentOffset.y, contentHeight, viewportHeight);
+            }}
           >
-            <Text style={[styles.chapterKicker, { color: palette.green }]}>NEXVERSE · PRATINJAU GRATIS</Text>
+            <Text style={[styles.chapterKicker, { color: palette.green }]}>{chapter.freePreview ? 'NEXVERSE · PRATINJAU GRATIS' : 'NEXVERSE · AKSES PREMIUM'}</Text>
             <Text style={[styles.chapterTitle, { color: theme.text }]}>{chapter.title}</Text>
             <Text style={[styles.chapterMeta, { color: theme.muted }]}>Bab {chapter.number}</Text>
             {resumeMessage ? <Text style={[styles.resume, { color: theme.muted }]}>{resumeMessage}</Text> : null}
