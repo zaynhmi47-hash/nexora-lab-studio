@@ -57,7 +57,7 @@ jobs:
         run: python manage.py check --deploy --fail-level WARNING
 
       - name: Django migration consistency check
-        run: python manage.py makemigrations --check --dry-run nexverse places finance
+        run: python manage.py makemigrations --check --dry-run nexverse places finance health
 
       - name: Control Plane tests
         env:
@@ -71,4 +71,4 @@ jobs:
           DJANGO_SETTINGS_MODULE: config.settings.testing
           SECURE_SSL_REDIRECT: "False"
         run: |
-          pytest apps/nexverse apps/places tests/test_authorization.py -q
+          pytest apps/nexverse apps/places apps/health tests/test_authorization.py tests/test_health_access.py tests/test_health_access_grants.py tests/test_health_profile_api.py tests/test_health_medical_records_api.py -q

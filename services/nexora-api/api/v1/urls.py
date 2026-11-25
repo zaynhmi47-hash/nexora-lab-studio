@@ -3,6 +3,8 @@ from django.urls import include, path
 from api.v1.app_state import CurrentAppStateView
 from api.v1.health import HealthView, LivenessView, ReadinessView
 from api.v1.identity import CurrentIdentityView
+from api.v1.health_profiles import HealthProfileAccessGrantView, HealthProfileDetailView, HealthProfileListCreateView
+from api.v1.health_medical_records import MedicalRecordDetailView, MedicalRecordListCreateView
 from apps.finance.api.reporting_views import FinanceCategoryBreakdownView
 from apps.finance.api.summary_views import FinanceSummaryView
 from apps.finance.api.comparison_views import FinancePeriodComparisonView
@@ -25,6 +27,11 @@ urlpatterns = [
     path("health/", HealthView.as_view(), name="health"),
     path("health/live/", LivenessView.as_view(), name="health-live"),
     path("health/ready/", ReadinessView.as_view(), name="health-ready"),
+    path("health/profiles/", HealthProfileListCreateView.as_view(), name="health-profile-list-create"),
+    path("health/profiles/<uuid:profile_id>/", HealthProfileDetailView.as_view(), name="health-profile-detail"),
+    path("health/profiles/<uuid:profile_id>/access-grants/", HealthProfileAccessGrantView.as_view(), name="health-profile-access-grants"),
+    path("health/profiles/<uuid:profile_id>/records/", MedicalRecordListCreateView.as_view(), name="health-medical-record-list-create"),
+    path("health/profiles/<uuid:profile_id>/records/<uuid:record_id>/", MedicalRecordDetailView.as_view(), name="health-medical-record-detail"),
     path("identity/", include("apps.identity.api.urls")),
     path("identity/me/", CurrentIdentityView.as_view(), name="identity-me"),
     path("app-state/", CurrentAppStateView.as_view(), name="app-state"),
