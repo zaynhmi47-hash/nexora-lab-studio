@@ -23,28 +23,17 @@ class OrganizationAPIView(APIView):
 
     @staticmethod
     def _error(request, exception: NexoraException):
-        return error_response(
-            exception.code,
-            exception.message,
-            details=exception.details,
-            correlation_id=getattr(request, "correlation_id", None),
-            status=exception.status_code,
-        )
+        return error_response(exception.code, exception.message, details=exception.details,
+                              correlation_id=getattr(request, "correlation_id", None), status=exception.status_code)
 
 
 class OrganizationListView(OrganizationAPIView):
     def get(self, request):
         organizations = get_user_organizations(request.user)
-        data = [
-            {
-                "id": str(organization.id),
-                "name": organization.name,
-                "slug": organization.slug,
-                "status": organization.status,
-            }
-            for organization in organizations
-        ]
-        return success_response(data)
+        return success_response([{
+            "id": str(organization.id), "name": organization.name,
+            "slug": organization.slug, "status": organization.status,
+        } for organization in organizations])
 
 
 class OrganizationDetailView(OrganizationAPIView):
@@ -56,14 +45,10 @@ class OrganizationDetailView(OrganizationAPIView):
             if membership is None:
                 raise PermissionDeniedException("Active organization membership is required.")
             organization = membership.organization
-            return success_response(
-                {
-                    "id": str(organization.id),
-                    "name": organization.name,
-                    "slug": organization.slug,
-                    "status": organization.status,
-                }
-            )
+            return success_response({
+                "id": str(organization.id), "name": organization.name,
+                "slug": organization.slug, "status": organization.status,
+            })
         except NexoraException as exception:
             return self._error(request, exception)
 
@@ -74,12 +59,11 @@ class OrganizationMembershipView(OrganizationAPIView):
             membership = get_active_membership(user=request.user, organization_id=organization_id)
             if membership is None:
                 raise PermissionDeniedException("Active organization membership is required.")
-            return success_response(
-                {
-                    "id": str(membership.id),
-                    "organization_id": str(membership.organization_id),
-                    "status": membership.status,
-                }
-            )
+            return success_response({
+                "id": str(membership.id),
+                "organization_id": str(membership.organization_id),
+                "role": membership.role.slug,
+                "status": membership.status,
+            })
         except NexoraException as exception:
             return self._error(request, exception)
