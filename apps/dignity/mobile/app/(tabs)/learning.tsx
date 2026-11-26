@@ -16,16 +16,14 @@ export default function LearningScreen() {
         <Eyebrow>GROW AT YOUR OWN PACE</Eyebrow>
         <Heading title="Your learning" subtitle="Explore ideas, practice new skills and make progress that lasts." />
       </View>
-
       <Panel style={styles.streak}>
         <View style={styles.streakIcon}><Ionicons name="flame" size={25} color="#E28B3F" /></View>
         <View style={{ flex: 1, gap: 3 }}><Text style={styles.streakTitle}>A little progress adds up</Text><Text style={styles.streakText}>Set aside 15 minutes for a focused session today.</Text></View>
         <Tag label="15 MIN" tone="orange" />
       </Panel>
-
       <View style={styles.sectionHead}><Text style={styles.sectionTitle}>Continue learning</Text><Tag label="3 COURSES" tone="purple" /></View>
       {courses.map((course) => (
-        <Pressable key={course.id} onPress={() => router.push('/(tabs)/lesson/' + course.id)} style={({ pressed }) => [styles.course, pressed && styles.pressed]}>
+        <Pressable key={course.id} onPress={() => router.push({ pathname: '/(tabs)/lesson/[lessonKey]', params: { lessonKey: course.id } })} style={({ pressed }) => [styles.course, pressed && styles.pressed]}>
           <View style={[styles.courseIcon, { backgroundColor: course.soft }]}><Ionicons name={course.icon} size={23} color={course.tone} /></View>
           <View style={styles.courseBody}>
             <Text style={[styles.category, { color: course.tone }]}>{course.category}</Text>
@@ -37,7 +35,6 @@ export default function LearningScreen() {
           <Ionicons name="chevron-forward" size={17} color="#A6AEC0" />
         </Pressable>
       ))}
-
       <View style={styles.sectionHead}><Text style={styles.sectionTitle}>Explore your growth</Text></View>
       <Panel style={{ gap: 4 }}>
         <Pressable style={styles.exploreRow} onPress={() => router.push('/(tabs)/journey')}>

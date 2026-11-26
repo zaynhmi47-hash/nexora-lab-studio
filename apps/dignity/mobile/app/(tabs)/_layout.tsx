@@ -25,6 +25,9 @@ export default function TabsLayout() {
       <Tabs.Screen name="learning" options={{ title: 'Learning', tabBarIcon: ({ color, size }) => <Ionicons name="book-outline" color={color} size={size} /> }} />
       <Tabs.Screen name="academic" options={{ title: 'Academic', tabBarIcon: ({ color, size }) => <Ionicons name="school-outline" color={color} size={size} /> }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" color={color} size={size} /> }} />
+      <Tabs.Screen name="journey" options={{ href: null }} />
+      <Tabs.Screen name="skills" options={{ href: null }} />
+      <Tabs.Screen name="lesson/[lessonKey]" options={{ href: null }} />
     </Tabs>
   );
 }
