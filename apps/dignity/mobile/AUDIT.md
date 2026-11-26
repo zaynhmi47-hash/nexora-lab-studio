@@ -51,6 +51,33 @@ The mobile client uses the existing authenticated Django endpoints under `/api/v
 
 The API client sends the Firebase ID token through the existing Nexora token port. Learning API responses are plain DRF payloads; the learning adapter also tolerates the shared `{ data }` envelope if one is introduced later.
 
+## Modular lesson content and upload workflow
+
+Learning content is authored as ordered `LearningContentBlock` records attached to a lesson. A lesson can combine any number of blocks without changing mobile screens or database schema:
+
+- `text` -> plain-text explanation or reading section
+- `image` -> PNG, JPG, JPEG or WEBP
+- `video` -> MP4 resource opened by the device's supported player
+- `audio` -> MP3 resource opened by the device's supported player
+- `document` -> PDF, PPTX, DOCX, XLSX or TXT
+- `link` -> external HTTPS/HTTP learning resource
+
+### Instructor / content-admin upload area
+
+The first upload workspace is the Django Admin, protected by Django staff login and model permissions:
+
+1. Open `/admin/` and sign in with an authorized staff account.
+2. Open **Learning lessons** and select the target lesson.
+3. Add one or more **Lesson content blocks** in the inline editor.
+4. Choose the block type, add its title/body, upload a file or supply an external URL, then set its order.
+5. Keep `is_published` disabled while preparing drafts; enable it only when the material is ready for learners.
+
+The dedicated **Learning content blocks** admin list also supports searching, filtering and editing blocks. Uploaded file extensions are allow-listed and the maximum file size is 100 MB. Student API reads only published blocks attached to published lessons and courses.
+
+The mobile lesson screen renders text and images in place. Video, audio, documents and external links open through the device's supported handler. Quiz questions remain a separate lesson kind and retain server-side scoring.
+
+Development uses Django's local `MEDIA_ROOT` and `/media/` route. Before production, configure a durable object-storage backend and private/signed delivery for institutional materials; do not rely on the development media route or ephemeral container storage. Current admin uploads are staff-only; organization-scoped instructor permissions and an in-app/web Content Studio are follow-up work.
+
 ## UI implementation notes
 
 - Shared palette, screen layout, cards, tags and progress indicators are in `components/ui.tsx`.
@@ -65,7 +92,7 @@ The API client sends the Firebase ID token through the existing Nexora token por
 ## Remaining work
 
 1. Validate typecheck, lint and Expo startup in CI/Codespaces; fix any issues before treating this stage as fully validated.
-2. Add lesson content blocks, video/document delivery and persisted written reflections.
+2. Add secure object-storage delivery, organization-scoped instructor permissions, a dedicated Content Studio and persisted written reflections.
 3. Implement institution selection and membership loading from the authorized organization API.
 4. Connect academic screens to authoritative attendance, KRS, schedule and grade APIs.
 5. Add accessible forms, evidence upload, portfolio permissions and research/library workflows.
