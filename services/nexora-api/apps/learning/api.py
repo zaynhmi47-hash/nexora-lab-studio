@@ -7,7 +7,7 @@ from rest_framework import status
 
 from apps.identity.authentication import FirebaseIdentityAuthentication
 
-from .models import LearningLesson
+from .models import LearningLesson, LearningContentBlock
 from .services import LearningService, UnifiedLearningEngine, learning_hub
 
 
@@ -66,6 +66,48 @@ class LearningProgressView(APIView):
         return Response(progress_payload(LearningService.progress(request.user)))
 
 
+class LearningLessonContentView(APIView):
+    """Read published lesson blocks; editing and uploads remain staff-only in Django Admin."""
+
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, lesson_key: str):
+        lesson = LearningLesson.objects.filter(
+            key=lesson_key,
+            is_published=True,
+            course__is_published=True,
+            deleted_at__isnull=True,
+            course__deleted_at__isnull=True,
+        ).first()
+        if lesson is None:
+            return Response({"detail": "Lesson not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        blocks = LearningContentBlock.objects.filter(
+            lesson=lesson,
+            is_published=True,
+            deleted_at__isnull=True,
+        ).order_by("sort_order", "created_at")
+        payload = []
+        for block in blocks:
+            file_url = None
+            if block.file:
+                try:
+                    file_url = request.build_absolute_uri(block.file.url)
+                except (ValueError, NotImplementedError):
+                    file_url = None
+            payload.append({
+                "id": str(block.id),
+                "title": block.title,
+                "kind": block.kind,
+                "body": block.body,
+                "fileUrl": file_url,
+                "externalUrl": block.external_url or None,
+                "order": block.sort_order,
+            })
+        return Response(payload)
+
+
 class LearningQuizView(APIView):
     authentication_classes = [FirebaseIdentityAuthentication]
     permission_classes = [IsAuthenticated]
@@ -75,7 +117,6 @@ class LearningQuizView(APIView):
         if not questions:
             return Response({"detail": "Quiz not found."}, status=status.HTTP_404_NOT_FOUND)
         # Never send answer keys or explanations before an attempt is submitted.
-        # Keeping this response intentionally limited protects quiz integrity.
         return Response([
             {
                 "id": question.key,
