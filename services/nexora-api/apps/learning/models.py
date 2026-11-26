@@ -1,10 +1,32 @@
 from __future__ import annotations
 
+from pathlib import Path
+
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 
 from apps.core.models import AuditableBaseModel
 from apps.identity.models import NexoraUser
+
+
+ALLOWED_LEARNING_FILE_EXTENSIONS = {
+    ".pdf", ".png", ".jpg", ".jpeg", ".webp", ".mp4", ".mp3",
+    ".pptx", ".docx", ".xlsx", ".txt",
+}
+MAX_LEARNING_FILE_SIZE = 100 * 1024 * 1024
+
+
+def validate_learning_content_file(uploaded_file):
+    suffix = Path(uploaded_file.name).suffix.lower()
+    if suffix not in ALLOWED_LEARNING_FILE_EXTENSIONS:
+        raise ValidationError("Unsupported learning material file type.")
+    if uploaded_file.size > MAX_LEARNING_FILE_SIZE:
+        raise ValidationError("Learning material files must be 100 MB or smaller.")
+
+
+def learning_content_upload_to(instance, filename):
+    return f"dignity/learning/{instance.lesson.course.key}/{instance.lesson.key}/{filename}"
 
 
 class LearningCourse(AuditableBaseModel):
@@ -41,6 +63,48 @@ class LearningLesson(AuditableBaseModel):
         constraints = [
             models.UniqueConstraint(fields=("course", "sort_order"), name="learning_course_lesson_order_unique"),
         ]
+
+
+class LearningContentBlock(AuditableBaseModel):
+    """An ordered, reusable content unit attached to a lesson."""
+
+    class Kind(models.TextChoices):
+        TEXT = "text", "Text"
+        IMAGE = "image", "Image"
+        VIDEO = "video", "Video"
+        AUDIO = "audio", "Audio"
+        DOCUMENT = "document", "Document"
+        LINK = "link", "External link"
+
+    lesson = models.ForeignKey(LearningLesson, on_delete=models.CASCADE, related_name="content_blocks")
+    title = models.CharField(max_length=255, blank=True)
+    kind = models.CharField(max_length=16, choices=Kind.choices, default=Kind.TEXT)
+    body = models.TextField(blank=True, help_text="Plain text content; use separate blocks for each section.")
+    file = models.FileField(
+        upload_to=learning_content_upload_to,
+        blank=True,
+        null=True,
+        validators=[validate_learning_content_file],
+    )
+    external_url = models.URLField(blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    is_published = models.BooleanField(default=True, db_index=True)
+
+    class Meta:
+        db_table = "learning_content_blocks"
+        ordering = ("sort_order", "created_at")
+        constraints = [
+            models.UniqueConstraint(fields=("lesson", "sort_order"), name="learning_content_lesson_order_unique"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.kind in {self.Kind.IMAGE, self.Kind.VIDEO, self.Kind.AUDIO, self.Kind.DOCUMENT} and not self.file:
+            raise ValidationError({"file": "Upload a file for this content type."})
+        if self.kind == self.Kind.TEXT and not self.body.strip():
+            raise ValidationError({"body": "Text content cannot be empty."})
+        if self.kind == self.Kind.LINK and not self.external_url:
+            raise ValidationError({"external_url": "Provide a valid URL for this content type."})
 
 
 class LearningProgress(AuditableBaseModel):
