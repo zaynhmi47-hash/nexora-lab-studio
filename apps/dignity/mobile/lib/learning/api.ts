@@ -2,6 +2,17 @@ import type { NexoraApiClient } from '@/lib/api/client';
 
 export type LearningLessonStatus = 'available' | 'locked' | 'completed';
 export type LearningLessonKind = 'lesson' | 'quiz' | 'practice';
+export type LearningContentKind = 'text' | 'image' | 'video' | 'audio' | 'document' | 'link';
+
+export interface LearningContentBlock {
+  id: string;
+  title: string;
+  kind: LearningContentKind;
+  body: string;
+  fileUrl: string | null;
+  externalUrl: string | null;
+  order: number;
+}
 
 export interface LearningLesson {
   id: string;
@@ -63,6 +74,10 @@ export function getLearningCourses(client: NexoraApiClient): Promise<LearningCou
 
 export function getLearningProgress(client: NexoraApiClient): Promise<LearningProgress> {
   return requestData(client.request<LearningProgress>('/api/v1/learning/progress/'));
+}
+
+export function getLearningLessonContent(client: NexoraApiClient, lessonKey: string): Promise<LearningContentBlock[]> {
+  return requestData(client.request<LearningContentBlock[]>(`/api/v1/learning/lessons/${encodeURIComponent(lessonKey)}/content/`));
 }
 
 export function getLearningQuiz(client: NexoraApiClient, lessonKey: string): Promise<LearningQuizQuestion[]> {
