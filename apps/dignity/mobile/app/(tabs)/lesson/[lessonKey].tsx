@@ -1,57 +1,163 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Eyebrow, Panel, ProgressBar, Screen, Tag, palette } from '@/components/ui';
-
-const lessonContent: Record<string, { title: string; module: string; duration: string; objective: string; points: string[] }> = {
-  learn: { title: 'Learning how to learn', module: 'Learning skills · Module 2', duration: '12 min', objective: 'Recognize how attention, retrieval and spaced practice work together to make learning more effective.', points: ['Focus on one meaningful task at a time.', 'Recall ideas before looking back at your notes.', 'Return to important concepts over several days.'] },
-  digital: { title: 'Digital confidence', module: 'Digital literacy · Module 1', duration: '10 min', objective: 'Build a thoughtful foundation for using digital tools safely and confidently.', points: ['Check the source before trusting information.', 'Protect accounts with unique passwords.', 'Pause before sharing personal information.'] },
-  growth: { title: 'Communication essentials', module: 'Personal growth · Module 1', duration: '15 min', objective: 'Practice communicating with clarity, empathy and curiosity.', points: ['Listen to understand, not only to respond.', 'Use specific language and useful examples.', 'Ask questions when context is unclear.'] },
-};
+import { useNexoraApi } from '@/lib/api/NexoraApiProvider';
+import {
+  completeLearningLesson,
+  getLearningCourses,
+  getLearningQuiz,
+  getLearningProgress,
+  submitLearningQuiz,
+  type LearningLesson,
+  type LearningProgress,
+  type LearningQuizQuestion,
+  type LearningQuizResult,
+} from '@/lib/learning/api';
 
 export default function LessonScreen() {
   const { lessonKey } = useLocalSearchParams<{ lessonKey: string }>();
-  const lesson = lessonContent[lessonKey ?? ''] ?? lessonContent.learn;
-  const [checked, setChecked] = useState<boolean[]>([false, false, false]);
-  const [practiceStarted, setPracticeStarted] = useState(false);
-  const done = checked.filter(Boolean).length;
+  const api = useNexoraApi();
+  const [lesson, setLesson] = useState<LearningLesson | null>(null);
+  const [questions, setQuestions] = useState<LearningQuizQuestion[]>([]);
+  const [answers, setAnswers] = useState<number[]>([]);
+  const [result, setResult] = useState<LearningQuizResult | null>(null);
+  const [progress, setProgress] = useState<LearningProgress | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    async function loadLesson() {
+      setLoading(true);
+      setError(null);
+      try {
+        const courses = await getLearningCourses(api);
+        const found = courses.flatMap((course) => course.lessons).find((item) => item.id === lessonKey) ?? null;
+        if (!active) return;
+        setLesson(found);
+        if (!found) throw new Error('This lesson is not available in your learning catalog.');
+        if (found.kind === 'quiz') {
+          const quiz = await getLearningQuiz(api, found.id);
+          if (active) {
+            setQuestions(quiz);
+            setAnswers(quiz.map(() => -1));
+          }
+        }
+        if (active && found.status === 'completed') {
+          setProgress(await getLearningProgress(api));
+        }
+      } catch (loadError) {
+        if (active) setError(loadError instanceof Error ? loadError.message : 'Unable to load this lesson.');
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    void loadLesson();
+    return () => { active = false; };
+  }, [api, lessonKey]);
+
+  const finishLesson = useCallback(async () => {
+    if (!lesson) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const nextProgress = await completeLearningLesson(api, lesson.id);
+      setProgress(nextProgress);
+      setLesson((current) => current ? { ...current, status: 'completed' } : current);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Unable to save lesson completion.');
+    } finally {
+      setSubmitting(false);
+    }
+  }, [api, lesson]);
+
+  const finishQuiz = useCallback(async () => {
+    if (!lesson || answers.some((answer) => answer < 0)) {
+      setError('Answer every question before submitting the quiz.');
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const quizResult = await submitLearningQuiz(api, lesson.id, answers);
+      setResult(quizResult);
+      if (quizResult.passed) {
+        const nextProgress = await completeLearningLesson(api, lesson.id);
+        setProgress(nextProgress);
+        setLesson((current) => current ? { ...current, status: 'completed' } : current);
+      }
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Unable to submit this quiz.');
+    } finally {
+      setSubmitting(false);
+    }
+  }, [api, answers, lesson]);
 
   return (
     <Screen>
       <Pressable onPress={() => router.back()} style={styles.back}><Ionicons name="arrow-back" size={19} color={palette.ink} /><Text style={styles.backText}>Back to learning</Text></Pressable>
-      <Eyebrow>{lesson.module.toUpperCase()}</Eyebrow>
-      <Text style={styles.title}>{lesson.title}</Text>
-      <View style={styles.meta}><Tag label="GUIDED LESSON" tone="purple" /><View style={styles.duration}><Ionicons name="time-outline" size={13} color={palette.muted} /><Text style={styles.durationText}>{lesson.duration}</Text></View></View>
-      <Panel style={styles.cover}>
-        <View style={styles.coverOrb}><Ionicons name="book-outline" size={38} color="#FFFFFF" /></View>
-        <Text style={styles.coverEyebrow}>A MOMENT TO GROW</Text>
-        <Text style={styles.coverTitle}>Learn with intention.</Text>
-        <Text style={styles.coverText}>Understand the idea, connect it to your life, then practice it.</Text>
-      </Panel>
-      <Panel>
-        <Text style={styles.sectionTitle}>What you’ll explore</Text>
-        <Text style={styles.body}>{lesson.objective}</Text>
-      </Panel>
-      <View style={styles.sectionHead}><Text style={styles.sectionTitle}>Key ideas</Text><Tag label={done + ' OF 3 REVIEWED'} tone={done === 3 ? 'green' : 'cyan'} /></View>
-      <Panel style={{ gap: 5 }}>
-        {lesson.points.map((point, index) => (
-          <Pressable key={point} onPress={() => setChecked((current) => current.map((value, i) => i === index ? !value : value))} style={styles.pointRow}>
-            <View style={[styles.check, checked[index] && styles.checkDone]}>{checked[index] ? <Ionicons name="checkmark" size={14} color="#fff" /> : <Text style={styles.number}>{index + 1}</Text>}</View>
-            <Text style={[styles.pointText, checked[index] && styles.pointChecked]}>{point}</Text>
-          </Pressable>
-        ))}
-        <ProgressBar value={done / 3 * 100} color={palette.green} />
-      </Panel>
-      <Panel style={{ gap: 9 }}>
-        <View style={styles.practiceHeader}><Ionicons name="create-outline" size={19} color={palette.primary} /><Text style={styles.sectionTitle}>Quick reflection</Text></View>
-        <Text style={styles.body}>Which idea would make the biggest difference to your next study session?</Text>
-        <Pressable onPress={() => setPracticeStarted((value) => !value)} style={styles.practiceButton}>
-          <Text style={styles.practiceButtonText}>{practiceStarted ? 'Reflection noted on this device' : 'Start reflection'}</Text>
-          <Ionicons name={practiceStarted ? 'checkmark-circle' : 'arrow-forward'} size={16} color="#fff" />
-        </Pressable>
-        <Text style={styles.helper}>This is a local learning interaction preview. Completion will only be recorded after connection to the Dignity learning service.</Text>
-      </Panel>
+      {loading ? (
+        <Panel style={styles.state}><ActivityIndicator color={palette.primary} /><Text style={styles.stateText}>Loading lesson…</Text></Panel>
+      ) : error && !lesson ? (
+        <Panel style={styles.state}><Ionicons name="alert-circle-outline" size={26} color={palette.rose} /><Text style={styles.stateTitle}>Lesson unavailable</Text><Text style={styles.stateText}>{error}</Text></Panel>
+      ) : lesson ? (
+        <>
+          <Eyebrow>{lesson.kind.toUpperCase()} · {lesson.xpReward} XP</Eyebrow>
+          <Text style={styles.title}>{lesson.title}</Text>
+          <View style={styles.meta}><Tag label={lesson.status === 'completed' ? 'COMPLETED' : lesson.status === 'locked' ? 'LOCKED' : 'READY TO LEARN'} tone={lesson.status === 'completed' ? 'green' : lesson.status === 'locked' ? 'neutral' : 'purple'} /></View>
+          <Panel style={styles.cover}>
+            <View style={styles.coverOrb}><Ionicons name={lesson.kind === 'quiz' ? 'help-circle-outline' : 'book-outline'} size={38} color="#FFFFFF" /></View>
+            <Text style={styles.coverEyebrow}>DIGNITY LEARNING</Text>
+            <Text style={styles.coverTitle}>{lesson.kind === 'quiz' ? 'Check your understanding.' : 'Learn with intention.'}</Text>
+            <Text style={styles.coverText}>{lesson.description || 'A guided step in your learning journey.'}</Text>
+          </Panel>
+
+          {lesson.kind === 'quiz' ? (
+            <Panel>
+              <View style={styles.sectionHead}><Text style={styles.sectionTitle}>Knowledge check</Text><Tag label={`${questions.length} QUESTIONS`} tone="cyan" /></View>
+              {questions.length === 0 ? <Text style={styles.body}>There are no published questions for this quiz yet.</Text> : questions.map((question, questionIndex) => (
+                <View key={question.id} style={styles.question}>
+                  <Text style={styles.questionPrompt}>{questionIndex + 1}. {question.prompt}</Text>
+                  {question.options.map((option, optionIndex) => {
+                    const selected = answers[questionIndex] === optionIndex;
+                    return (
+                      <Pressable key={optionIndex} onPress={() => { setAnswers((current) => current.map((answer, index) => index === questionIndex ? optionIndex : answer)); setResult(null); }} style={[styles.option, selected && styles.optionSelected]}>
+                        <View style={[styles.optionMarker, selected && styles.optionMarkerSelected]}>{selected ? <Ionicons name="checkmark" size={12} color="#fff" /> : null}</View>
+                        <Text style={[styles.optionText, selected && styles.optionTextSelected]}>{option}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ))}
+              {result && (
+                <View style={styles.result}>
+                  <Text style={styles.resultTitle}>{result.passed ? 'You passed!' : 'Keep practicing'}</Text>
+                  <Text style={styles.resultText}>{result.correctAnswers} of {result.totalQuestions} correct · {result.scorePercent}% · {result.xpEarned} XP earned</Text>
+                  <ProgressBar value={result.scorePercent} color={result.passed ? palette.green : palette.orange} />
+                </View>
+              )}
+              <Pressable disabled={submitting || questions.length === 0 || lesson.status === 'locked'} onPress={() => void finishQuiz()} style={[styles.primaryButton, (submitting || questions.length === 0 || lesson.status === 'locked') && styles.disabled]}>
+                {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Submit answers</Text>}
+              </Pressable>
+            </Panel>
+          ) : (
+            <Panel style={{ gap: 11 }}>
+              <Text style={styles.sectionTitle}>Lesson overview</Text>
+              <Text style={styles.body}>{lesson.description || 'Review the lesson material and complete the learning activity when you are ready.'}</Text>
+              <View style={styles.learningTip}><Ionicons name="bulb-outline" size={18} color={palette.primary} /><Text style={styles.tipText}>Take a moment to connect this topic with something you already know. Reflection helps make learning meaningful.</Text></View>
+              <Pressable disabled={submitting || lesson.status !== 'available'} onPress={() => void finishLesson()} style={[styles.primaryButton, (submitting || lesson.status !== 'available') && styles.disabled]}>
+                {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>{lesson.status === 'completed' ? 'Lesson completed' : lesson.status === 'locked' ? 'Complete the previous lesson first' : 'Mark lesson as complete'}</Text>}
+                {!submitting && lesson.status === 'available' && <Ionicons name="checkmark-circle-outline" size={17} color="#fff" />}
+              </Pressable>
+            </Panel>
+          )}
+          {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+          {lesson.status === 'completed' && progress ? <Panel style={styles.progressCard}><Ionicons name="trophy-outline" size={20} color={palette.green} /><View style={{ flex: 1 }}><Text style={styles.progressTitle}>Progress saved</Text><Text style={styles.progressText}>{progress.xp} total XP · Level {progress.level} · {progress.currentStreak} day streak</Text></View></Panel> : null}
+        </>
+      ) : null}
     </Screen>
   );
 }
@@ -61,24 +167,35 @@ const styles = StyleSheet.create({
   backText: { color: palette.muted, fontSize: 12, fontWeight: '700' },
   title: { color: palette.ink, fontSize: 27, lineHeight: 33, fontWeight: '900', letterSpacing: -0.6 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  duration: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  durationText: { color: palette.muted, fontSize: 10, fontWeight: '600' },
   cover: { backgroundColor: '#6257E8', borderColor: '#6257E8', alignItems: 'flex-start', padding: 20, minHeight: 190, justifyContent: 'center' },
   coverOrb: { width: 62, height: 62, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.17)', alignItems: 'center', justifyContent: 'center', marginBottom: 15 },
   coverEyebrow: { color: '#DCD9FF', fontSize: 9, letterSpacing: 1.5, fontWeight: '900' },
   coverTitle: { color: '#fff', fontSize: 23, fontWeight: '900', marginTop: 6 },
-  coverText: { color: '#E6E4FF', fontSize: 11, lineHeight: 17, marginTop: 5, maxWidth: 260 },
+  coverText: { color: '#E6E4FF', fontSize: 11, lineHeight: 17, marginTop: 5, maxWidth: 270 },
+  sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   sectionTitle: { color: palette.ink, fontSize: 14, fontWeight: '800' },
   body: { color: palette.muted, fontSize: 11, lineHeight: 18 },
-  sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  pointRow: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 8 },
-  check: { width: 27, height: 27, borderRadius: 10, backgroundColor: palette.primarySoft, alignItems: 'center', justifyContent: 'center' },
-  checkDone: { backgroundColor: palette.green },
-  number: { color: palette.primary, fontSize: 11, fontWeight: '900' },
-  pointText: { flex: 1, color: palette.ink, fontSize: 11, lineHeight: 17, fontWeight: '600' },
-  pointChecked: { color: palette.muted, textDecorationLine: 'line-through' },
-  practiceHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  practiceButton: { minHeight: 43, borderRadius: 13, backgroundColor: palette.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  practiceButtonText: { color: '#fff', fontSize: 11, fontWeight: '800' },
-  helper: { color: '#9AA3B6', fontSize: 9, lineHeight: 14 },
+  state: { alignItems: 'center', paddingVertical: 25 },
+  stateTitle: { color: palette.ink, fontSize: 14, fontWeight: '800' },
+  stateText: { color: palette.muted, fontSize: 11, textAlign: 'center', lineHeight: 17 },
+  question: { gap: 8, paddingVertical: 12, borderTopWidth: 1, borderTopColor: palette.line },
+  questionPrompt: { color: palette.ink, fontSize: 12, lineHeight: 18, fontWeight: '800' },
+  option: { flexDirection: 'row', alignItems: 'center', gap: 9, padding: 10, borderWidth: 1, borderColor: palette.line, borderRadius: 12 },
+  optionSelected: { borderColor: palette.primary, backgroundColor: palette.primarySoft },
+  optionMarker: { width: 19, height: 19, borderRadius: 10, borderWidth: 1, borderColor: '#B9C0D0', alignItems: 'center', justifyContent: 'center' },
+  optionMarkerSelected: { backgroundColor: palette.primary, borderColor: palette.primary },
+  optionText: { flex: 1, color: palette.ink, fontSize: 10, lineHeight: 15 },
+  optionTextSelected: { color: palette.primary, fontWeight: '800' },
+  result: { gap: 7, backgroundColor: palette.greenSoft, borderRadius: 13, padding: 12 },
+  resultTitle: { color: palette.green, fontSize: 13, fontWeight: '900' },
+  resultText: { color: palette.ink, fontSize: 10 },
+  primaryButton: { minHeight: 44, borderRadius: 13, backgroundColor: palette.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  primaryText: { color: '#fff', fontSize: 11, fontWeight: '800' },
+  disabled: { opacity: 0.5 },
+  learningTip: { flexDirection: 'row', gap: 9, backgroundColor: palette.primarySoft, borderRadius: 12, padding: 12, alignItems: 'flex-start' },
+  tipText: { flex: 1, color: palette.ink, fontSize: 10, lineHeight: 16 },
+  error: { color: '#C34F6B', fontSize: 10, lineHeight: 15 },
+  progressCard: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: palette.greenSoft, borderColor: '#D5F0E5' },
+  progressTitle: { color: palette.green, fontSize: 11, fontWeight: '800' },
+  progressText: { color: '#397D69', fontSize: 9, marginTop: 3 },
 });
