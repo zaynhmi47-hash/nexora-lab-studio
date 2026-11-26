@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Eyebrow, Panel, ProgressBar, Screen, Tag, palette } from '@/components/ui';
@@ -7,9 +7,11 @@ import { useNexoraApi } from '@/lib/api/NexoraApiProvider';
 import {
   completeLearningLesson,
   getLearningCourses,
+  getLearningLessonContent,
   getLearningQuiz,
   getLearningProgress,
   submitLearningQuiz,
+  type LearningContentBlock,
   type LearningLesson,
   type LearningProgress,
   type LearningQuizQuestion,
@@ -20,6 +22,7 @@ export default function LessonScreen() {
   const { lessonKey } = useLocalSearchParams<{ lessonKey: string }>();
   const api = useNexoraApi();
   const [lesson, setLesson] = useState<LearningLesson | null>(null);
+  const [contentBlocks, setContentBlocks] = useState<LearningContentBlock[]>([]);
   const [questions, setQuestions] = useState<LearningQuizQuestion[]>([]);
   const [answers, setAnswers] = useState<number[]>([]);
   const [result, setResult] = useState<LearningQuizResult | null>(null);
@@ -39,12 +42,15 @@ export default function LessonScreen() {
         if (!active) return;
         setLesson(found);
         if (!found) throw new Error('This lesson is not available in your learning catalog.');
-        if (found.kind === 'quiz') {
-          const quiz = await getLearningQuiz(api, found.id);
-          if (active) {
-            setQuestions(quiz);
-            setAnswers(quiz.map(() => -1));
-          }
+
+        const [blocks, quiz] = await Promise.all([
+          getLearningLessonContent(api, found.id),
+          found.kind === 'quiz' ? getLearningQuiz(api, found.id) : Promise.resolve([]),
+        ]);
+        if (active) {
+          setContentBlocks(blocks);
+          setQuestions(quiz);
+          setAnswers(quiz.map(() => -1));
         }
         if (active && found.status === 'completed') {
           setProgress(await getLearningProgress(api));
@@ -96,6 +102,40 @@ export default function LessonScreen() {
     }
   }, [api, answers, lesson]);
 
+  const openResource = useCallback(async (url: string) => {
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('Unable to open file', 'This resource could not be opened on this device.');
+    }
+  }, []);
+
+  const renderContentBlock = (block: LearningContentBlock, index: number) => {
+    const resourceUrl = block.fileUrl || block.externalUrl;
+    const icon = block.kind === 'video' ? 'videocam-outline' : block.kind === 'audio' ? 'headset-outline' : block.kind === 'document' ? 'document-text-outline' : block.kind === 'link' ? 'link-outline' : 'image-outline';
+    return (
+      <View key={block.id} style={styles.contentBlock}>
+        <View style={styles.blockHeading}>
+          <View style={styles.blockNumber}><Text style={styles.blockNumberText}>{index + 1}</Text></View>
+          <Text style={styles.blockTitle}>{block.title || ({ text: 'Reading', image: 'Image', video: 'Video lesson', audio: 'Audio lesson', document: 'Study document', link: 'Further reading' } as const)[block.kind]}</Text>
+        </View>
+        {block.kind === 'text' && <Text style={styles.body}>{block.body}</Text>}
+        {block.kind === 'image' && resourceUrl ? <Pressable onPress={() => void openResource(resourceUrl)}><Image source={{ uri: resourceUrl }} resizeMode="contain" style={styles.contentImage} /></Pressable> : null}
+        {block.kind !== 'text' && block.kind !== 'image' && resourceUrl ? (
+          <Pressable onPress={() => void openResource(resourceUrl)} style={styles.resourceCard}>
+            <View style={styles.resourceIcon}><Ionicons name={icon} size={21} color={palette.primary} /></View>
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={styles.resourceTitle}>{block.title || 'Open learning resource'}</Text>
+              <Text style={styles.resourceSubtitle}>{block.kind === 'video' ? 'Watch video' : block.kind === 'audio' ? 'Listen to audio' : block.kind === 'link' ? 'Open external resource' : 'Open or download document'}</Text>
+            </View>
+            <Ionicons name="open-outline" size={17} color={palette.primary} />
+          </Pressable>
+        ) : null}
+        {block.body && block.kind !== 'text' ? <Text style={styles.resourceCaption}>{block.body}</Text> : null}
+      </View>
+    );
+  };
+
   return (
     <Screen>
       <Pressable onPress={() => router.back()} style={styles.back}><Ionicons name="arrow-back" size={19} color={palette.ink} /><Text style={styles.backText}>Back to learning</Text></Pressable>
@@ -114,6 +154,18 @@ export default function LessonScreen() {
             <Text style={styles.coverTitle}>{lesson.kind === 'quiz' ? 'Check your understanding.' : 'Learn with intention.'}</Text>
             <Text style={styles.coverText}>{lesson.description || 'A guided step in your learning journey.'}</Text>
           </Panel>
+
+          {contentBlocks.length > 0 ? (
+            <Panel style={{ gap: 13 }}>
+              <View style={styles.sectionHead}><Text style={styles.sectionTitle}>Learning materials</Text><Tag label={`${contentBlocks.length} BLOCKS`} tone="cyan" /></View>
+              {contentBlocks.map(renderContentBlock)}
+            </Panel>
+          ) : lesson.kind !== 'quiz' ? (
+            <Panel style={{ gap: 7 }}>
+              <Text style={styles.sectionTitle}>No materials published yet</Text>
+              <Text style={styles.body}>Your instructor has not added content to this lesson. Check back later.</Text>
+            </Panel>
+          ) : null}
 
           {lesson.kind === 'quiz' ? (
             <Panel>
@@ -178,6 +230,17 @@ const styles = StyleSheet.create({
   state: { alignItems: 'center', paddingVertical: 25 },
   stateTitle: { color: palette.ink, fontSize: 14, fontWeight: '800' },
   stateText: { color: palette.muted, fontSize: 11, textAlign: 'center', lineHeight: 17 },
+  contentBlock: { gap: 9 },
+  blockHeading: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  blockNumber: { width: 25, height: 25, borderRadius: 9, backgroundColor: palette.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  blockNumberText: { color: palette.primary, fontSize: 10, fontWeight: '900' },
+  blockTitle: { color: palette.ink, fontSize: 12, fontWeight: '800', flex: 1 },
+  contentImage: { width: '100%', height: 220, borderRadius: 13, backgroundColor: palette.canvas },
+  resourceCard: { borderWidth: 1, borderColor: palette.line, borderRadius: 13, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  resourceIcon: { width: 39, height: 39, borderRadius: 12, backgroundColor: palette.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  resourceTitle: { color: palette.ink, fontSize: 11, fontWeight: '800' },
+  resourceSubtitle: { color: palette.muted, fontSize: 9 },
+  resourceCaption: { color: palette.muted, fontSize: 10, lineHeight: 16 },
   question: { gap: 8, paddingVertical: 12, borderTopWidth: 1, borderTopColor: palette.line },
   questionPrompt: { color: palette.ink, fontSize: 12, lineHeight: 18, fontWeight: '800' },
   option: { flexDirection: 'row', alignItems: 'center', gap: 9, padding: 10, borderWidth: 1, borderColor: palette.line, borderRadius: 12 },
