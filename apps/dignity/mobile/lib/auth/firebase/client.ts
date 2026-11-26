@@ -1,52 +1,24 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
-import * as FirebaseAuth from 'firebase/auth';
-import { getAuth, initializeAuth, type Auth, type Persistence } from 'firebase/auth';
-import { Platform } from 'react-native';
+import { getApp, getApps, initializeApp } from 'firebase/app';
+import {
+  getAuth,
+  initializeAuth,
+  type Auth,
+} from 'firebase/auth';
+// Firebase 12.19 exports this from its React Native runtime entry, but its shared
+// TypeScript declarations omit the symbol. Keep the suppression local to this import.
+// @ts-expect-error React Native runtime export missing from Firebase 12 shared typings.
+import { getReactNativePersistence } from 'firebase/auth';
 
-import { getFirebaseConfig } from './config';
+import { firebaseConfig } from './config';
 
-let firebaseApp: FirebaseApp | null = null;
-let firebaseAuth: Auth | null = null;
+const hasExistingFirebaseApp = getApps().length > 0;
+const firebaseApp = hasExistingFirebaseApp ? getApp() : initializeApp(firebaseConfig);
 
-type ReactNativePersistenceFactory = (storage: typeof AsyncStorage) => Persistence;
-
-export function getFirebaseApp(): FirebaseApp {
-  if (!firebaseApp) {
-    firebaseApp = getApps().length > 0 ? getApp() : initializeApp(getFirebaseConfig());
-  }
-  return firebaseApp;
-}
-
-export function getFirebaseAuth(): Auth {
-  if (firebaseAuth) return firebaseAuth;
-
-  const app = getFirebaseApp();
-  if (Platform.OS === 'web') {
-    firebaseAuth = getAuth(app);
-    return firebaseAuth;
-  }
-
-  // Firebase 12's public TypeScript declarations omit this RN-only export,
-  // while the React Native runtime entry point still provides it.
-  const getReactNativePersistence = (
-    FirebaseAuth as unknown as { getReactNativePersistence?: ReactNativePersistenceFactory }
-  ).getReactNativePersistence;
-
-  if (!getReactNativePersistence) {
-    throw new Error('The Firebase React Native auth runtime is unavailable. Verify Metro resolves the React Native Firebase Auth entry point.');
-  }
-
-  try {
-    firebaseAuth = initializeAuth(app, {
+export const firebaseAuth: Auth = hasExistingFirebaseApp
+  ? getAuth(firebaseApp)
+  : initializeAuth(firebaseApp, {
       persistence: getReactNativePersistence(AsyncStorage),
     });
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('already initialized')) {
-      firebaseAuth = getAuth(app);
-    } else {
-      throw error;
-    }
-  }
-  return firebaseAuth;
-}
+
+export { firebaseApp };
