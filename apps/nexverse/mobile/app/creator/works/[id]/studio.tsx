@@ -52,8 +52,8 @@ export default function ChapterStudioScreen() {
       const nextChapters = result.chapters ?? [];
       setWork(result);
       setChapters(nextChapters);
-      const nextSelected = nextChapters.some(chapter => chapter.id === selectedId)
-        ? selectedId
+      const nextSelected = nextChapters.some(chapter => chapter.id === chapterId)
+        ? chapterId ?? null
         : nextChapters[0]?.id ?? null;
       setSelectedId(nextSelected);
       const active = nextChapters.find(chapter => chapter.id === nextSelected);
@@ -66,7 +66,7 @@ export default function ChapterStudioScreen() {
     } finally {
       setLoading(false);
     }
-  }, [id, selectedId]);
+  }, [id, chapterId]);
 
   useEffect(() => { void load(); }, [load]);
 
