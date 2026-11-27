@@ -1,4 +1,7 @@
+from datetime import timedelta
+
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.identity.models import IdentityProviderAccount, NexoraUser
@@ -77,6 +80,30 @@ class NexverseUploadSessionApiTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data["code"], "FILE_SIZE_LIMIT")
+
+    def test_limits_active_upload_sessions_per_creator(self):
+        for index in range(5):
+            NexverseUploadSession.objects.create(
+                work=self.work,
+                owner=self.user,
+                asset_type=NexverseUploadSession.AssetType.MANUSCRIPT,
+                original_filename=f"existing-{index}.pdf",
+                content_type="application/pdf",
+                expected_size_bytes=1024,
+                storage_path=f"nexverse/firebase-test-uid/uploads/{index}/existing.pdf",
+                expires_at=timezone.now() + timedelta(minutes=10),
+            )
+
+        response = self.post_upload({
+            "assetType": "manuscript",
+            "filename": "new.pdf",
+            "contentType": "application/pdf",
+            "sizeBytes": 1024,
+        })
+
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(response.data["code"], "ACTIVE_UPLOAD_LIMIT")
+        self.assertEqual(NexverseUploadSession.objects.count(), 5)
 
     def test_other_user_cannot_create_session_for_work(self):
         other_user = NexoraUser.objects.create(email="other@example.test")
