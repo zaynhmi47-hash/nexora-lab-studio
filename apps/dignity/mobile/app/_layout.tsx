@@ -5,12 +5,17 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NexoraApiProvider } from '@/lib/api/NexoraApiProvider';
 import { AuthProvider } from '@/lib/auth';
 import { createFirebaseAuthPort } from '@/lib/auth/firebase/authPort';
+import { hasFirebaseConfig } from '@/lib/auth/firebase/config';
 import { createFirebaseTokenPort } from '@/lib/auth/firebase/tokenPort';
 import { OrganizationProvider } from '@/lib/organization/OrganizationProvider';
 
 export default function RootLayout() {
   const apiUrl = process.env.EXPO_PUBLIC_NEXORA_API_URL ?? 'http://localhost:8000';
-  const authPort = useMemo(() => createFirebaseAuthPort(apiUrl), [apiUrl]);
+  const firebaseConfigured = hasFirebaseConfig();
+  const authPort = useMemo(
+    () => firebaseConfigured ? createFirebaseAuthPort(apiUrl) : undefined,
+    [apiUrl, firebaseConfigured],
+  );
   const tokenPort = useMemo(() => createFirebaseTokenPort(), []);
 
   return (
