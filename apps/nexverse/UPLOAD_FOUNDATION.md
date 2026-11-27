@@ -25,7 +25,7 @@ Apply migrations from `services/nexora-api` after confirming the migration graph
 ```bash
 python manage.py showmigrations nexverse
 python manage.py migrate nexverse
-python manage.py test apps.nexverse.tests.test_upload_api
+python manage.py test apps.nexverse.tests
 ```
 
 ## Upload protocol
@@ -38,6 +38,11 @@ python manage.py test apps.nexverse.tests.test_upload_api
 4. Mobile calls `POST /api/v1/nexverse/creator/uploads/{session_id}/complete/`.
 5. Django reads the object metadata through the provider-neutral Firebase storage adapter and
    marks the session uploaded only when size and content type match.
+6. The creator explicitly starts inspection with
+   `POST /api/v1/nexverse/creator/uploads/{session_id}/process/`.
+7. Django downloads the private object through the storage adapter, validates file signatures,
+   checks bounded EPUB archive structure, verifies image decoding/dimensions, and extracts basic
+   metadata. The resulting state is `ready`, `rejected`, or retryable `failed`.
 
 The current status `uploaded` means the object has been verified against its session metadata;
 it does **not** mean malware scanning, document extraction, moderation, or publication is complete.
@@ -54,8 +59,12 @@ firebase deploy --only storage --project nexora-73cfa
 
 - 50 MiB per file; resumable Firebase Storage upload is enabled on the client.
 - Manuscripts: PDF, EPUB, TXT. Covers: JPEG, PNG, WEBP. Attachments: PDF, JPEG, PNG.
-- The backend currently verifies object existence, byte size, and declared content type. A later
-  processing stage must inspect file signatures, scan malware, extract metadata/pages, and bind
-  approved assets to a published work.
-- Upload Center is an initial mobile screen; a persistent upload queue, background retry, and
-  per-asset history are subsequent work.
+- The current processing endpoint is synchronous and creator-triggered, not a background worker.
+  It performs structural/type validation and basic metadata extraction; it is **not** antivirus or
+  malware scanning, a complete PDF parser/OCR engine, moderation approval, or publication.
+- TXT extracts UTF-8 word/character counts and a short private preview; EPUB checks ZIP limits,
+  safe paths, the EPUB mimetype/container/package, and title metadata; PDF checks basic header/end
+  markers; images are decoded and checked for dimensions.
+- Upload Center now shows per-asset processing state, metadata, validation errors, and retry for
+  transient processing failures. Reader binding, chapter segmentation, secure preview delivery,
+  and a background job queue remain subsequent work.
