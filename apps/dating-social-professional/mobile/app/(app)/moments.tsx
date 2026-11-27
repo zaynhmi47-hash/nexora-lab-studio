@@ -67,7 +67,7 @@ function MomentCard({ item, onDelete }: { item: DatingMoment; onDelete: (id: str
     ]);
   };
 
-  const like = useMutation({
+  const like = useMutation<{ status: 'liked'; reaction_id: string } | { status: 'unliked' }, Error, void>({
     mutationFn: () => item.is_liked_by_me ? api.unlikeMoment(item.id) : api.likeMoment(item.id),
     onSuccess: refreshInteractions,
     onError: (error) => Alert.alert('Interaksi gagal', error instanceof Error ? error.message : 'Silakan coba lagi.'),
