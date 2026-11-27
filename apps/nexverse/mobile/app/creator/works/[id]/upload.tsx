@@ -215,6 +215,7 @@ export default function UploadCenterScreen() {
             <Text style={s.assetName} numberOfLines={1}>{item.filename}</Text>
             <Text style={s.cardBody}>{item.assetType === 'cover' ? 'Cover' : item.assetType === 'manuscript' ? 'Manuskrip' : 'Lampiran'} · {formatBytes(item.uploadedSizeBytes ?? item.expectedSizeBytes)}</Text>
             <Text style={s.assetStatus}>{statusLabel(item.status)}</Text>
+            {item.processingError ? <Text style={s.assetError}>{item.processingError}</Text> : null}
             {item.status === 'ready' && item.processingMetadata.format ? <Text style={s.assetMeta}>{String(item.processingMetadata.format)}{typeof item.processingMetadata.words === 'number' ? ' · ' + item.processingMetadata.words.toLocaleString('id-ID') + ' kata' : typeof item.processingMetadata.width === 'number' ? ' · ' + item.processingMetadata.width + ' × ' + item.processingMetadata.height + ' px' : ''}</Text> : null}
             {item.status === 'uploaded' || item.status === 'failed' ? <Pressable disabled={processingId !== null} onPress={() => void runProcessing(item)} style={s.processButton}><Text style={s.processText}>{processingId === item.id ? 'Memeriksa…' : item.status === 'failed' ? 'Coba lagi' : 'Periksa berkas'}</Text></Pressable> : null}
           </View>
@@ -223,7 +224,7 @@ export default function UploadCenterScreen() {
       )) : (
         <View style={s.emptyLibrary}><Ionicons name="folder-open-outline" size={25} color={palette.muted} /><Text style={s.cardBody}>Belum ada aset. Berkas yang berhasil diunggah akan muncul di sini.</Text></View>
       )}
-      <Text style={s.footnote}>Status “tersimpan” berarti metadata objek sudah diverifikasi oleh backend. Berkas belum dipindai malware, diekstrak, atau disetujui untuk publikasi. Pratinjau dan pengaitan ke reader akan ditambahkan pada tahap pemrosesan dokumen.</Text>
+      <Text style={s.footnote}>Pemeriksaan saat ini memvalidasi signature dan struktur berkas serta mengekstrak metadata dasar. Pemeriksaan ini bukan pemindaian malware, bukan persetujuan moderasi, dan belum menerbitkan karya. Pengaitan ke reader akan dilakukan pada tahap berikutnya.</Text>
     </ScrollView>
   );
 }
@@ -270,6 +271,7 @@ const s = StyleSheet.create({
   assetStatus: { color: palette.greenDark, fontSize: 9, fontWeight: '700' },
   assetDate: { color: palette.muted, fontSize: 9 },
   assetMeta: { color: palette.muted, fontSize: 9 },
+  assetError: { color: '#A34E42', fontSize: 9, lineHeight: 13 },
   processButton: { alignSelf: 'flex-start', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 7, backgroundColor: palette.mint, marginTop: 3 },
   processText: { color: palette.greenDark, fontSize: 9, fontWeight: '900' },
   emptyLibrary: { alignItems: 'center', justifyContent: 'center', gap: 8, padding: 22, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: palette.line },
