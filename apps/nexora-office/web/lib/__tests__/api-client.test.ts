@@ -22,19 +22,19 @@ describe('lib/api ApiClient', () => {
   });
 
   it('wraps fetch requests via ApiClient', async () => {
-    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => jsonResponse({ data: [] }));
+    const fetchMock = vi.fn<[RequestInfo | URL, RequestInit?], Promise<Response>>(async (_input, _init) => jsonResponse({ data: [] }));
     vi.stubGlobal('fetch', fetchMock as any);
 
     const client = new ApiClient(baseUrl);
     await client.getPopularServices();
 
     expect(fetchMock).toHaveBeenCalledOnce();
-    const [url] = fetchMock.mock.calls[0] ?? [];
+    const url = fetchMock.mock.calls[0]?.[0];
     expect(String(url)).toContain('/api/services/popular');
   });
 
   it('throws error message from non-ok response JSON', async () => {
-    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => jsonResponse({ message: 'Invalid payload' }, 422));
+    const fetchMock = vi.fn<[RequestInfo | URL, RequestInit?], Promise<Response>>(async (_input, _init) => jsonResponse({ message: 'Invalid payload' }, 422));
     vi.stubGlobal('fetch', fetchMock as any);
 
     const client = new ApiClient(baseUrl);
