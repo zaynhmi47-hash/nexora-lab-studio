@@ -5,8 +5,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 
 describe('contexts/CurrencyContext', () => {
   it('throws if used without provider', () => {
-    const { result } = renderHook(() => useCurrency());
-    expect(result.error).toBeTruthy();
+    expect(() => renderHook(() => useCurrency())).toThrow();
   });
 
   it('reads initial currency from localStorage and updates it', () => {
