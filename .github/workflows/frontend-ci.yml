@@ -1,5 +1,9 @@
 name: Frontend CI
 
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   pull_request:
     paths:
