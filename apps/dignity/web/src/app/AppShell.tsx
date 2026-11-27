@@ -559,7 +559,7 @@ export const AppShellContent: React.FC = () => {
                 <AITutorScreen
                   initialTab={
                     currentRoute === 'ai-study-plan'
-                      ? 'study_plan'
+                      ? 'plan'
                       : currentRoute === 'ai-summary'
                       ? 'insights'
                       : 'chat'
