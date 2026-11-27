@@ -1,4 +1,4 @@
-export type AuthStatus = 'signed_out' | 'signed_in' | 'loading' | 'error';
+export type AuthStatus = 'signed_out' | 'signed_in' | 'loading' | 'error' | 'unavailable';
 
 export interface NexoraIdentity {
   id: string;
@@ -13,9 +13,17 @@ export interface AuthSession {
   error?: string;
 }
 
+export interface AuthRegistration {
+  displayName: string;
+  email: string;
+  password: string;
+}
+
 export interface AuthPort {
   getSession(): Promise<AuthSession>;
-  signIn(): Promise<AuthSession>;
+  signIn(email: string, password: string): Promise<AuthSession>;
+  register(input: AuthRegistration): Promise<AuthSession>;
+  sendPasswordReset(email: string): Promise<void>;
   signOut(): Promise<void>;
   subscribe?(listener: (session: AuthSession) => void): () => void;
 }
