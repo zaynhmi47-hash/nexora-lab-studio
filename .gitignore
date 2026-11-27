@@ -26,3 +26,4 @@ Thumbs.db
 *service-account*.json
 **/secrets/
 **/credentials/
+services/nexora-api/db.sqlite3
