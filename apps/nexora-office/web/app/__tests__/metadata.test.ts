@@ -47,8 +47,8 @@ describe('SSR page metadata', () => {
     const meta = await generateHomeMetadata({ params: makeParams('en') });
 
     expect(meta.openGraph?.url).toBe('https://app.example/en');
-    expect(meta.alternates?.languages?.en).toBe('/en');
-    expect(meta.alternates?.languages?.ro).toBe('/ro');
+    expect(meta.alternates?.languages?.en).toBe('https://app.example/en');
+    expect(meta.alternates?.languages?.ro).toBe('https://app.example/ro');
 
     if (typeof meta.title === 'object' && meta.title) {
       expect(JSON.stringify(meta.title)).toContain('Trustora');
