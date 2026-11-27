@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useCan } from '@/hooks/useCan';
@@ -8,7 +9,7 @@ vi.mock('@/contexts/auth-context', () => ({
 }));
 
 describe('hooks/useCan', () => {
-  const mockedUseAuth = useAuth as unknown as vi.Mock;
+  const mockedUseAuth = useAuth as unknown as Mock;
 
   beforeEach(() => {
     mockedUseAuth.mockReset();
