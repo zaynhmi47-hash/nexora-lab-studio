@@ -8,7 +8,9 @@ export type ButtonVariant =
   | 'destructive'
   | 'soft'
   | 'success'
-  | 'link';
+  | 'link'
+  | 'solid'
+  | 'subtle';
 
 export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
 
@@ -60,6 +62,10 @@ export const buttonVariantClasses: Record<ButtonVariant, string> = {
     'bg-[var(--color-success)] hover:opacity-90 text-white shadow-[var(--shadow-subtle)] focus-visible:ring-[var(--color-success)]',
   link:
     'bg-transparent text-[var(--primary-main)] underline-offset-4 hover:underline p-0 min-h-0 focus-visible:ring-[var(--primary-main)]',
+  solid:
+    'bg-[var(--primary-main)] hover:bg-[var(--primary-hover)] text-[var(--primary-text)] shadow-[var(--shadow-subtle)] focus-visible:ring-[var(--primary-main)]',
+  subtle:
+    'bg-[var(--secondary-soft)] hover:bg-slate-200 dark:hover:bg-slate-700/80 text-[var(--text-secondary)] border border-[var(--border-subtle)] focus-visible:ring-[var(--border-main)]',
 };
 
 /**
@@ -128,7 +134,7 @@ export default Button;
  * Convenience Token-Bound Aliases for Backwards Compatibility
  * and Clean Call Sites
  */
-export type BaseButtonProps = Omit<ButtonProps, 'variant'>;
+export type BaseButtonProps = Omit<ButtonProps, 'variant'> & { variant?: ButtonVariant };
 
 export const PrimaryButton = forwardRef<HTMLButtonElement, BaseButtonProps>((props, ref) => (
   <Button ref={ref} variant="primary" {...props} />
