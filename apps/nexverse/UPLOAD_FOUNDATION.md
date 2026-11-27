@@ -25,7 +25,7 @@ Apply migrations from `services/nexora-api` after confirming the migration graph
 ```bash
 python manage.py showmigrations nexverse
 python manage.py migrate nexverse
-python manage.py test apps.nexverse.tests
+python manage.py test apps.nexverse
 ```
 
 ## Upload protocol
@@ -49,6 +49,28 @@ it does **not** mean malware scanning, document extraction, moderation, or publi
 Uploaded objects remain private. Reader delivery and publisher access must use a separate
 authorization path (for example short-lived signed URLs).
 
+## Manuscript-to-chapter pipeline
+
+After a manuscript reaches `ready`, the creator can request a private extraction preview:
+
+`GET /api/v1/nexverse/creator/uploads/{session_id}/extract/`
+
+- EPUB extraction follows the package spine order and reads bounded XHTML/text content.
+- TXT extraction normalizes whitespace and detects common Indonesian/English chapter headings
+  (BAB, CHAPTER, BAGIAN, PROLOG, EPILOG, and related headings). If no heading is detected,
+  the text is offered as one editable section.
+- The preview is a proposal only. It does not create chapters or modify the work.
+- The mobile review screen allows editing titles/content, reordering, and removing proposed
+  sections before the creator confirms import.
+- Confirmed import uses
+  `POST /api/v1/nexverse/creator/uploads/{session_id}/chapters/`. It creates draft chapters
+  inside one database transaction, assigns numbers after existing chapters, and records imported
+  chapter IDs on the upload session to prevent duplicate imports on retry.
+- Imported chapters remain draft and are not automatically published or exposed to readers.
+- PDF extraction is intentionally unavailable until a dedicated bounded PDF text extraction
+  dependency and validation strategy are selected. A PDF passing the structural check is not
+  considered text-extractable.
+
 Deploy Storage rules only after confirming the Firebase project and bucket:
 
 ```bash
@@ -65,6 +87,6 @@ firebase deploy --only storage --project nexora-73cfa
 - TXT extracts UTF-8 word/character counts and a short private preview; EPUB checks ZIP limits,
   safe paths, the EPUB mimetype/container/package, and title metadata; PDF checks basic header/end
   markers; images are decoded and checked for dimensions.
-- Upload Center now shows per-asset processing state, metadata, validation errors, and retry for
-  transient processing failures. Reader binding, chapter segmentation, secure preview delivery,
-  and a background job queue remain subsequent work.
+- Upload Center shows per-asset processing state, metadata, validation errors, retry, and the
+  manuscript review action for ready EPUB/TXT files. PDF text extraction, OCR, malware scanning,
+  secure preview delivery, and a background job queue remain subsequent work.
