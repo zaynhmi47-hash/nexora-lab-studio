@@ -16,6 +16,7 @@ from infrastructure.common.types import ObjectReference
 from infrastructure.firebase.registry import FirebaseProviderRegistry
 
 from .assets import NexverseUploadSession
+from .asset_processing import AssetValidationError, inspect_asset
 from .models import NexverseWork
 
 
@@ -66,6 +67,9 @@ def _session_payload(session):
         "expiresAt": session.expires_at.isoformat(),
         "createdAt": session.created_at.isoformat(),
         "uploadedAt": session.uploaded_at.isoformat() if session.uploaded_at else None,
+        "processingMetadata": session.processing_metadata,
+        "processingError": session.processing_error or None,
+        "processedAt": session.processed_at.isoformat() if session.processed_at else None,
     }
 
 
@@ -207,3 +211,84 @@ class NexverseUploadCompleteView(APIView):
         session.uploaded_at = timezone.now()
         session.save(update_fields=("status", "uploaded_size_bytes", "checksum_md5", "uploaded_at", "updated_at"))
         return Response(_session_payload(session), status=200)
+
+
+
+class NexverseAssetProcessView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, session_id):
+        session = NexverseUploadSession.objects.filter(
+            pk=session_id,
+            owner=request.user,
+            work__author__user=request.user,
+            deleted_at__isnull=True,
+        ).select_related("work").first()
+        if session is None:
+            return Response({"detail": "Asset not found."}, status=404)
+        if session.status == NexverseUploadSession.Status.READY:
+            return Response(_session_payload(session))
+        if session.status not in {
+            NexverseUploadSession.Status.UPLOADED,
+            NexverseUploadSession.Status.FAILED,
+        }:
+            return Response(
+                {"detail": "Only uploaded assets can be processed.", "code": "ASSET_NOT_UPLOADED"},
+                status=409,
+            )
+
+        session.status = NexverseUploadSession.Status.PROCESSING
+        session.processing_error = ""
+        session.save(update_fields=("status", "processing_error", "updated_at"))
+
+        reference = ObjectReference(
+            namespace="nexverse",
+            key=session.storage_path.removeprefix("nexverse/"),
+        )
+        try:
+            data = FirebaseProviderRegistry().storage().download(reference)
+            metadata = inspect_asset(
+                data,
+                asset_type=session.asset_type,
+                content_type=session.content_type,
+                filename=session.original_filename,
+            )
+        except AssetValidationError as exc:
+            session.status = NexverseUploadSession.Status.REJECTED
+            session.processing_error = str(exc)[:500]
+            session.save(update_fields=("status", "processing_error", "updated_at"))
+            return Response(
+                {"detail": session.processing_error, "code": "ASSET_VALIDATION_FAILED"},
+                status=422,
+            )
+        except Exception:
+            session.status = NexverseUploadSession.Status.FAILED
+            session.processing_error = "Processing service is temporarily unavailable. You can retry."
+            session.save(update_fields=("status", "processing_error", "updated_at"))
+            return Response(
+                {"detail": session.processing_error, "code": "ASSET_PROCESSING_UNAVAILABLE"},
+                status=503,
+            )
+
+        if len(data) != session.expected_size_bytes:
+            session.status = NexverseUploadSession.Status.REJECTED
+            session.processing_error = "Downloaded object size does not match the verified upload session."
+            session.save(update_fields=("status", "processing_error", "updated_at"))
+            return Response(
+                {"detail": session.processing_error, "code": "ASSET_SIZE_MISMATCH"},
+                status=422,
+            )
+
+        session.processing_metadata = metadata
+        session.processing_error = ""
+        session.status = NexverseUploadSession.Status.READY
+        session.processed_at = timezone.now()
+        session.save(update_fields=(
+            "processing_metadata",
+            "processing_error",
+            "status",
+            "processed_at",
+            "updated_at",
+        ))
+        return Response(_session_payload(session))
