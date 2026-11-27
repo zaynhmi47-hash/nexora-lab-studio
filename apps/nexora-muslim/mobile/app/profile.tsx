@@ -24,7 +24,7 @@ export default function ProfileScreen() {
         </View>
 
         {['Quran Reading', 'Tajwid', 'Arabic', 'Kitab Kuning'].map((item, index) => {
-          const progress = ['78%', '60%', '40%', '30%'][index];
+          const progress = (['78%', '60%', '40%', '30%'] as const)[index] ?? '0%';
           return (
             <Card key={item} style={styles.progressCard}>
               <View style={styles.row}><Text style={styles.title}>{item}</Text><Text style={styles.value}>{progress}</Text></View>
