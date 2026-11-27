@@ -14,14 +14,15 @@ class NexverseManuscriptPipelineTests(APITestCase):
         self.user = NexoraUser.objects.create(email="pipeline@example.test", status=NexoraUser.Status.ACTIVE)
         author = NexverseAuthor.objects.create(user=self.user, slug="pipeline-author", pen_name="Pipeline")
         self.work = NexverseWork.objects.create(author=author, slug="pipeline-work", title="Pipeline Work")
+        self.data = b"BAB 1\nAwal cerita.\n\nBAB 2\nLanjutan cerita."
         self.session = NexverseUploadSession.objects.create(
             work=self.work,
             owner=self.user,
             asset_type=NexverseUploadSession.AssetType.MANUSCRIPT,
             original_filename="manuscript.txt",
             content_type="text/plain",
-            expected_size_bytes=len(b"BAB 1\\nAwal cerita.\\n\\nBAB 2\\nLanjutan cerita."),
-            uploaded_size_bytes=len(b"BAB 1\\nAwal cerita.\\n\\nBAB 2\\nLanjutan cerita."),
+            expected_size_bytes=len(self.data),
+            uploaded_size_bytes=len(self.data),
             storage_path="nexverse/pipeline/uploads/manuscript.txt",
             status=NexverseUploadSession.Status.READY,
             expires_at=timezone.now() + timedelta(minutes=10),
@@ -29,7 +30,6 @@ class NexverseManuscriptPipelineTests(APITestCase):
             processing_metadata={"format": "TXT"},
         )
         self.client.force_authenticate(user=self.user)
-        self.data = b"BAB 1\nAwal cerita.\n\nBAB 2\nLanjutan cerita."
 
     @patch("apps.nexverse.manuscript_pipeline.FirebaseProviderRegistry")
     def test_extracts_txt_sections_as_reviewable_proposals(self, registry):
