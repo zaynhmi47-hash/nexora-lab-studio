@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -28,7 +29,7 @@ vi.mock('@/lib/api', () => ({
 
 describe('AuditLogsTable', () => {
   const mockedApi = apiClient as unknown as {
-    fetchAuditLogs: vi.Mock;
+    fetchAuditLogs: Mock;
   };
 
   const baseLog = {
