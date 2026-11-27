@@ -125,7 +125,7 @@ def inspect_asset(data: bytes, *, asset_type: str, content_type: str, filename: 
             "format": "TXT",
             "encoding": "UTF-8",
             "characters": len(decoded),
-            "words": len(re.findall(r"\\S+", decoded)),
+            "words": len(re.findall(r"\S+", decoded)),
             "preview": decoded[:500],
         })
         return metadata
