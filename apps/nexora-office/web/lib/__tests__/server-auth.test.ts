@@ -1,105 +1,74 @@
 import type { Mock } from 'vitest';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { auth } from '@/auth';
 import { getServerUser, requirePermission } from '../server-auth';
-import { cookies } from 'next/headers';
 
 vi.mock('@/auth', () => ({ auth: vi.fn() }));
 
-vi.mock('next/headers', () => ({
-  cookies: vi.fn(),
-}));
+const authMock = auth as unknown as Mock;
 
 describe('lib/server-auth', () => {
-  const cookiesMock = cookies as unknown as Mock;
-  const makeSessionStore = () => ({
-    getAll: () => [{ name: 'laravel_session', value: 'token-123' }],
-    get: (name: string) =>
-      name === 'laravel_session' ? { name: 'laravel_session', value: 'token-123' } : undefined,
-  });
-
   beforeEach(() => {
-    cookiesMock.mockReset();
+    authMock.mockReset();
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
+  it('returns null when the Auth.js session has no user', async () => {
+    authMock.mockResolvedValue({ user: null });
+
+    await expect(getServerUser()).resolves.toBeNull();
   });
 
-  it('getServerUser returns null without session cookies', async () => {
-    cookiesMock.mockReturnValue({ getAll: () => [], get: () => undefined });
-
-    const fetchMock = vi.fn();
-    vi.stubGlobal('fetch', fetchMock);
-
-    const user = await getServerUser();
-    expect(user).toBeNull();
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it('getServerUser returns user from API (data.user)', async () => {
-    cookiesMock.mockReturnValue(makeSessionStore());
-
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: vi.fn().mockResolvedValue({ user: { id: 1, email: 'a@b.com' } }),
+  it('normalizes the user from the Auth.js session', async () => {
+    authMock.mockResolvedValue({
+      user: {
+        id: 1,
+        email: 'a@b.com',
+        first_name: 'Ada',
+        last_name: 'Lovelace',
+      },
     });
-    vi.stubGlobal('fetch', fetchMock);
 
-    const user = await getServerUser();
-    expect(user).toEqual({ id: 1, email: 'a@b.com' });
-  });
-
-  it('getServerUser returns data when API returns direct user', async () => {
-    cookiesMock.mockReturnValue(makeSessionStore());
-
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: vi.fn().mockResolvedValue({ id: 2, email: 'x@y.com' }),
+    await expect(getServerUser()).resolves.toMatchObject({
+      id: '1',
+      email: 'a@b.com',
+      firstName: 'Ada',
+      lastName: 'Lovelace',
     });
-    vi.stubGlobal('fetch', fetchMock);
-
-    const user = await getServerUser();
-    expect(user).toEqual({ id: 2, email: 'x@y.com' });
   });
 
-  it('requirePermission throws 401 when unauthenticated', async () => {
-    cookiesMock.mockReturnValue({ getAll: () => [], get: () => undefined });
+  it('requires an authenticated user before checking permissions', async () => {
+    authMock.mockResolvedValue({ user: null });
 
     await expect(requirePermission('admin')).rejects.toMatchObject({ status: 401 });
   });
 
-  it('requirePermission throws 403 when forbidden', async () => {
-    cookiesMock.mockReturnValue(makeSessionStore());
-
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: vi.fn().mockResolvedValue({
+  it('returns 403 when the authenticated user lacks a permission', async () => {
+    authMock.mockResolvedValue({
+      user: {
         id: 1,
+        email: 'user@example.com',
         permissions: ['view'],
         roles: [{ slug: 'user', permissions: [{ slug: 'view' }] }],
-      }),
+      },
     });
-    vi.stubGlobal('fetch', fetchMock);
 
     await expect(requirePermission('edit')).rejects.toMatchObject({ status: 403 });
   });
 
-  it('requirePermission passes for superuser', async () => {
-    cookiesMock.mockReturnValue(makeSessionStore());
-
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: vi.fn().mockResolvedValue({
+  it('allows a superuser regardless of the requested permission', async () => {
+    authMock.mockResolvedValue({
+      user: {
         id: 1,
+        email: 'admin@example.com',
         is_superuser: true,
         roles: [],
         permissions: [],
-      }),
+      },
     });
-    vi.stubGlobal('fetch', fetchMock);
 
-    const user = await requirePermission('edit');
-    expect(user).toMatchObject({ id: 1, is_superuser: true });
+    await expect(requirePermission('edit')).resolves.toMatchObject({
+      id: '1',
+      is_superuser: true,
+    });
   });
 });
