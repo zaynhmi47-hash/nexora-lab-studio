@@ -295,9 +295,9 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, icon }) => (
   <Card padding="sm">
     <div className="flex items-center gap-3">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary-main)]">
-        {React.cloneElement(icon as React.ReactElement, {
-          className: 'h-5 w-5',
-        })}
+        {React.isValidElement<{ className?: string }>(icon)
+          ? React.cloneElement(icon, { className: 'h-5 w-5' })
+          : icon}
       </div>
       <div className="min-w-0">
         <p className="text-xl font-bold text-[var(--text-primary)]">{value}</p>
