@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import {
@@ -25,10 +26,10 @@ vi.mock('@/lib/api', () => ({
 
 describe('hooks/useApi and specific hooks', () => {
   const mockedApi = apiClient as unknown as {
-    getServices: vi.Mock;
-    getTestResults: vi.Mock;
-    getProviderProfile: vi.Mock;
-    getProviderProfileByUrl: vi.Mock;
+    getServices: Mock;
+    getTestResults: Mock;
+    getProviderProfile: Mock;
+    getProviderProfileByUrl: Mock;
   };
 
   beforeEach(() => {
