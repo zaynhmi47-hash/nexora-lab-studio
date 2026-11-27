@@ -81,6 +81,7 @@ export interface CommunityAnswer {
   helpfulCount: number;
   userMarkedHelpful?: boolean;
   upvotes: number;
+  userVote?: 'up' | 'down';
   createdAt: string;
   content: string;
   codeSnippet?: string;
@@ -111,6 +112,7 @@ export interface CommunityPost {
   tags: string[];
 
   upvotes: number;
+  userVote?: 'up' | 'down';
   repliesCount: number;
   viewsCount: number;
 
