@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent, screen, waitFor } from '@testing-library/react';
@@ -50,7 +51,7 @@ describe('UI core components', () => {
   it('LocaleSwitcher calls setUserLanguage and router.replace', async () => {
     locale = 'ro';
     const setUserLanguage = vi.fn().mockResolvedValue({ id: '1' });
-    (useAuth as unknown as vi.Mock).mockReturnValue({
+    (useAuth as unknown as Mock).mockReturnValue({
       user: { id: '1' },
       setUserLanguage,
     });
