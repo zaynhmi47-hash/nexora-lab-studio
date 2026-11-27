@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useActivityTracker } from '../useActivityTracker';
@@ -17,11 +18,11 @@ vi.mock('@/contexts/auth-context', () => ({
 }));
 
 describe('hooks/useActivityTracker', () => {
-  const mockedUseAuth = useAuth as unknown as vi.Mock;
+  const mockedUseAuth = useAuth as unknown as Mock;
   const mockedApi = apiClient as unknown as {
-    updateLastActive: vi.Mock;
-    getToken: vi.Mock;
-    setToken: vi.Mock;
+    updateLastActive: Mock;
+    getToken: Mock;
+    setToken: Mock;
   };
 
   beforeEach(() => {
