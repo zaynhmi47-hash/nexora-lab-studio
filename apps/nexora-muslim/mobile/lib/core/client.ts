@@ -6,7 +6,7 @@ export type CoreClient = {
 
 export function createCoreClient(baseUrl: string): CoreClient {
   return {
-    async get<T>(path, session) {
+    async get<T>(path: string, session: AuthSession) {
       const response = await fetch(`${baseUrl}${path}`, {
         headers: {
           Authorization: `Bearer ${session.accessToken}`,
