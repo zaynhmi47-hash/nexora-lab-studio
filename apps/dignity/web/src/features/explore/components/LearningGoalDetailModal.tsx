@@ -125,7 +125,7 @@ export const LearningGoalDetailModal: React.FC<LearningGoalDetailModalProps> = (
                   <div className="mt-3 flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
                     <span>{recommendedPath.estimatedWeeks} weeks roadmap</span>
                     <span>•</span>
-                    <span>{recommendedPath.courseIds.length} progressive courses</span>
+                    <span>{recommendedPath.courseCount} progressive courses</span>
                     <span>•</span>
                     <span>{recommendedPath.projectsCount} capstone projects</span>
                   </div>
