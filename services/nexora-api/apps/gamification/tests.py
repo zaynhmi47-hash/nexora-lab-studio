@@ -90,6 +90,7 @@ class GamificationServiceTests(TestCase):
                 key=f"streak-lesson-{index}",
                 course=course,
                 title=f"Lesson {index}",
+                sort_order=index,
             )
             for index in range(3)
         ]
@@ -106,6 +107,7 @@ class GamificationServiceTests(TestCase):
             key="streak-gap",
             course=course,
             title="Gap",
+            sort_order=3,
         )
         LearningLessonCompletion.objects.create(
             user=self.user,
