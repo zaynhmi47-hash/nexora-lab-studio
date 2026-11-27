@@ -1,3 +1,8 @@
+export type Coordinates = {
+  latitude: number;
+  longitude: number;
+};
+
 export type QiblaDirection = {
   bearingDegrees: number;
   distanceKm: number;
