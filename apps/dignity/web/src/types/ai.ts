@@ -3,6 +3,8 @@ import type { EducationLevel } from './index';
 export type AILanguage = 'en' | 'id' | 'English' | 'Indonesian';
 
 export type AIExplanationDepth =
+  | 'short'
+  | 'detailed'
   | 'beginner'
   | 'intermediate'
   | 'advanced'
@@ -217,6 +219,7 @@ export interface AIAction {
   id: string;
   label: string;
   actionType: AIActionType;
+  variant?: 'primary' | 'secondary';
 }
 
 export interface AIMessageContext {
