@@ -21,6 +21,7 @@ from .models import NexverseWork
 
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 MAX_ACTIVE_UPLOADS = 5
+MAX_LIBRARY_ITEMS = 100
 ALLOWED_ASSETS = {
     NexverseUploadSession.AssetType.MANUSCRIPT: {
         "application/pdf": {".pdf"},
@@ -46,7 +47,7 @@ def _firebase_uid(user):
 
 
 def _safe_filename(value: str) -> str:
-    name = PurePath(value.replace("\\", "/")).name.strip()
+    name = PurePath(value.replace("\\\\", "/")).name.strip()
     name = re.sub(r"[^A-Za-z0-9._-]+", "-", name)[:180].strip(".-")
     return name or "upload"
 
@@ -58,9 +59,13 @@ def _session_payload(session):
         "filename": session.original_filename,
         "contentType": session.content_type,
         "expectedSizeBytes": session.expected_size_bytes,
+        "uploadedSizeBytes": session.uploaded_size_bytes,
+        "checksum": session.checksum_md5 or None,
         "storagePath": session.storage_path,
         "status": session.status,
         "expiresAt": session.expires_at.isoformat(),
+        "createdAt": session.created_at.isoformat(),
+        "uploadedAt": session.uploaded_at.isoformat() if session.uploaded_at else None,
     }
 
 
@@ -69,11 +74,48 @@ class NexverseUploadSessionListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, work_id):
-        work = NexverseWork.objects.filter(pk=work_id, author__user=request.user).first()
+        work = NexverseWork.objects.filter(
+            pk=work_id, author__user=request.user, deleted_at__isnull=True
+        ).first()
         if work is None:
             return Response({"detail": "Work not found."}, status=404)
-        sessions = NexverseUploadSession.objects.filter(work=work, owner=request.user)[:50]
-        return Response({"items": [_session_payload(item) for item in sessions]})
+
+        sessions = NexverseUploadSession.objects.filter(
+            work=work, owner=request.user, deleted_at__isnull=True
+        )
+        asset_type = request.query_params.get("assetType")
+        if asset_type:
+            if asset_type not in NexverseUploadSession.AssetType.values:
+                return Response(
+                    {"detail": "Unknown asset type.", "code": "INVALID_ASSET_TYPE"},
+                    status=400,
+                )
+            sessions = sessions.filter(asset_type=asset_type)
+
+        upload_status = request.query_params.get("status")
+        if upload_status:
+            if upload_status not in NexverseUploadSession.Status.values:
+                return Response(
+                    {"detail": "Unknown upload status.", "code": "INVALID_UPLOAD_STATUS"},
+                    status=400,
+                )
+            sessions = sessions.filter(status=upload_status)
+
+        items = list(sessions.order_by("-created_at")[:MAX_LIBRARY_ITEMS])
+        counts = {
+            value: NexverseUploadSession.objects.filter(
+                work=work,
+                owner=request.user,
+                deleted_at__isnull=True,
+                status=value,
+            ).count()
+            for value, _label in NexverseUploadSession.Status.choices
+        }
+        return Response({
+            "items": [_session_payload(item) for item in items],
+            "counts": counts,
+            "limit": MAX_LIBRARY_ITEMS,
+        })
 
     def post(self, request, work_id):
         work = NexverseWork.objects.filter(pk=work_id, author__user=request.user).first()
@@ -106,6 +148,7 @@ class NexverseUploadSessionListCreateView(APIView):
             owner=request.user,
             status=NexverseUploadSession.Status.CREATED,
             expires_at__gt=now,
+            deleted_at__isnull=True,
         ).count()
         if active_uploads >= MAX_ACTIVE_UPLOADS:
             return Response({"detail": "You already have five active uploads. Complete or wait for an existing session to expire.", "code": "ACTIVE_UPLOAD_LIMIT"}, status=429)
@@ -133,7 +176,8 @@ class NexverseUploadCompleteView(APIView):
 
     def post(self, request, session_id):
         session = NexverseUploadSession.objects.filter(
-            pk=session_id, owner=request.user, work__author__user=request.user
+            pk=session_id, owner=request.user, work__author__user=request.user,
+            deleted_at__isnull=True,
         ).select_related("work").first()
         if session is None:
             return Response({"detail": "Upload session not found."}, status=404)
