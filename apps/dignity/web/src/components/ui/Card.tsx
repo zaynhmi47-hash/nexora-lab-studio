@@ -2,9 +2,11 @@ import React, { forwardRef } from 'react';
 
 export type CardVariant = 'default' | 'elevated' | 'outlined' | 'interactive' | 'subtle';
 export type CardPadding = 'none' | 'xs' | 'sm' | 'md' | 'lg';
+export type CardElevation = 'subtle' | 'medium';
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: CardVariant;
+  elevation?: CardElevation;
   padding?: CardPadding;
   as?: 'div' | 'section' | 'article';
 }
@@ -45,7 +47,8 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
   (
     {
       children,
-      variant = 'default',
+      variant,
+      elevation,
       padding = 'md',
       className = '',
       as = 'div',
@@ -54,11 +57,12 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
     ref
   ) => {
     const Component = as;
+    const resolvedVariant = variant ?? (elevation === 'medium' ? 'elevated' : 'default');
 
     return (
       <Component
         ref={ref}
-        className={`rounded-2xl transition-colors duration-200 ${cardVariantClasses[variant]} ${cardPaddingClasses[padding]} ${className}`}
+        className={`rounded-2xl transition-colors duration-200 ${cardVariantClasses[resolvedVariant]} ${cardPaddingClasses[padding]} ${className}`}
         {...props}
       >
         {children}
@@ -75,7 +79,7 @@ export default Card;
  * Card Header Component
  * Supports structured title/subtitle/action props OR arbitrary children
  */
-export interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface CardHeaderProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
   title?: React.ReactNode;
   subtitle?: React.ReactNode;
   action?: React.ReactNode;
