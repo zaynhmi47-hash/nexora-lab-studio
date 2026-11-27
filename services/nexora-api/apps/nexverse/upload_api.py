@@ -47,7 +47,7 @@ def _firebase_uid(user):
 
 
 def _safe_filename(value: str) -> str:
-    name = PurePath(value.replace("\\\\", "/")).name.strip()
+    name = PurePath(value.replace("\\", "/")).name.strip()
     name = re.sub(r"[^A-Za-z0-9._-]+", "-", name)[:180].strip(".-")
     return name or "upload"
 
