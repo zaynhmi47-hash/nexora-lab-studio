@@ -16,7 +16,7 @@ import {
 export default function DuaScreen() {
   const { session } = useAuth();
   const repo = useMemo<DuaPort>(
-    () => session?.user.provider === 'firebase' ? nexoraCoreDuaRepository() : mockDua,
+    () => session?.user.provider === 'firebase' ? nexoraCoreDuaRepository(session) : mockDua,
     [session],
   );
   const [data, setData] = useState<DuaEntry[]>([]);
