@@ -48,7 +48,7 @@ vi.mock('@/auth', () => ({
   auth: (handler: any) => handler,
 }));
 
-const invokeProxy = (request: any) => proxy(request, {} as any);
+const invokeProxy = (request: any) => proxy(request);
 
 describe('proxy', () => {
   const baseUrl = 'https://example.com';
