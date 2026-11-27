@@ -2,6 +2,9 @@ import type {
   Bookmark,
   QuranPage,
   QuranPort,
+  QuranReadingGoal,
+  QuranReadingLog,
+  QuranReadingStatistics,
   ReadingPosition,
   Recitation,
   SurahSummary,
@@ -21,52 +24,60 @@ const surahs: SurahSummary[] = [
 const pages: Record<number, QuranPage> = {
   2: {
     surah: surahs[1],
-    ayahs: [
-      {
-        surahNumber: 2,
-        numberInSurah: 153,
-        arabicText: 'يَا أَيُّهَا الَّذِينَ آمَنُوا اسْتَعِينُوا بِالصَّبْرِ وَالصَّلَاةِ',
-        translation: 'O believers! Seek comfort in patience and prayer.',
-      },
-    ],
+    ayahs: [{
+      surahNumber: 2,
+      numberInSurah: 153,
+      arabicText: 'يَا أَيُّهَا الَّذِينَ آمَنُوا اسْتَعِينُوا بِالصَّبْرِ وَالصَّلَاةِ',
+      translation: 'O believers! Seek comfort in patience and prayer.',
+    }],
   },
 };
 
-let readingPosition: ReadingPosition = {
-  surahNumber: 2,
-  ayahNumber: 153,
-  updatedAt: new Date().toISOString(),
-};
-
+let readingPosition: ReadingPosition = { surahNumber: 2, ayahNumber: 153, updatedAt: new Date().toISOString() };
 let bookmarks: Bookmark[] = [];
+let readingGoal: QuranReadingGoal = { dailyTargetPages: 4, dailyTargetMinutes: 15 };
+let readingLogs: QuranReadingLog[] = [];
+const recitations: Recitation[] = [{ id: 'demo-1', name: 'Demo Recitation', language: 'ar', audioUrl: '' }];
 
-const recitations: Recitation[] = [
-  { id: 'demo-1', name: 'Demo Recitation', language: 'ar', audioUrl: '' },
-];
+function statistics(): QuranReadingStatistics {
+  const today = new Date().toISOString().slice(0, 10);
+  const todayLog = readingLogs.find((item) => item.date === today);
+  const total = readingLogs.reduce((sum, item) => ({ pages: sum.pages + item.pages, minutes: sum.minutes + item.minutes }), { pages: 0, minutes: 0 });
+  const pages = todayLog?.pages ?? 0;
+  const minutes = todayLog?.minutes ?? 0;
+  return {
+    goal: { ...readingGoal },
+    today: {
+      date: today,
+      pages,
+      minutes,
+      pagesProgress: readingGoal.dailyTargetPages > 0 ? Math.min(pages / readingGoal.dailyTargetPages, 1) : 0,
+      minutesProgress: readingGoal.dailyTargetMinutes > 0 ? Math.min(minutes / readingGoal.dailyTargetMinutes, 1) : 0,
+    },
+    total,
+    currentStreak: readingLogs.length > 0 ? 1 : 0,
+  };
+}
 
 export const mockQuran: QuranPort = {
-  async listSurahs() {
-    return surahs;
-  },
-  async getSurah(surahNumber) {
-    return pages[surahNumber] ?? null;
-  },
-  async getReadingPosition() {
-    return readingPosition;
-  },
-  async saveReadingPosition(position) {
-    readingPosition = position;
-  },
-  async listBookmarks() {
-    return bookmarks;
-  },
+  async listSurahs() { return surahs.map((item) => ({ ...item })); },
+  async getSurah(surahNumber) { return pages[surahNumber] ?? null; },
+  async getReadingPosition() { return { ...readingPosition }; },
+  async saveReadingPosition(position) { readingPosition = { ...position, updatedAt: new Date().toISOString() }; },
+  async listBookmarks() { return bookmarks.map((item) => ({ ...item })); },
   async saveBookmark(bookmark) {
-    bookmarks = [bookmark, ...bookmarks.filter((item) => item.id !== bookmark.id)];
+    bookmarks = [{ ...bookmark }, ...bookmarks.filter((item) => item.id !== bookmark.id)];
   },
-  async removeBookmark(bookmarkId) {
-    bookmarks = bookmarks.filter((item) => item.id !== bookmarkId);
+  async removeBookmark(bookmarkId) { bookmarks = bookmarks.filter((item) => item.id !== bookmarkId); },
+  async listRecitations() { return recitations.map((item) => ({ ...item })); },
+  async getReadingGoal() { return { ...readingGoal }; },
+  async updateReadingGoal(goal) {
+    readingGoal = { ...goal };
+    return { ...readingGoal };
   },
-  async listRecitations() {
-    return recitations;
+  async getReadingStatistics() { return statistics(); },
+  async logReading(log) {
+    readingLogs = [{ ...log }, ...readingLogs.filter((item) => item.date !== log.date)];
+    return { ...log };
   },
 };
