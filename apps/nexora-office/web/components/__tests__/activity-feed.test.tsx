@@ -13,6 +13,11 @@ vi.mock('@/lib/navigation', () => ({
   ),
 }));
 
+vi.mock('@/contexts/notification-context', () => ({
+  useNotifications: vi.fn(),
+  resolveNotificationLink: vi.fn(() => '/notifications'),
+}));
+
 vi.mock('@/lib/api', () => ({
   default: {
     getRecentActivitiesQuick: vi.fn(),
