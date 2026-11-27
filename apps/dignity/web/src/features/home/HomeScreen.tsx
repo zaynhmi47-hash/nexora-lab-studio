@@ -64,6 +64,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 }) => {
   // Prototype State Simulator for testing UX states (Normal, Loading, Empty, Error)
   const [viewState, setViewState] = useState<'normal' | 'loading' | 'empty' | 'error'>('normal');
+  const isViewState = (state: 'normal' | 'loading' | 'empty' | 'error') => viewState === state;
 
   // Interactive Daily Missions State
   const [missions, setMissions] = useState<DailyMission[]>(mockHomeDashboardData.dailyMissions);
@@ -127,7 +128,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   // ----------------------------------------------------
   // Render Loading State (Section 19)
   // ----------------------------------------------------
-  if (viewState === 'loading') {
+  if (isViewState('loading')) {
     return (
       <div className="space-y-6 max-w-7xl mx-auto">
         <div className="flex justify-end">
@@ -143,7 +144,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   // ----------------------------------------------------
   // Render Error State (Section 19)
   // ----------------------------------------------------
-  if (viewState === 'error') {
+  if (isViewState('error')) {
     return (
       <div className="p-4 max-w-7xl mx-auto space-y-6">
         <div className="flex justify-end">
@@ -163,7 +164,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   // ----------------------------------------------------
   // Render Empty State (Section 19)
   // ----------------------------------------------------
-  if (viewState === 'empty') {
+  if (isViewState('empty')) {
     return (
       <div className="space-y-6 max-w-7xl mx-auto">
         <div className="flex justify-end">
@@ -199,7 +200,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <button
             onClick={() => setViewState('normal')}
             className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
-              viewState === 'normal'
+              isViewState('normal')
                 ? 'bg-blue-600 text-white shadow-2xs'
                 : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
             }`}
@@ -209,7 +210,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <button
             onClick={() => setViewState('loading')}
             className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
-              viewState === 'loading'
+              isViewState('loading')
                 ? 'bg-blue-600 text-white shadow-2xs'
                 : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
             }`}
@@ -219,7 +220,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <button
             onClick={() => setViewState('empty')}
             className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
-              viewState === 'empty'
+              isViewState('empty')
                 ? 'bg-blue-600 text-white shadow-2xs'
                 : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
             }`}
@@ -229,7 +230,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <button
             onClick={() => setViewState('error')}
             className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
-              viewState === 'error'
+              isViewState('error')
                 ? 'bg-blue-600 text-white shadow-2xs'
                 : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
             }`}
