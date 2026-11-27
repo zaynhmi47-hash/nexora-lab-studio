@@ -117,7 +117,7 @@ export function ChatWidget() {
     const onPickFile = () => fileInputRef.current?.click()
 
     const messagesEndRef = useRef<HTMLDivElement>(null)
-    const typingTimeoutRef = useRef<NodeJS.Timeout>()
+    const typingTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
     const messageInputRef = useRef<HTMLTextAreaElement>(null)
     const pageRef = useRef(1)
     const [emojiOpen, setEmojiOpen] = useState(false)
