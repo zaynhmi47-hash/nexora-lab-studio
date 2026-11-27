@@ -1,7 +1,7 @@
 import React from 'react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/react';
-import { useForm, FormProvider } from 'react-hook-form';
+import { useForm, FormProvider, type UseFormReturn } from 'react-hook-form';
 import { BillingDetailsForm } from '@/components/forms/BillingDetailsForm';
 
 vi.mock('next-intl', () => ({
@@ -20,11 +20,11 @@ describe('Forms components', () => {
       billing_postal_code: '12345',
     };
 
-    let methods: ReturnType<typeof useForm> | null = null;
+    const methodsRef: { current: UseFormReturn<typeof defaultValues> | null } = { current: null };
 
     const Wrapper = ({ children }: { children: React.ReactNode }) => {
-      const form = useForm({ defaultValues });
-      methods = form as ReturnType<typeof useForm>;
+      const form = useForm<typeof defaultValues>({ defaultValues });
+      methodsRef.current = form;
       return <FormProvider {...form}>{children}</FormProvider>;
     };
 
@@ -44,7 +44,7 @@ describe('Forms components', () => {
     expect(screen.queryByLabelText('common.billing.company_name_label')).toBeNull();
 
     // values are cleared in form state
-    expect(methods?.getValues('company_name')).toBe('');
+    expect(methodsRef.current?.getValues('company_name')).toBe('');
     expect(methods?.getValues('tax_id')).toBe('');
     expect(methods?.getValues('billing_address')).toBe('');
   });
