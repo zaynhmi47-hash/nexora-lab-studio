@@ -202,6 +202,11 @@ export default function WorkEditor() {
         <Text style={s.uploadButtonText}>Buka Upload Center</Text>
         <Ionicons name="chevron-forward" size={16} color={palette.green} />
       </Pressable>
+      <Pressable onPress={() => router.push({ pathname: '/creator/works/[id]/studio', params: { id: work.id } })} style={s.uploadButton}>
+        <Ionicons name="book-outline" size={18} color={palette.green} />
+        <Text style={s.uploadButtonText}>Buka Chapter Studio</Text>
+        <Ionicons name="chevron-forward" size={16} color={palette.green} />
+      </Pressable>
       <Text style={s.muted}>
         Review: {work.reviewStatus} · Publikasi: {work.publicationStatus}
       </Text>
