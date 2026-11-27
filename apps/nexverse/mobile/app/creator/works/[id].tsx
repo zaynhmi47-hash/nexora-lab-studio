@@ -197,6 +197,11 @@ export default function WorkEditor() {
         <Text>Creator Studio</Text>
       </Pressable>
       <Text style={s.title}>{work.title}</Text>
+      <Pressable onPress={() => router.push({ pathname: '/creator/works/[id]/upload', params: { id: work.id } })} style={s.uploadButton}>
+        <Ionicons name="cloud-upload-outline" size={18} color={palette.green} />
+        <Text style={s.uploadButtonText}>Buka Upload Center</Text>
+        <Ionicons name="chevron-forward" size={16} color={palette.green} />
+      </Pressable>
       <Text style={s.muted}>
         Review: {work.reviewStatus} · Publikasi: {work.publicationStatus}
       </Text>
@@ -322,6 +327,8 @@ const s = StyleSheet.create({
   back: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   title: { color: palette.ink, fontSize: 24, fontWeight: '900' },
   heading: { color: palette.ink, fontSize: 17, fontWeight: '900', marginTop: 12 },
+  uploadButton: { minHeight: 48, paddingHorizontal: 13, borderRadius: 12, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.mint, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  uploadButtonText: { color: palette.greenDark, fontSize: 12, fontWeight: '800', flex: 1 },
   muted: { color: palette.muted, fontSize: 11, lineHeight: 17 },
   note: {
     backgroundColor: palette.mint,
