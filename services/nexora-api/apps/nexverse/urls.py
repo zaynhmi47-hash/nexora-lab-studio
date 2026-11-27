@@ -14,6 +14,7 @@ from .manuscript_pipeline import NexverseImportManuscriptChaptersView, NexverseM
 from .creator_api import (
     NexverseCreatorChapterDetailView,
     NexverseCreatorChapterListView,
+    NexverseCreatorChapterOrderView,
     NexverseCreatorChapterPriceView,
     NexverseCreatorProfileView,
     NexverseCreatorWorkDetailView,
@@ -46,6 +47,7 @@ urlpatterns = [
     path("creator/uploads/<uuid:session_id>/extract/", NexverseManuscriptExtractView.as_view(), name="nexverse-creator-manuscript-extract"),
     path("creator/uploads/<uuid:session_id>/chapters/", NexverseImportManuscriptChaptersView.as_view(), name="nexverse-creator-manuscript-chapters"),
     path("creator/works/<uuid:work_id>/chapters/", NexverseCreatorChapterListView.as_view(), name="nexverse-creator-chapter-list"),
+    path("creator/works/<uuid:work_id>/chapters/order/", NexverseCreatorChapterOrderView.as_view(), name="nexverse-creator-chapter-order"),
     path("creator/works/<uuid:work_id>/chapters/<uuid:chapter_id>/price/", NexverseCreatorChapterPriceView.as_view(), name="nexverse-creator-chapter-price"),
     path("creator/works/<uuid:work_id>/chapters/<uuid:chapter_id>/", NexverseCreatorChapterDetailView.as_view(), name="nexverse-creator-chapter-detail"),
     path("creator/works/<uuid:work_id>/submit/", NexverseSubmitWorkView.as_view(), name="nexverse-creator-submit-work"),
