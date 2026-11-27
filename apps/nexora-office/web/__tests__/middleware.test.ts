@@ -48,6 +48,8 @@ vi.mock('@/auth', () => ({
   auth: (handler: any) => handler,
 }));
 
+const invokeProxy = (request: any) => proxy(request, {} as any);
+
 describe('proxy', () => {
   const baseUrl = 'https://example.com';
   beforeEach(() => {
@@ -87,13 +89,13 @@ describe('proxy', () => {
 
   it('returns NextResponse.next for static/assets paths', async () => {
     const req = makeReq('/_next/static/file.js');
-    const res: any = await proxy(req);
+    const res: any = await invokeProxy(req);
     expect(res.type).toBe('next');
   });
 
   it('bypasses OneSignal service worker script', async () => {
     const req = makeReq('/OneSignalSDKWorker.js');
-    const res: any = await proxy(req);
+    const res: any = await invokeProxy(req);
     expect(res.type).toBe('next');
   });
 
@@ -103,7 +105,7 @@ describe('proxy', () => {
     process.env.BASIC_AUTH_PASSWORDS = 'secret';
 
     const req = makeReq('/ro/services');
-    const res: any = await proxy(req);
+    const res: any = await invokeProxy(req);
     expect(res.status).toBe(401);
     expect(res.headers.get('WWW-Authenticate')).toContain('Basic');
   });
@@ -114,7 +116,7 @@ describe('proxy', () => {
     process.env.BASIC_AUTH_PASSWORDS = '';
 
     const req = makeReq('/ro/services');
-    const res: any = await proxy(req);
+    const res: any = await invokeProxy(req);
     expect(res.status).toBe(401);
     expect(res.headers.get('WWW-Authenticate')).toContain('Basic');
   });
@@ -128,7 +130,7 @@ describe('proxy', () => {
     const req = makeReq('/ro/services', {
       headers: { authorization: `Basic ${token}`, 'x-vercel-ip-country': 'RO' },
     });
-    const res: any = await proxy(req);
+    const res: any = await invokeProxy(req);
     expect(res.type).toBe('next');
     expect(res.headers.get('X-Client-Geo-Country')).toBe('RO');
   });
@@ -137,7 +139,7 @@ describe('proxy', () => {
     const req = makeReq('/ro/services', {
       headers: { 'x-vercel-ip-country': 'RU' },
     });
-    const res: any = await proxy(req);
+    const res: any = await invokeProxy(req);
     expect(res.status).toBe(403);
   });
 
@@ -145,7 +147,7 @@ describe('proxy', () => {
     const req = makeReq('/projects', {
       headers: { 'x-vercel-ip-country': 'RO' },
     });
-    const res: any = await proxy(req);
+    const res: any = await invokeProxy(req);
     expect(res.type).toBe('redirect');
     expect(res.url).toContain('/ro/projects');
   });
@@ -154,7 +156,7 @@ describe('proxy', () => {
     const req = makeReq('/en/projects', {
       headers: { 'x-vercel-ip-country': 'RO' },
     });
-    const res: any = await proxy(req);
+    const res: any = await invokeProxy(req);
     expect(res.type).toBe('redirect');
     expect(res.url).toContain('/ro/projects');
   });
@@ -164,7 +166,7 @@ describe('proxy', () => {
     const req = makeReq('/ro/projects', {
       headers: { 'x-vercel-ip-country': 'RO' },
     });
-    const res: any = await proxy(req);
+    const res: any = await invokeProxy(req);
     expect(res.type).toBe('redirect');
     expect(res.url).toContain('/ro/open-soon');
   });
@@ -174,7 +176,7 @@ describe('proxy', () => {
     const req = makeReq('/ro/open-soon', {
       headers: { 'x-vercel-ip-country': 'RO' },
     });
-    const res: any = await proxy(req);
+    const res: any = await invokeProxy(req);
     expect(res.type).toBe('next');
   });
 
@@ -184,7 +186,7 @@ describe('proxy', () => {
       headers: { 'x-vercel-ip-country': 'RO' },
       auth: { user: { id: '1', roles: [{ slug: 'admin' }] } },
     });
-    const res: any = await proxy(req);
+    const res: any = await invokeProxy(req);
     expect(res.type).toBe('next');
   });
 
@@ -193,7 +195,7 @@ describe('proxy', () => {
     const req = makeReq('/ro/services', {
       headers: { 'x-vercel-ip-country': 'RO' },
     });
-    const res: any = await proxy(req);
+    const res: any = await invokeProxy(req);
     expect(res.type).toBe('redirect');
     expect(res.url).toContain('/ro/early-access');
   });
@@ -202,7 +204,7 @@ describe('proxy', () => {
     const req = makeReq('/ro/dashboard', {
       headers: { 'x-vercel-ip-country': 'RO' },
     });
-    const res: any = await proxy(req);
+    const res: any = await invokeProxy(req);
     expect(res.type).toBe('redirect');
     expect(res.url).toContain('/ro/auth/signin');
     expect(res.url).toContain('callbackUrl=%2Fro%2Fdashboard');
@@ -212,7 +214,7 @@ describe('proxy', () => {
     const req = makeReq('/ro/client/project-requests?tab=active', {
       headers: { 'x-vercel-ip-country': 'RO' },
     });
-    const res: any = await proxy(req);
+    const res: any = await invokeProxy(req);
     expect(res.type).toBe('redirect');
     expect(res.url).toContain('/ro/auth/signin');
     expect(res.url).toContain(
@@ -225,7 +227,7 @@ describe('proxy', () => {
       headers: { 'x-vercel-ip-country': 'RO' },
       auth: { user: { id: '1', roles: [{ slug: 'client' }] } },
     });
-    const res: any = await proxy(req);
+    const res: any = await invokeProxy(req);
     expect(res.type).toBe('redirect');
     expect(res.url).toContain('/ro/access-denied');
   });
@@ -235,7 +237,7 @@ describe('proxy', () => {
       headers: { 'x-vercel-ip-country': 'RO' },
       auth: { user: { id: '1' } },
     });
-    const res: any = await proxy(req);
+    const res: any = await invokeProxy(req);
     expect(res.type).toBe('redirect');
     expect(res.url).toContain('/ro/dashboard');
   });
