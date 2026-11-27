@@ -1,0 +1,17 @@
+// Merge this match block into the existing service firebase.storage / match /b/{bucket}/o.
+// Do not deploy this fragment as a replacement for the shared Nexora Storage rules.
+
+match /nexverse/{uid}/uploads/{sessionId}/{fileName} {
+  function signedInAsOwner() {
+    return request.auth != null && request.auth.uid == uid;
+  }
+
+  allow read: if signedInAsOwner();
+  allow create: if signedInAsOwner()
+    && request.resource.size > 0
+    && request.resource.size <= 50 * 1024 * 1024
+    && request.resource.contentType.matches(
+      'application/pdf|application/epub\\+zip|text/plain|image/jpeg|image/png|image/webp'
+    );
+  // Updates and deletes are denied to prevent replacing an object after verification.
+}
