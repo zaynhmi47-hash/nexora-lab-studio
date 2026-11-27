@@ -70,7 +70,7 @@ export function ProgressBar({ value, color = palette.primary, track = '#ECEEF5',
   value: number; color?: string; track?: string; height?: number;
 }) {
   const safeValue = Math.max(0, Math.min(100, value));
-  return <View style={[styles.progressTrack, { height, backgroundColor: track }]}><View style={[styles.progressFill, { width: safeValue + '%', backgroundColor: color }]} /></View>;
+  return <View style={[styles.progressTrack, { height, backgroundColor: track }]}><View style={[styles.progressFill, { width: `${safeValue}%` as `${number}%`, backgroundColor: color }]} /></View>;
 }
 
 export function ActionRow({ icon, title, detail, onPress, color = palette.primary, trailing }: {
