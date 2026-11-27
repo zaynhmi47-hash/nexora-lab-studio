@@ -19,6 +19,7 @@ on:
       - 'packages/**'
       - 'package.json'
       - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
       - '.github/workflows/frontend-ci.yml'
 
 jobs:
@@ -102,3 +103,46 @@ jobs:
 
       - name: Typecheck
         run: pnpm typecheck
+
+  workspace-typecheck:
+    name: Workspace app typecheck
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: Nexora Core mobile
+            package: '@nexora/mobile'
+            script: typecheck
+          - app: Nexora Muslim mobile
+            package: nexora-muslim-mobile
+            script: typecheck
+          - app: Dating mobile
+            package: '@nexora/dating-social-professional-mobile'
+            script: typecheck
+          - app: Dignity web
+            package: '@nexora/dignity-web'
+            script: typecheck
+          - app: Nexora Office web
+            package: '@nexora/nexora-office-web'
+            script: typecheck
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm --filter "${{ matrix.package }}" ${{ matrix.script }}
