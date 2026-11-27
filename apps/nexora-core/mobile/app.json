@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Nexora Core",
+    "slug": "nexora-core",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "nexora",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "plugins": [
+      "expo-router",
+      "@react-native-firebase/app"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "android": {
+      "package": "com.nexora.core"
+    },
+    "ios": {
+      "bundleIdentifier": "com.nexora.core",
+      "supportsTablet": true
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
