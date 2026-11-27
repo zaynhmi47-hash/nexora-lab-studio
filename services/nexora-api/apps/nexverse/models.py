@@ -333,3 +333,7 @@ class NexverseRoyaltyEntry(AuditableBaseModel):
 
     def __str__(self) -> str:
         return f"{self.author_id}:{self.purchase_id}:{self.entry_type}"
+
+
+# Upload sessions are kept in a separate module to keep asset lifecycle concerns isolated.
+from .assets import NexverseUploadSession  # noqa: E402,F401

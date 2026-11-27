@@ -1,6 +1,10 @@
+from datetime import timedelta
+
+from django.utils import timezone
 from rest_framework.test import APITestCase
 
-from apps.identity.models import NexoraUser
+from apps.identity.models import IdentityProviderAccount, NexoraUser
+from .assets import NexverseUploadSession
 from .models import NexverseAuthor, NexverseChapter, NexverseWork
 
 
@@ -80,3 +84,114 @@ class NexversePublicApiTests(APITestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.data["code"], "ENTITLEMENT_REQUIRED")
         self.assertNotIn("content", response.data)
+
+
+
+class NexverseUploadSessionApiTests(APITestCase):
+    def setUp(self):
+        self.user = NexoraUser.objects.create(
+            email="creator@example.test",
+            status=NexoraUser.Status.ACTIVE,
+        )
+        IdentityProviderAccount.objects.create(
+            user=self.user,
+            provider="firebase",
+            provider_subject="firebase-test-uid",
+        )
+        author = NexverseAuthor.objects.create(
+            user=self.user,
+            slug="creator-test",
+            pen_name="Creator Test",
+        )
+        self.work = NexverseWork.objects.create(
+            author=author,
+            slug="draft-work-test",
+            title="Draft Work",
+            synopsis="A test synopsis.",
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def post_upload(self, payload):
+        return self.client.post(
+            f"/api/v1/nexverse/creator/works/{self.work.id}/uploads/",
+            data=payload,
+            format="json",
+        )
+
+    def test_creator_can_create_private_pdf_upload_session(self):
+        response = self.post_upload({
+            "assetType": "manuscript",
+            "filename": "draft.pdf",
+            "contentType": "application/pdf",
+            "sizeBytes": 1024,
+        })
+
+        self.assertEqual(response.status_code, 201)
+        session = NexverseUploadSession.objects.get(pk=response.data["id"])
+        self.assertEqual(session.owner, self.user)
+        self.assertEqual(session.status, NexverseUploadSession.Status.CREATED)
+        self.assertTrue(session.storage_path.startswith(
+            "nexverse/firebase-test-uid/uploads/"
+        ))
+
+    def test_rejects_extension_and_mime_type_mismatch(self):
+        response = self.post_upload({
+            "assetType": "manuscript",
+            "filename": "draft.pdf",
+            "contentType": "image/png",
+            "sizeBytes": 1024,
+        })
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["code"], "UNSUPPORTED_FILE_TYPE")
+        self.assertEqual(NexverseUploadSession.objects.count(), 0)
+
+    def test_rejects_upload_larger_than_limit(self):
+        response = self.post_upload({
+            "assetType": "manuscript",
+            "filename": "draft.pdf",
+            "contentType": "application/pdf",
+            "sizeBytes": 50 * 1024 * 1024 + 1,
+        })
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["code"], "FILE_SIZE_LIMIT")
+
+    def test_limits_active_upload_sessions_per_creator(self):
+        for index in range(5):
+            NexverseUploadSession.objects.create(
+                work=self.work,
+                owner=self.user,
+                asset_type=NexverseUploadSession.AssetType.MANUSCRIPT,
+                original_filename=f"existing-{index}.pdf",
+                content_type="application/pdf",
+                expected_size_bytes=1024,
+                storage_path=f"nexverse/firebase-test-uid/uploads/{index}/existing.pdf",
+                expires_at=timezone.now() + timedelta(minutes=10),
+            )
+
+        response = self.post_upload({
+            "assetType": "manuscript",
+            "filename": "new.pdf",
+            "contentType": "application/pdf",
+            "sizeBytes": 1024,
+        })
+
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(response.data["code"], "ACTIVE_UPLOAD_LIMIT")
+        self.assertEqual(NexverseUploadSession.objects.count(), 5)
+
+    def test_other_user_cannot_create_session_for_work(self):
+        other_user = NexoraUser.objects.create(
+            email="other@example.test",
+            status=NexoraUser.Status.ACTIVE,
+        )
+        self.client.force_authenticate(user=other_user)
+        response = self.post_upload({
+            "assetType": "manuscript",
+            "filename": "draft.pdf",
+            "contentType": "application/pdf",
+            "sizeBytes": 1024,
+        })
+
+        self.assertEqual(response.status_code, 404)
