@@ -13,6 +13,7 @@ export interface ModalProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -22,7 +23,8 @@ export const Modal: React.FC<ModalProps> = ({
   description,
   children,
   footer,
-  maxWidth = 'md',
+  maxWidth,
+  size,
 }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -39,6 +41,8 @@ export const Modal: React.FC<ModalProps> = ({
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
+
+  const resolvedMaxWidth = size ?? maxWidth ?? 'md';
 
   const widthClasses = {
     sm: 'max-w-sm',
@@ -61,7 +65,7 @@ export const Modal: React.FC<ModalProps> = ({
 
       {/* Dialog Window */}
       <div
-        className={`relative w-full ${widthClasses[maxWidth]} bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh] z-10 animate-in fade-in zoom-in-95 duration-150`}
+        className={`relative w-full ${widthClasses[resolvedMaxWidth]} bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh] z-10 animate-in fade-in zoom-in-95 duration-150`}
       >
         {/* Header */}
         <div className="flex items-start justify-between p-5 border-b border-slate-100 dark:border-slate-800">
