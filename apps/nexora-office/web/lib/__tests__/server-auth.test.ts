@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getServerUser, requirePermission } from '../server-auth';
 import { cookies } from 'next/headers';
@@ -7,7 +8,7 @@ vi.mock('next/headers', () => ({
 }));
 
 describe('lib/server-auth', () => {
-  const cookiesMock = cookies as unknown as vi.Mock;
+  const cookiesMock = cookies as unknown as Mock;
   const makeSessionStore = () => ({
     getAll: () => [{ name: 'laravel_session', value: 'token-123' }],
     get: (name: string) =>
