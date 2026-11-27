@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { NotificationProvider, useNotifications } from '@/contexts/notification-context';
@@ -56,10 +57,10 @@ vi.mock('next-intl', () => ({
 }));
 
 describe('contexts/notification-context', () => {
-  const mockedUseAuth = useAuth as unknown as vi.Mock;
+  const mockedUseAuth = useAuth as unknown as Mock;
   const mockedApi = apiClient as unknown as {
-    getNotifications: vi.Mock;
-    markNotificationAsRead: vi.Mock;
+    getNotifications: Mock;
+    markNotificationAsRead: Mock;
   };
 
   beforeEach(() => {
