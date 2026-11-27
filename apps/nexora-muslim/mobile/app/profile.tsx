@@ -20,7 +20,7 @@ export default function ProfileScreen() {
         </Card>
 
         <View style={styles.authButton}>
-          <Button title={loading ? 'Please wait…' : session ? 'Sign out' : 'Sign in (Development)'} onPress={session ? signOut : signIn} disabled={loading} />
+          <Button title={loading ? 'Please wait…' : session ? 'Sign out' : 'Sign in (Development)'} onPress={() => { if (session) void signOut(); else void signIn(); }} disabled={loading} />
         </View>
 
         {['Quran Reading', 'Tajwid', 'Arabic', 'Kitab Kuning'].map((item, index) => {
