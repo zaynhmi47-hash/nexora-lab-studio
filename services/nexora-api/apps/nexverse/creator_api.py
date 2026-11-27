@@ -374,3 +374,47 @@ class NexverseCreatorChapterPriceView(APIView):
             chapter=chapter, deleted_at__isnull=True, is_active=True
         ).update(is_active=False, updated_at=timezone.now())
         return Response({"isPriced": False, "deactivated": bool(updated)})
+
+
+class NexverseCreatorChapterOrderView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, work_id):
+        chapter_ids = request.data.get("chapterIds")
+        if not isinstance(chapter_ids, list) or not chapter_ids or len(chapter_ids) > 500:
+            return Response({"detail": "chapterIds must contain between 1 and 500 chapter IDs."}, status=400)
+        if any(not isinstance(value, str) for value in chapter_ids) or len(set(chapter_ids)) != len(chapter_ids):
+            return Response({"detail": "chapterIds must be unique string IDs."}, status=400)
+
+        with transaction.atomic():
+            work = NexverseWork.objects.select_for_update().filter(
+                pk=work_id, author__user=request.user
+            ).first()
+            if work is None:
+                return Response({"detail": "Work not found."}, status=404)
+            if work.status != NexverseWork.Status.DRAFT or work.review_status not in (
+                NexverseWork.ReviewStatus.DRAFT, NexverseWork.ReviewStatus.REJECTED
+            ):
+                return Response({"detail": "Chapter order can only change while the work is an editable draft."}, status=409)
+
+            chapters = list(work.chapters.select_for_update().order_by("chapter_number"))
+            existing_ids = {str(chapter.id) for chapter in chapters}
+            if set(chapter_ids) != existing_ids:
+                return Response({"detail": "chapterIds must include every chapter in this work exactly once."}, status=400)
+            if any(chapter.status != NexverseChapter.Status.DRAFT for chapter in chapters):
+                return Response({"detail": "Published chapters cannot be reordered."}, status=409)
+
+            by_id = {str(chapter.id): chapter for chapter in chapters}
+            temporary_start = max((chapter.chapter_number for chapter in chapters), default=0) + len(chapters) + 1
+            for index, chapter_id in enumerate(chapter_ids):
+                NexverseChapter.objects.filter(pk=by_id[chapter_id].pk).update(
+                    chapter_number=temporary_start + index
+                )
+            for index, chapter_id in enumerate(chapter_ids, start=1):
+                NexverseChapter.objects.filter(pk=by_id[chapter_id].pk).update(
+                    chapter_number=index, updated_at=timezone.now()
+                )
+
+            ordered = list(work.chapters.order_by("chapter_number"))
+        return Response({"items": [_chapter_payload(chapter) for chapter in ordered]})
