@@ -120,6 +120,7 @@ export class NotificationService {
         const defaultOptions: NotificationOptions & { vibrate?: number[] } = {
             icon: '/logo.webp',
             badge: '/logo.webp',
+            vibrate: [200, 100, 200],
             data: {
                 timestamp: Date.now()
             },
