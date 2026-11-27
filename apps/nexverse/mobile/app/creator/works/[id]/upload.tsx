@@ -13,6 +13,7 @@ import {
 import { palette } from '@/constants/theme';
 import {
   getCreatorUploadLibrary,
+  processCreatorAsset,
   uploadCreatorAsset,
   type UploadAssetType,
   type UploadLibraryItem,
@@ -31,6 +32,7 @@ export default function UploadCenterScreen() {
   const [library, setLibrary] = useState<UploadLibraryResponse | null>(null);
   const [loadingLibrary, setLoadingLibrary] = useState(true);
   const [libraryError, setLibraryError] = useState('');
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   const refreshLibrary = useCallback(async () => {
     if (!id) return;
@@ -51,14 +53,33 @@ export default function UploadCenterScreen() {
 
   const statusLabel = (status: UploadLibraryItem['status']) => ({
     created: 'Menunggu upload',
-    uploaded: 'Tersimpan · menunggu pemeriksaan',
+    uploaded: 'Tersimpan · siap diperiksa',
+    processing: 'Sedang diperiksa',
+    ready: 'Lolos pemeriksaan struktur',
+    failed: 'Pemeriksaan gagal · dapat dicoba lagi',
     expired: 'Kedaluwarsa',
-    rejected: 'Perlu unggah ulang',
+    rejected: 'Ditolak · format tidak valid',
   })[status];
 
   const formatBytes = (bytes: number) => bytes < 1024 * 1024
     ? Math.max(1, Math.round(bytes / 1024)) + ' KB'
     : (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+
+  const runProcessing = async (item: UploadLibraryItem) => {
+    setProcessingId(item.id);
+    setError('');
+    setSuccess('');
+    try {
+      const result = await processCreatorAsset(item.id);
+      setSuccess(result.filename + ' lolos pemeriksaan struktur dokumen.');
+      await refreshLibrary();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Pemeriksaan dokumen gagal.');
+      await refreshLibrary();
+    } finally {
+      setProcessingId(null);
+    }
+  };
 
   const chooseAndUpload = async (assetType: UploadAssetType) => {
     setError('');
@@ -176,9 +197,9 @@ export default function UploadCenterScreen() {
       </View>
       {library ? (
         <View style={s.countRow}>
-          <View style={s.countPill}><Text style={s.countValue}>{library.counts.uploaded}</Text><Text style={s.countLabel}>Tersimpan</Text></View>
-          <View style={s.countPill}><Text style={s.countValue}>{library.counts.created}</Text><Text style={s.countLabel}>Berlangsung</Text></View>
-          <View style={s.countPill}><Text style={s.countValue}>{library.counts.rejected + library.counts.expired}</Text><Text style={s.countLabel}>Perlu tindakan</Text></View>
+          <View style={s.countPill}><Text style={s.countValue}>{library.counts.uploaded}</Text><Text style={s.countLabel}>Upload selesai</Text></View>
+          <View style={s.countPill}><Text style={s.countValue}>{library.counts.processing}</Text><Text style={s.countLabel}>Diproses</Text></View>
+          <View style={s.countPill}><Text style={s.countValue}>{library.counts.failed + library.counts.rejected + library.counts.expired}</Text><Text style={s.countLabel}>Perlu tindakan</Text></View>
         </View>
       ) : null}
       {loadingLibrary ? (
@@ -194,6 +215,8 @@ export default function UploadCenterScreen() {
             <Text style={s.assetName} numberOfLines={1}>{item.filename}</Text>
             <Text style={s.cardBody}>{item.assetType === 'cover' ? 'Cover' : item.assetType === 'manuscript' ? 'Manuskrip' : 'Lampiran'} · {formatBytes(item.uploadedSizeBytes ?? item.expectedSizeBytes)}</Text>
             <Text style={s.assetStatus}>{statusLabel(item.status)}</Text>
+            {item.status === 'ready' && item.processingMetadata.format ? <Text style={s.assetMeta}>{String(item.processingMetadata.format)}{typeof item.processingMetadata.words === 'number' ? ' · ' + item.processingMetadata.words.toLocaleString('id-ID') + ' kata' : typeof item.processingMetadata.width === 'number' ? ' · ' + item.processingMetadata.width + ' × ' + item.processingMetadata.height + ' px' : ''}</Text> : null}
+            {item.status === 'uploaded' || item.status === 'failed' ? <Pressable disabled={processingId !== null} onPress={() => void runProcessing(item)} style={s.processButton}><Text style={s.processText}>{processingId === item.id ? 'Memeriksa…' : item.status === 'failed' ? 'Coba lagi' : 'Periksa berkas'}</Text></Pressable> : null}
           </View>
           <Text style={s.assetDate}>{new Date(item.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}</Text>
         </View>
@@ -246,6 +269,9 @@ const s = StyleSheet.create({
   assetName: { color: palette.ink, fontSize: 11, fontWeight: '900' },
   assetStatus: { color: palette.greenDark, fontSize: 9, fontWeight: '700' },
   assetDate: { color: palette.muted, fontSize: 9 },
+  assetMeta: { color: palette.muted, fontSize: 9 },
+  processButton: { alignSelf: 'flex-start', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 7, backgroundColor: palette.mint, marginTop: 3 },
+  processText: { color: palette.greenDark, fontSize: 9, fontWeight: '900' },
   emptyLibrary: { alignItems: 'center', justifyContent: 'center', gap: 8, padding: 22, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: palette.line },
   footnote: { color: palette.muted, fontSize: 10, lineHeight: 16, marginTop: 8 },
 });
