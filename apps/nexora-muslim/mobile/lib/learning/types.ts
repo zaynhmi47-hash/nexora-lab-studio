@@ -1,5 +1,4 @@
 export type LessonStatus = 'locked' | 'available' | 'in_progress' | 'completed';
-
 export type LessonKind = 'lesson' | 'quiz' | 'practice';
 
 export type LearningLesson = {
@@ -46,9 +45,46 @@ export type QuizResult = {
   xpEarned: number;
 };
 
+export type LearningAchievement = {
+  id: string;
+  title: string;
+  description: string;
+  xpReward: number;
+  unlocked: boolean;
+  unlockedAt?: string;
+};
+
+export type LearningHub = {
+  courses: LearningCourse[];
+  progress: LearningProgress;
+  achievements: LearningAchievement[];
+};
+
+export type GamificationSource = 'learning' | 'tajwid' | 'arabic' | 'gamification';
+
+export type GamificationActivity = {
+  id: string;
+  source: GamificationSource;
+  action: string;
+  sourceKey: string;
+  xpEarned: number;
+  occurredAt: string;
+};
+
+export type GamificationStatistics = {
+  days: number;
+  totalXp: number;
+  activityCount: number;
+  bySource: Record<GamificationSource, number>;
+  dailyXp: Array<{ date: string; xp: number }>;
+};
+
 export interface LearningPort {
   getCourses(): Promise<LearningCourse[]>;
+  getHub(): Promise<LearningHub>;
   getProgress(userId: string): Promise<LearningProgress>;
   getQuiz(lessonId: string): Promise<QuizQuestion[]>;
+  completeQuiz(lessonId: string, answers: Record<string, number>): Promise<QuizResult>;
+  getAchievements(): Promise<LearningAchievement[]>;
   completeLesson(userId: string, lessonId: string): Promise<LearningProgress>;
 }
