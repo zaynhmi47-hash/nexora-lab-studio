@@ -5,7 +5,7 @@ import { generateMetadata as generateHelpMetadata } from '../[locale]/help/page'
 import { generateMetadata as generateHomeMetadata } from '../[locale]/page';
 import { generateMetadata as generateDashboardMetadata } from '../[locale]/dashboard/page';
 
-const makeParams = (locale: string) => Promise.resolve({ locale });
+const makeParams = (locale: 'en' | 'ro') => Promise.resolve({ locale });
 
 describe('SSR page metadata', () => {
   beforeEach(() => {
@@ -51,7 +51,7 @@ describe('SSR page metadata', () => {
     expect(meta.alternates?.languages?.ro).toBe('/ro');
 
     if (typeof meta.title === 'object' && meta.title) {
-      expect(meta.title.default).toContain('Trustora');
+      expect(JSON.stringify(meta.title)).toContain('Trustora');
     }
   });
 
