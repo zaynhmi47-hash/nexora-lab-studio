@@ -174,6 +174,8 @@ export const mockTajwid: TajwidPort = {
   },
 
   async completePractice(userId, practiceId, correct) {
+    const practiceExists = Object.values(practice).some((items) => items.some((item) => item.id === practiceId));
+    if (!practiceExists) throw new Error('Tajwid practice item not found.');
     if (userId !== progress.userId) progress = { ...progress, userId };
     progress = {
       ...progress,
