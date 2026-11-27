@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getServerUser, requirePermission } from '../server-auth';
 import { cookies } from 'next/headers';
 
+vi.mock('@/auth', () => ({ auth: vi.fn() }));
+
 vi.mock('next/headers', () => ({
   cookies: vi.fn(),
 }));
