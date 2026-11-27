@@ -10,7 +10,7 @@
     "build:turbo": "next build --turbo",
     "build:sandbox": "next build --webpack",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "node scripts/lint.mjs",
     "analyze": "ANALYZE=true next build --webpack",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
