@@ -294,7 +294,7 @@ class NexverseAssetProcessingApiTests(APITestCase):
             format="json",
         )
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 200, response.data)
         session.refresh_from_db()
         self.assertEqual(session.status, NexverseUploadSession.Status.READY)
         self.assertEqual(session.processing_metadata["format"], "TXT")
