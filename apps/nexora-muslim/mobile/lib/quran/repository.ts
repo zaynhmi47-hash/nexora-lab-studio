@@ -36,11 +36,11 @@ export const nexoraCoreQuranRepository = (session: AuthSession): QuranPort => ({
     }
   },
   getReadingPosition: () => request<ReadingPosition | null>(session, '/reading-position/'),
-  saveReadingPosition: (position) => request(session, '/reading-position/', {
+  saveReadingPosition: async (position) => { await request<ReadingPosition>(session, '/reading-position/', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(position),
-  }),
+  }); },
   listBookmarks: () => request<Bookmark[]>(session, '/bookmarks/'),
   saveBookmark: async (bookmark) => {
     await request<Bookmark>(session, '/bookmarks/', {
@@ -53,7 +53,7 @@ export const nexoraCoreQuranRepository = (session: AuthSession): QuranPort => ({
       }),
     });
   },
-  removeBookmark: (bookmarkId) => request(session, `/bookmarks/${bookmarkId}/`, { method: 'DELETE' }),
+  removeBookmark: async (bookmarkId) => { await request<void>(session, `/bookmarks/${bookmarkId}/`, { method: 'DELETE' }); },
   listRecitations: () => request<Recitation[]>(session, '/recitations/'),
   getReadingGoal: () => request<QuranReadingGoal>(session, '/goals/'),
   updateReadingGoal: (value) => request<QuranReadingGoal>(session, '/goals/', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) }),
