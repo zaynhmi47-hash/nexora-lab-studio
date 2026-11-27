@@ -2,6 +2,7 @@ import type {
   TajwidPort,
   TajwidPracticeItem,
   TajwidProgress,
+  TajwidAssessmentResult,
   TajwidTopic,
   TajwidTopicId,
 } from './types';
@@ -172,6 +173,16 @@ export const mockTajwid: TajwidPort = {
     }));
   },
 
+  async completePractice(userId, practiceId, correct) {
+    if (userId !== progress.userId) progress = { ...progress, userId };
+    progress = {
+      ...progress,
+      practiceCompleted: progress.practiceCompleted + 1,
+      xpEarned: progress.xpEarned + (correct ? 5 : 0),
+    };
+    return cloneProgress();
+  },
+
   async completeTopic(userId, topicId) {
     if (userId !== progress.userId) progress = { ...progress, userId };
 
@@ -198,6 +209,7 @@ export const mockTajwid: TajwidPort = {
       xpEarned: progress.xpEarned + reward,
     };
 
-    return cloneProgress();
+    const result: TajwidAssessmentResult = { correctAnswers, totalQuestions, passed, xpEarned: reward };
+    return result;
   },
 };
