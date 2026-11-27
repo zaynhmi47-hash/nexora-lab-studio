@@ -45,7 +45,7 @@ describe('Forms components', () => {
 
     // values are cleared in form state
     expect(methodsRef.current?.getValues('company_name')).toBe('');
-    expect(methods?.getValues('tax_id')).toBe('');
-    expect(methods?.getValues('billing_address')).toBe('');
+    expect(methodsRef.current?.getValues('tax_id')).toBe('');
+    expect(methodsRef.current?.getValues('billing_address')).toBe('');
   });
 });
