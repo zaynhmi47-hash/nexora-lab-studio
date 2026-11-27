@@ -62,7 +62,7 @@ export default function ProfileDetailScreen() {
           {mediaItems.length > 1 ? <View style={styles.galleryControls}><Pressable disabled={mediaIndex === 0} onPress={() => setMediaIndex((value) => Math.max(0, value - 1))} style={styles.galleryButton}><Text>Previous</Text></Pressable><Text>{mediaIndex + 1} / {mediaItems.length}</Text><Pressable disabled={mediaIndex === mediaItems.length - 1} onPress={() => setMediaIndex((value) => Math.min(mediaItems.length - 1, value + 1))} style={styles.galleryButton}><Text>Next</Text></Pressable></View> : null}
           <View style={styles.thumbnailRow}>{mediaItems.map((item, itemIndex) => <Pressable key={item.id} onPress={() => setMediaIndex(itemIndex)}><Image source={{ uri: item.url }} style={[styles.thumbnail, itemIndex === mediaIndex && styles.thumbnailActive]} /></Pressable>)}</View>
         </View>
-      ) : data.photoUrl ? <Image source={{ uri: data.photoUrl }} style={styles.featuredImage} accessibilityLabel="Profile photo" /> : null
+      ) : data.photoUrl ? <Image source={{ uri: data.photoUrl }} style={styles.featuredImage} accessibilityLabel="Profile photo" /> : null}
       <View style={styles.compatibilityCard}>
         <Text style={styles.section}>Compatibility context</Text>
         <Text style={styles.body}>Compatibility: {Math.round(data.compatibilityScore)}%</Text>
