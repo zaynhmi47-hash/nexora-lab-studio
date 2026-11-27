@@ -12,6 +12,7 @@ export default defineConfig({
     target: 'esnext', // sau 'es2017', 'es2018' etc, evită transpiling inutil
   },
   test: {
+    globals: true,
     environment: 'jsdom',
   },
 });
