@@ -90,3 +90,14 @@ firebase deploy --only storage --project nexora-73cfa
 - Upload Center shows per-asset processing state, metadata, validation errors, retry, and the
   manuscript review action for ready EPUB/TXT files. PDF text extraction, OCR, malware scanning,
   secure preview delivery, and a background job queue remain subsequent work.
+
+
+## Creator Chapter Studio
+
+- The mobile Creator Studio links each work to a dedicated Chapter Studio screen.
+- Authors can select a chapter, edit its title, summary, body, and free-preview flag, then explicitly save changes through the existing owner-scoped chapter PATCH endpoint.
+- A local reader-style preview renders the current editor buffer. It is private to the creator and does not call public reader delivery or expose draft content to readers.
+- Draft chapter ordering is persisted through
+  `PUT /api/v1/nexverse/creator/works/{work_id}/chapters/order/`. The API locks the owned work, requires the complete unique chapter ID list, blocks submitted/published works and published chapters, and uses temporary chapter numbers inside a transaction to avoid unique-number collisions during swaps.
+- Editing and reordering remain unavailable after submission or publication; an explicit revision workflow is required before modifying published content.
+- This stage does not implement autosave, collaborative editing, version history, offline conflict resolution, or a revision/publishing workflow. Saving remains creator-triggered.
