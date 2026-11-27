@@ -5,8 +5,10 @@ export interface ProgressBarProps {
   max?: number;
   label?: string;
   showPercentText?: boolean;
+  showValue?: boolean;
   size?: 'sm' | 'md' | 'lg';
   variant?: 'primary' | 'success' | 'warning' | 'info';
+  color?: 'primary' | 'success' | 'warning' | 'info';
   className?: string;
 }
 
@@ -15,11 +17,15 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   max = 100,
   label,
   showPercentText = false,
+  showValue = false,
   size = 'md',
   variant = 'primary',
+  color,
   className = '',
 }) => {
   const percentage = Math.min(Math.max(0, Math.round((value / max) * 100)), 100);
+  const showPercentage = showPercentText || showValue;
+  const resolvedVariant = color ?? variant;
 
   const heightStyles = {
     sm: 'h-1.5',
@@ -36,10 +42,10 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 
   return (
     <div className={`w-full ${className}`}>
-      {(label || showPercentText) && (
+      {(label || showPercentage) && (
         <div className="flex items-center justify-between text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
           {label && <span>{label}</span>}
-          {showPercentText && <span className="font-semibold text-slate-900 dark:text-white">{percentage}%</span>}
+          {showPercentage && <span className="font-semibold text-slate-900 dark:text-white">{percentage}%</span>}
         </div>
       )}
       <div
@@ -51,7 +57,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         aria-label={label || 'Progress bar'}
       >
         <div
-          className={`h-full rounded-full transition-all duration-500 ease-out ${fillColors[variant]}`}
+          className={`h-full rounded-full transition-all duration-500 ease-out ${fillColors[resolvedVariant]}`}
           style={{ width: `${percentage}%` }}
         />
       </div>
