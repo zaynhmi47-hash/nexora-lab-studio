@@ -6,6 +6,7 @@ export default defineConfig({
     alias: [
       { find: 'next/navigation', replacement: path.resolve(__dirname, 'test/mocks/next-navigation.ts') },
       { find: 'next/server', replacement: path.resolve(__dirname, 'test/mocks/next-server.ts') },
+      { find: 'next/headers', replacement: path.resolve(__dirname, 'test/mocks/next-headers.ts') },
       { find: '@/locales', replacement: path.resolve(__dirname, 'messages') },
       { find: '@', replacement: path.resolve(__dirname, '.') },
     ],
@@ -15,6 +16,7 @@ export default defineConfig({
   },
   test: {
     globals: true,
+    deps: { inline: ['next-intl'] },
     environment: 'jsdom',
   },
 });
