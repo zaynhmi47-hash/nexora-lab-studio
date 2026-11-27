@@ -7,7 +7,7 @@ service firebase.storage {
 
     match /nexverse/{uid}/uploads/{sessionId}/{fileName} {
       allow read: if signedInAs(uid);
-      allow create, update: if signedInAs(uid)
+      allow create: if signedInAs(uid)
         && request.resource.size > 0
         && request.resource.size <= 50 * 1024 * 1024
         && request.resource.contentType.matches(
