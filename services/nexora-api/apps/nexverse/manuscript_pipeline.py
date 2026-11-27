@@ -24,6 +24,7 @@ from .models import NexverseChapter, NexverseWork
 MAX_CHAPTERS = 200
 MAX_CHAPTER_CHARS = 500_000
 MAX_TEXT_CHARS = 20_000_000
+MAX_IMPORT_TOTAL_CHARS = 20_000_000
 
 
 class _TextExtractor(HTMLParser):
@@ -183,6 +184,9 @@ class NexverseManuscriptExtractView(APIView):
         reference = ObjectReference(namespace="nexverse", key=session.storage_path.removeprefix("nexverse/"))
         try:
             data = FirebaseProviderRegistry().storage().download(reference)
+            if len(data) != session.expected_size_bytes or len(data) > 50 * 1024 * 1024:
+                return Response({"detail": "Manuscript size does not match the verified upload session.",
+                                 "code": "MANUSCRIPT_SIZE_MISMATCH"}, status=422)
             proposals = extract_chapter_proposals(data, session.content_type, session.original_filename)
         except (ValueError, UnicodeDecodeError, zipfile.BadZipFile, KeyError, ElementTree.ParseError) as exc:
             return Response({"detail": str(exc), "code": "MANUSCRIPT_EXTRACTION_FAILED"}, status=422)
@@ -226,6 +230,9 @@ class NexverseImportManuscriptChaptersView(APIView):
                 return Response({"items": [{
                     "id": str(ch.id), "number": ch.chapter_number, "title": ch.title
                 } for ch in existing], "alreadyImported": True})
+            total_chars = sum(len(str(item.get("content", ""))) for item in chapters if isinstance(item, dict))
+            if total_chars > MAX_IMPORT_TOTAL_CHARS:
+                return Response({"detail": "Total imported content exceeds the 20-million-character limit."}, status=400)
             start = (work.chapters.order_by("-chapter_number").values_list("chapter_number", flat=True).first() or 0) + 1
             created = []
             seen_titles = set()
