@@ -86,7 +86,7 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
   className = '',
 }) => {
   // Dynamically resolve lucide icon safely
-  const IconComponent = (LucideIcons as Record<string, React.ElementType>)[category.iconName] || LucideIcons.BookOpen;
+  const IconComponent = (LucideIcons as unknown as Record<string, React.ElementType>)[category.iconName] || LucideIcons.BookOpen;
 
   return (
     <div
