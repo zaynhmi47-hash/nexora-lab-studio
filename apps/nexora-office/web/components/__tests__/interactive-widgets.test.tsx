@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent, screen, waitFor } from '@testing-library/react';
@@ -46,7 +47,7 @@ describe('Interactive widgets', () => {
 
   it('NotificationBell shows unread badge and navigates on click', async () => {
     const markAsRead = vi.fn().mockResolvedValue(undefined);
-    (useNotifications as unknown as vi.Mock).mockReturnValue({
+    (useNotifications as unknown as Mock).mockReturnValue({
       notifications: [
         {
           id: 'n1',
@@ -109,7 +110,7 @@ describe('Interactive widgets', () => {
 
   it('ChatButton marks all unread groups as read', async () => {
     const markAsRead = vi.fn().mockResolvedValue(undefined);
-    (useChat as unknown as vi.Mock).mockReturnValue({
+    (useChat as unknown as Mock).mockReturnValue({
       groups: [
         {
           id: 'g1',
@@ -136,7 +137,7 @@ describe('Interactive widgets', () => {
       openPanel: vi.fn(),
     });
 
-    (useAuth as unknown as vi.Mock).mockReturnValue({
+    (useAuth as unknown as Mock).mockReturnValue({
       user: { language: 'ro' },
     });
 
