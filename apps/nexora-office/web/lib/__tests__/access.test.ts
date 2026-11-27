@@ -12,7 +12,7 @@ describe('lib/access', () => {
     const user = {
       role: 'Admin',
       roles: [{ slug: 'provider' }, 'CLIENT', { slug: 'ADMIN' }],
-    } as AccessUser;
+    } as unknown as AccessUser;
 
     const result = getRoleSlugs(user);
     expect(result.sort()).toEqual(['admin', 'client', 'provider'].sort());
@@ -24,22 +24,22 @@ describe('lib/access', () => {
       roles: [
         { slug: 'any', permissions: [{ slug: 'View' }, { slug: 'delete' }] },
       ],
-    } as AccessUser;
+    } as unknown as AccessUser;
 
     const result = getPermissionSlugs(user);
     expect(result.sort()).toEqual(['edit', 'view', 'delete'].sort());
   });
 
   it('isSuperUser returns true for super flags or role', () => {
-    expect(isSuperUser({ is_superuser: true } as AccessUser)).toBe(true);
-    expect(isSuperUser({ role: 'superuser' } as AccessUser)).toBe(true);
-    expect(isSuperUser({ roles: [{ slug: 'SuperUser' }] } as AccessUser)).toBe(true);
-    expect(isSuperUser({ roles: [{ slug: 'admin' }] } as AccessUser)).toBe(false);
+    expect(isSuperUser({ is_superuser: true } as unknown as AccessUser)).toBe(true);
+    expect(isSuperUser({ role: 'superuser' } as unknown as AccessUser)).toBe(true);
+    expect(isSuperUser({ roles: [{ slug: 'SuperUser' }] } as unknown as AccessUser)).toBe(true);
+    expect(isSuperUser({ roles: [{ slug: 'admin' }] } as unknown as AccessUser)).toBe(false);
   });
 
   it('checkRequirement handles superuser only', () => {
-    const superUser = { is_superuser: true } as AccessUser;
-    const normalUser = { roles: [{ slug: 'admin' }] } as AccessUser;
+    const superUser = { is_superuser: true } as unknown as AccessUser;
+    const normalUser = { roles: [{ slug: 'admin' }] } as unknown as AccessUser;
 
     expect(checkRequirement(superUser, { superuser: true })).toBe(true);
     expect(checkRequirement(normalUser, { superuser: true })).toBe(false);
@@ -49,7 +49,7 @@ describe('lib/access', () => {
     const user = {
       roles: [{ slug: 'provider' }],
       permissions: ['edit'],
-    } as AccessUser;
+    } as unknown as AccessUser;
 
     expect(
       checkRequirement(user, {
@@ -63,7 +63,7 @@ describe('lib/access', () => {
       })
     ).toBe(false);
 
-    const superUser = { is_superuser: true, roles: [] } as AccessUser;
+    const superUser = { is_superuser: true, roles: [] } as unknown as AccessUser;
     expect(
       checkRequirement(superUser, {
         roles: ['admin'],
