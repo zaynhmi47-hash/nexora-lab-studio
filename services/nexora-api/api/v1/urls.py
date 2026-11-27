@@ -49,6 +49,7 @@ urlpatterns = [
     path("dua/", include("apps.dua.urls")),
     path("calendar/", include("apps.calendar.urls")),
     path("zakat/", include("apps.zakat.urls")),
+    path("prayer/", include("apps.prayer.urls")),
     path("reminders/", include("apps.reminders.urls")),
     path("places/", include("apps.places.urls")),
     path("ramadan/", include("apps.ramadan.urls")),
