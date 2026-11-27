@@ -30,7 +30,6 @@ import {
 } from 'lucide-react';
 import { useTest } from '@/hooks/use-api';
 import { apiClient } from '@/lib/api';
-import parseJson from "parse-json";
 
 // ---------- Helpers to parse/normalize ----------
 
@@ -66,6 +65,21 @@ function isJSON(str: string): boolean {
     } catch {
         return false;
     }
+}
+
+function readMeta(meta: string | undefined): Record<string, unknown> {
+    if (!meta) return {};
+    return tryParseJSON<Record<string, unknown>>(meta, {});
+}
+
+function getMetaString(meta: string | undefined, key: string): string {
+    const value = readMeta(meta)[key];
+    return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+}
+
+function getMetaTestCases(meta: string | undefined): TestCase[] {
+    const value = readMeta(meta).testCases;
+    return Array.isArray(value) ? value as TestCase[] : [];
 }
 
 type QuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'CODE_WRITING' | 'TEXT_INPUT';
@@ -683,7 +697,7 @@ export default function EditTestClient({ id }: { id: string }) {
                                             <Label htmlFor="codeTemplate">Template Cod (opțional)</Label>
                                             <Textarea
                                                 id="codeTemplate"
-                                                value={isJSON(currentQuestion.meta ?? '') ? parseJson(currentQuestion.meta as string).codeTemplate : (currentQuestion.codeTemplate ?? '')}
+                                                value={getMetaString(currentQuestion.meta, 'codeTemplate') || (currentQuestion.codeTemplate ?? '')}
                                                 onChange={(e) => setCurrentQuestion({ ...currentQuestion, codeTemplate: e.target.value })}
                                                 placeholder={`function solutie() {\n  // Completează funcția\n}`}
                                                 rows={5}
@@ -698,7 +712,7 @@ export default function EditTestClient({ id }: { id: string }) {
                                             <Label htmlFor="codeSolution">Soluție Cod (pentru evaluare)</Label>
                                             <Textarea
                                                 id="codeSolution"
-                                                value={isJSON(currentQuestion.meta ?? '') ? parseJson(currentQuestion.meta as string).codeSolution : (currentQuestion.codeSolution ?? '')}
+                                                value={getMetaString(currentQuestion.meta, 'codeSolution') || (currentQuestion.codeSolution ?? '')}
                                                 onChange={(e) => setCurrentQuestion({ ...currentQuestion, codeSolution: e.target.value })}
                                                 placeholder={`function solutie() {\n  // Soluția corectă a problemei\n  return rezultat;\n}`}
                                                 rows={5}
@@ -713,7 +727,7 @@ export default function EditTestClient({ id }: { id: string }) {
                                             <Label htmlFor="expectedOutput">Output Așteptat</Label>
                                             <Input
                                                 id="expectedOutput"
-                                                value={isJSON(currentQuestion.meta ?? '') ? parseJson(currentQuestion.meta as string).expectedOutput : (currentQuestion.expectedOutput ?? '')}
+                                                value={getMetaString(currentQuestion.meta, 'expectedOutput') || (currentQuestion.expectedOutput ?? '')}
                                                 onChange={(e) => setCurrentQuestion({ ...currentQuestion, expectedOutput: e.target.value })}
                                                 placeholder="Rezultatul așteptat"
                                             />
@@ -730,7 +744,7 @@ export default function EditTestClient({ id }: { id: string }) {
                                             </div>
 
                                             {isJSON(currentQuestion.meta ?? '')
-                                                ? (parseJson(currentQuestion.meta as string).testCases || []).map((testCase: TestCase, index: number) => (
+                                                ? getMetaTestCases(currentQuestion.meta).map((testCase: TestCase, index: number) => (
                                                     <div key={index} className="border rounded-lg p-4 space-y-3 mb-3">
                                                         <div className="flex items-center justify-between">
                                                             <h4 className="font-medium">Test Case {index + 1}</h4>
