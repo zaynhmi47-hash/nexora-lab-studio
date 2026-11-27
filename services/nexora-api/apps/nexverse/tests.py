@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.utils import timezone
 from rest_framework.test import APITestCase
@@ -245,3 +246,110 @@ class NexverseUploadSessionApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data["code"], "INVALID_UPLOAD_STATUS")
+
+
+
+class NexverseAssetProcessingApiTests(APITestCase):
+    def setUp(self):
+        self.user = NexoraUser.objects.create(
+            email="processor@example.test",
+            status=NexoraUser.Status.ACTIVE,
+        )
+        author = NexverseAuthor.objects.create(
+            user=self.user,
+            slug="processor",
+            pen_name="Processor",
+        )
+        self.work = NexverseWork.objects.create(
+            author=author,
+            slug="processing-work",
+            title="Processing Work",
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def make_uploaded_session(self, *, filename="chapter.txt", content_type="text/plain", data=b"Hello Nexverse"):
+        return NexverseUploadSession.objects.create(
+            work=self.work,
+            owner=self.user,
+            asset_type=NexverseUploadSession.AssetType.MANUSCRIPT,
+            original_filename=filename,
+            content_type=content_type,
+            expected_size_bytes=len(data),
+            uploaded_size_bytes=len(data),
+            storage_path="nexverse/processor/uploads/test/" + filename,
+            status=NexverseUploadSession.Status.UPLOADED,
+            expires_at=timezone.now() + timedelta(minutes=10),
+            uploaded_at=timezone.now(),
+        )
+
+    @patch("apps.nexverse.upload_api.FirebaseProviderRegistry")
+    def test_valid_utf8_manuscript_becomes_ready_with_metadata(self, registry):
+        data = b"Hello Nexverse\nThis is a chapter."
+        session = self.make_uploaded_session(data=data)
+        registry.return_value.storage.return_value.download.return_value = data
+
+        response = self.client.post(
+            f"/api/v1/nexverse/creator/uploads/{session.id}/process/",
+            data={},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        session.refresh_from_db()
+        self.assertEqual(session.status, NexverseUploadSession.Status.READY)
+        self.assertEqual(session.processing_metadata["format"], "TXT")
+        self.assertGreater(session.processing_metadata["words"], 0)
+        self.assertIsNotNone(session.processed_at)
+
+    @patch("apps.nexverse.upload_api.FirebaseProviderRegistry")
+    def test_mime_spoofed_pdf_is_rejected_by_signature(self, registry):
+        data = b"not a pdf file"
+        session = self.make_uploaded_session(
+            filename="chapter.pdf",
+            content_type="application/pdf",
+            data=data,
+        )
+        registry.return_value.storage.return_value.download.return_value = data
+
+        response = self.client.post(
+            f"/api/v1/nexverse/creator/uploads/{session.id}/process/",
+            data={},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.data["code"], "ASSET_VALIDATION_FAILED")
+        session.refresh_from_db()
+        self.assertEqual(session.status, NexverseUploadSession.Status.REJECTED)
+
+    @patch("apps.nexverse.upload_api.FirebaseProviderRegistry")
+    def test_storage_failure_is_retryable(self, registry):
+        session = self.make_uploaded_session()
+        registry.return_value.storage.return_value.download.side_effect = RuntimeError("storage unavailable")
+
+        response = self.client.post(
+            f"/api/v1/nexverse/creator/uploads/{session.id}/process/",
+            data={},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 503)
+        session.refresh_from_db()
+        self.assertEqual(session.status, NexverseUploadSession.Status.FAILED)
+        self.assertTrue(session.processing_error)
+
+    def test_other_user_cannot_process_asset(self):
+        session = self.make_uploaded_session()
+        other_user = NexoraUser.objects.create(
+            email="intruder@example.test",
+            status=NexoraUser.Status.ACTIVE,
+        )
+        self.client.force_authenticate(user=other_user)
+
+        response = self.client.post(
+            f"/api/v1/nexverse/creator/uploads/{session.id}/process/",
+            data={},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 404)
