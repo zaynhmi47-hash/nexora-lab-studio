@@ -27,6 +27,7 @@ describe('hooks/useActivityTracker', () => {
 
   beforeEach(() => {
     mockedApi.updateLastActive.mockReset();
+    mockedApi.updateLastActive.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
