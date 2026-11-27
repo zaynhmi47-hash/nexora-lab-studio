@@ -68,7 +68,7 @@ export const mockLearning: LearningPort = {
     return courses.map((course) => ({ ...course, lessons: course.lessons.map((lesson) => ({ ...lesson })) }));
   },
   async getHub(): Promise<LearningHub> {
-    return { courses: await this.getCourses(), progress: copyProgress(progressState.userId), achievements: await this.getAchievements() };
+    return { courses: courses.map((course) => ({ ...course, lessons: course.lessons.map((lesson) => ({ ...lesson })) })), progress: copyProgress(progressState.userId), achievements: achievements.map((achievement) => ({ ...achievement })) };
   },
   async getProgress(userId) {
     return copyProgress(userId);
