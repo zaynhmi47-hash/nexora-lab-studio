@@ -35,3 +35,17 @@ export const deactivateCreatorChapterPrice = (workId: string, chapterId: string)
     encodeURIComponent(chapterId) + '/price/',
     { method: 'DELETE' },
   );
+
+export const updateCreatorChapter = (
+  workId: string,
+  chapterId: string,
+  input: Partial<Pick<CreatorChapter, 'title' | 'summary' | 'content' | 'freePreview'>>,
+) => nexverseApiRequest<CreatorChapter>(
+  '/nexverse/creator/works/' + encodeURIComponent(workId) + '/chapters/' + encodeURIComponent(chapterId) + '/',
+  { method: 'PATCH', body: JSON.stringify(input) },
+);
+export const reorderCreatorChapters = (workId: string, chapterIds: string[]) =>
+  nexverseApiRequest<{ items: CreatorChapter[] }>(
+    '/nexverse/creator/works/' + encodeURIComponent(workId) + '/chapters/order/',
+    { method: 'PUT', body: JSON.stringify({ chapterIds }) },
+  );
