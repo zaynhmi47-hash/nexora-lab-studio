@@ -125,6 +125,7 @@ export type EducationLevel =
   | 'Beginner'
   | 'Intermediate'
   | 'Advanced'
+  | 'Expert'
   | 'All Levels';
 
 export type EducationFormat =
@@ -238,6 +239,8 @@ export interface Instructor {
   coursesCount?: number;
   expertise?: string[];
   verified?: boolean;
+  isVerified?: boolean;
+  headline?: string;
 }
 
 export interface Lesson {
@@ -302,6 +305,7 @@ export interface LearningPath {
   skillsAcquired: string[];
   careerTarget: string;
   courses: Course[];
+  projectsCount?: number;
   progressPercent: number;
 }
 
