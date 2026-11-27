@@ -9,6 +9,7 @@ from .moderation_api import (
 from .reader_api import NexverseBookmarkDetailView, NexverseBookmarkListView, NexverseReadingProgressDetailView, NexverseReadingProgressListView
 from .monetization_api import NexverseChapterOffersView, NexverseEntitlementListView, NexversePurchaseListCreateView
 from .earnings_api import NexverseCreatorEarningsView
+from .upload_api import NexverseUploadCompleteView, NexverseUploadSessionListCreateView
 from .creator_api import (
     NexverseCreatorChapterDetailView,
     NexverseCreatorChapterListView,
@@ -38,6 +39,8 @@ urlpatterns = [
     path("creator/profile/", NexverseCreatorProfileView.as_view(), name="nexverse-creator-profile"),
     path("creator/works/", NexverseCreatorWorkListView.as_view(), name="nexverse-creator-work-list"),
     path("creator/works/<uuid:work_id>/", NexverseCreatorWorkDetailView.as_view(), name="nexverse-creator-work-detail"),
+    path("creator/works/<uuid:work_id>/uploads/", NexverseUploadSessionListCreateView.as_view(), name="nexverse-creator-upload-list-create"),
+    path("creator/uploads/<uuid:session_id>/complete/", NexverseUploadCompleteView.as_view(), name="nexverse-creator-upload-complete"),
     path("creator/works/<uuid:work_id>/chapters/", NexverseCreatorChapterListView.as_view(), name="nexverse-creator-chapter-list"),
     path("creator/works/<uuid:work_id>/chapters/<uuid:chapter_id>/price/", NexverseCreatorChapterPriceView.as_view(), name="nexverse-creator-chapter-price"),
     path("creator/works/<uuid:work_id>/chapters/<uuid:chapter_id>/", NexverseCreatorChapterDetailView.as_view(), name="nexverse-creator-chapter-detail"),
