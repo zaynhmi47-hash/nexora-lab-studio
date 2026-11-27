@@ -58,7 +58,7 @@ export function SearchBar({
 
   const router = useRouter();
   const searchRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const loadTrendingSearches = useCallback(async () => {
     try {
