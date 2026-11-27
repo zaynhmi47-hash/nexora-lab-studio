@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ChatService } from '../chat';
 import { FetchError } from '../fetch-client';
@@ -24,7 +25,7 @@ vi.mock('../fetch-client', () => ({
 import { http } from '../fetch-client';
 
 describe('lib/chat ChatService', () => {
-  const mockedHttp = http as unknown as { post: vi.Mock };
+  const mockedHttp = http as unknown as { post: Mock };
 
   beforeEach(() => {
     localStorage.clear();
