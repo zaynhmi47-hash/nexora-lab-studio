@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams, router } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -11,7 +11,13 @@ import {
   View,
 } from 'react-native';
 import { palette } from '@/constants/theme';
-import { uploadCreatorAsset, type UploadAssetType } from '@/services/uploads';
+import {
+  getCreatorUploadLibrary,
+  uploadCreatorAsset,
+  type UploadAssetType,
+  type UploadLibraryItem,
+  type UploadLibraryResponse,
+} from '@/services/uploads';
 
 const MAX_BYTES = 50 * 1024 * 1024;
 
@@ -22,6 +28,37 @@ export default function UploadCenterScreen() {
   const [currentLabel, setCurrentLabel] = useState('');
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+  const [library, setLibrary] = useState<UploadLibraryResponse | null>(null);
+  const [loadingLibrary, setLoadingLibrary] = useState(true);
+  const [libraryError, setLibraryError] = useState('');
+
+  const refreshLibrary = useCallback(async () => {
+    if (!id) return;
+    setLoadingLibrary(true);
+    setLibraryError('');
+    try {
+      setLibrary(await getCreatorUploadLibrary(id));
+    } catch (cause) {
+      setLibraryError(cause instanceof Error ? cause.message : 'Perpustakaan aset gagal dimuat.');
+    } finally {
+      setLoadingLibrary(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    void refreshLibrary();
+  }, [refreshLibrary]);
+
+  const statusLabel = (status: UploadLibraryItem['status']) => ({
+    created: 'Menunggu upload',
+    uploaded: 'Tersimpan · menunggu pemeriksaan',
+    expired: 'Kedaluwarsa',
+    rejected: 'Perlu unggah ulang',
+  })[status];
+
+  const formatBytes = (bytes: number) => bytes < 1024 * 1024
+    ? Math.max(1, Math.round(bytes / 1024)) + ' KB'
+    : (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 
   const chooseAndUpload = async (assetType: UploadAssetType) => {
     setError('');
@@ -30,7 +67,9 @@ export default function UploadCenterScreen() {
     const result = await DocumentPicker.getDocumentAsync({
       type: isCover
         ? ['image/jpeg', 'image/png', 'image/webp']
-        : ['application/pdf', 'application/epub+zip', 'text/plain'],
+        : assetType === 'attachment'
+          ? ['application/pdf', 'image/jpeg', 'image/png']
+          : ['application/pdf', 'application/epub+zip', 'text/plain'],
       copyToCacheDirectory: true,
       multiple: false,
     });
@@ -42,7 +81,7 @@ export default function UploadCenterScreen() {
       return;
     }
     if (!file.mimeType) {
-      setError('Format berkas tidak dapat dikenali. Pilih PDF, EPUB, TXT, JPG, PNG, atau WEBP.');
+      setError('Format berkas tidak dapat dikenali. Pilih format yang didukung.');
       return;
     }
 
@@ -53,15 +92,11 @@ export default function UploadCenterScreen() {
       const uploaded = await uploadCreatorAsset(
         id,
         assetType,
-        {
-          uri: file.uri,
-          name: file.name,
-          mimeType: file.mimeType,
-          size: file.size,
-        },
+        { uri: file.uri, name: file.name, mimeType: file.mimeType, size: file.size },
         setProgress,
       );
       setSuccess(uploaded.filename + ' berhasil diunggah dan menunggu pemeriksaan.');
+      await refreshLibrary();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Upload gagal. Periksa koneksi lalu coba lagi.');
     } finally {
@@ -122,13 +157,50 @@ export default function UploadCenterScreen() {
             <Text style={s.progressTitle}>Mengunggah {currentLabel}</Text>
             <Text style={s.percent}>{progress}%</Text>
           </View>
-          <View style={s.track}><View style={[s.fill, { width: `${progress}%` as `${number}%` }]} /></View>
+          <View style={s.track}><View style={[s.fill, { width: String(progress) + '%' }]} /></View>
           <Text style={s.cardBody}>Jangan tutup halaman sampai upload selesai.</Text>
         </View>
       ) : null}
       {success ? <View style={s.success}><Ionicons name="checkmark-circle" size={19} color={palette.green} /><Text style={s.successText}>{success}</Text></View> : null}
       {error ? <View style={s.errorBox}><Ionicons name="alert-circle-outline" size={19} color="#A34E42" /><Text style={s.errorText}>{error}</Text></View> : null}
-      <Text style={s.footnote}>Berkas yang diunggah belum otomatis diterbitkan. Tahap pemindaian keamanan, ekstraksi isi, dan pengaitan aset ke reader dilakukan sebelum publikasi.</Text>
+
+      <View style={s.libraryHeader}>
+        <View style={{ flex: 1, gap: 3 }}>
+          <Text style={s.section}>Perpustakaan aset</Text>
+          <Text style={s.cardBody}>Riwayat berkas untuk karya ini</Text>
+        </View>
+        <Pressable onPress={() => void refreshLibrary()} style={s.refreshButton} disabled={loadingLibrary}>
+          <Ionicons name="refresh" size={16} color={palette.green} />
+          <Text style={s.refreshText}>Muat ulang</Text>
+        </Pressable>
+      </View>
+      {library ? (
+        <View style={s.countRow}>
+          <View style={s.countPill}><Text style={s.countValue}>{library.counts.uploaded}</Text><Text style={s.countLabel}>Tersimpan</Text></View>
+          <View style={s.countPill}><Text style={s.countValue}>{library.counts.created}</Text><Text style={s.countLabel}>Berlangsung</Text></View>
+          <View style={s.countPill}><Text style={s.countValue}>{library.counts.rejected + library.counts.expired}</Text><Text style={s.countLabel}>Perlu tindakan</Text></View>
+        </View>
+      ) : null}
+      {loadingLibrary ? (
+        <View style={s.emptyLibrary}><ActivityIndicator color={palette.green} /><Text style={s.cardBody}>Memuat perpustakaan aset…</Text></View>
+      ) : libraryError ? (
+        <View style={s.errorBox}><Ionicons name="alert-circle-outline" size={18} color="#A34E42" /><Text style={s.errorText}>{libraryError}</Text></View>
+      ) : library?.items.length ? library.items.map(item => (
+        <View key={item.id} style={s.assetRow}>
+          <View style={s.assetIcon}>
+            <Ionicons name={item.assetType === 'cover' ? 'image-outline' : item.assetType === 'manuscript' ? 'document-text-outline' : 'attach-outline'} size={21} color={palette.green} />
+          </View>
+          <View style={s.assetCopy}>
+            <Text style={s.assetName} numberOfLines={1}>{item.filename}</Text>
+            <Text style={s.cardBody}>{item.assetType === 'cover' ? 'Cover' : item.assetType === 'manuscript' ? 'Manuskrip' : 'Lampiran'} · {formatBytes(item.uploadedSizeBytes ?? item.expectedSizeBytes)}</Text>
+            <Text style={s.assetStatus}>{statusLabel(item.status)}</Text>
+          </View>
+          <Text style={s.assetDate}>{new Date(item.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}</Text>
+        </View>
+      )) : (
+        <View style={s.emptyLibrary}><Ionicons name="folder-open-outline" size={25} color={palette.muted} /><Text style={s.cardBody}>Belum ada aset. Berkas yang berhasil diunggah akan muncul di sini.</Text></View>
+      )}
+      <Text style={s.footnote}>Status “tersimpan” berarti metadata objek sudah diverifikasi oleh backend. Berkas belum dipindai malware, diekstrak, atau disetujui untuk publikasi. Pratinjau dan pengaitan ke reader akan ditambahkan pada tahap pemrosesan dokumen.</Text>
     </ScrollView>
   );
 }
@@ -161,5 +233,19 @@ const s = StyleSheet.create({
   successText: { color: palette.greenDark, fontSize: 11, flex: 1, lineHeight: 16 },
   errorBox: { flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: palette.rose, borderRadius: 11, padding: 12 },
   errorText: { color: '#8E443A', fontSize: 11, flex: 1, lineHeight: 16 },
+  libraryHeader: { flexDirection: 'row', alignItems: 'center', marginTop: 16 },
+  refreshButton: { flexDirection: 'row', alignItems: 'center', gap: 5, padding: 8 },
+  refreshText: { color: palette.green, fontSize: 10, fontWeight: '800' },
+  countRow: { flexDirection: 'row', gap: 8 },
+  countPill: { flex: 1, padding: 10, borderRadius: 11, backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.line, gap: 2 },
+  countValue: { color: palette.ink, fontSize: 18, fontWeight: '900' },
+  countLabel: { color: palette.muted, fontSize: 9 },
+  assetRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 11, borderRadius: 12, backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.line },
+  assetIcon: { width: 40, height: 40, borderRadius: 10, backgroundColor: palette.mint, alignItems: 'center', justifyContent: 'center' },
+  assetCopy: { flex: 1, gap: 3 },
+  assetName: { color: palette.ink, fontSize: 11, fontWeight: '900' },
+  assetStatus: { color: palette.greenDark, fontSize: 9, fontWeight: '700' },
+  assetDate: { color: palette.muted, fontSize: 9 },
+  emptyLibrary: { alignItems: 'center', justifyContent: 'center', gap: 8, padding: 22, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: palette.line },
   footnote: { color: palette.muted, fontSize: 10, lineHeight: 16, marginTop: 8 },
 });
