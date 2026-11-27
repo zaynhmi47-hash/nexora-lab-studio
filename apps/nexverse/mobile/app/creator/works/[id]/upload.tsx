@@ -218,13 +218,14 @@ export default function UploadCenterScreen() {
             {item.processingError ? <Text style={s.assetError}>{item.processingError}</Text> : null}
             {item.status === 'ready' && item.processingMetadata.format ? <Text style={s.assetMeta}>{String(item.processingMetadata.format)}{typeof item.processingMetadata.words === 'number' ? ' · ' + item.processingMetadata.words.toLocaleString('id-ID') + ' kata' : typeof item.processingMetadata.width === 'number' ? ' · ' + item.processingMetadata.width + ' × ' + item.processingMetadata.height + ' px' : ''}</Text> : null}
             {item.status === 'uploaded' || item.status === 'failed' ? <Pressable disabled={processingId !== null} onPress={() => void runProcessing(item)} style={s.processButton}><Text style={s.processText}>{processingId === item.id ? 'Memeriksa…' : item.status === 'failed' ? 'Coba lagi' : 'Periksa berkas'}</Text></Pressable> : null}
+            {item.status === 'ready' && item.assetType === 'manuscript' ? <Pressable onPress={() => router.push('/creator/works/' + id + '/import?assetId=' + encodeURIComponent(item.id))} style={s.processButton}><Text style={s.processText}>Ekstrak & tinjau bab</Text></Pressable> : null}
           </View>
           <Text style={s.assetDate}>{new Date(item.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}</Text>
         </View>
       )) : (
         <View style={s.emptyLibrary}><Ionicons name="folder-open-outline" size={25} color={palette.muted} /><Text style={s.cardBody}>Belum ada aset. Berkas yang berhasil diunggah akan muncul di sini.</Text></View>
       )}
-      <Text style={s.footnote}>Pemeriksaan saat ini memvalidasi signature dan struktur berkas serta mengekstrak metadata dasar. Pemeriksaan ini bukan pemindaian malware, bukan persetujuan moderasi, dan belum menerbitkan karya. Pengaitan ke reader akan dilakukan pada tahap berikutnya.</Text>
+      <Text style={s.footnote}>Pemeriksaan struktur bukan pemindaian malware atau persetujuan moderasi. EPUB/TXT dapat diekstrak menjadi usulan bab untuk ditinjau dan disimpan sebagai draf. Ekstraksi PDF belum tersedia; tidak ada konten yang diterbitkan otomatis.</Text>
     </ScrollView>
   );
 }
