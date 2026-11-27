@@ -18,15 +18,18 @@ export type UploadLibraryItem = {
   uploadedSizeBytes: number | null;
   checksum: string | null;
   storagePath: string;
-  status: 'created' | 'uploaded' | 'expired' | 'rejected';
+  status: 'created' | 'uploaded' | 'expired' | 'rejected' | 'processing' | 'ready' | 'failed';
   expiresAt: string;
   createdAt: string;
   uploadedAt: string | null;
+  processingMetadata: Record<string, string | number | boolean>;
+  processingError: string | null;
+  processedAt: string | null;
 };
 
 export type UploadLibraryResponse = {
   items: UploadLibraryItem[];
-  counts: Record<'created' | 'uploaded' | 'expired' | 'rejected', number>;
+  counts: Record<'created' | 'uploaded' | 'expired' | 'rejected' | 'processing' | 'ready' | 'failed', number>;
   limit: number;
 };
 
@@ -97,6 +100,13 @@ export async function uploadCreatorAsset(
 
   return nexverseApiRequest<UploadSession>(
     '/nexverse/creator/uploads/' + encodeURIComponent(session.id) + '/complete/',
+    { method: 'POST', body: '{}' },
+  );
+}
+
+export function processCreatorAsset(sessionId: string) {
+  return nexverseApiRequest<UploadLibraryItem>(
+    '/nexverse/creator/uploads/' + encodeURIComponent(sessionId) + '/process/',
     { method: 'POST', body: '{}' },
   );
 }
