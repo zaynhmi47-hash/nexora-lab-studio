@@ -21,6 +21,11 @@ export type HadithItem = {
   source: SourceReference;
 };
 
+export type HadithFavorite = HadithItem & {
+  favoriteId: string;
+  savedAt?: string;
+};
+
 export type KnowledgeTopic = {
   id: string;
   title: string;
@@ -33,6 +38,11 @@ export type IslamicKnowledgeSnapshot = {
   hadith: HadithItem[];
 };
 
-export type IslamicKnowledgeProvider = {
+export interface IslamicKnowledgeProvider {
   getSnapshot(): Promise<IslamicKnowledgeSnapshot>;
-};
+  getTopic(topicId: string): Promise<KnowledgeTopic | null>;
+  getHadith(hadithId: string): Promise<HadithItem | null>;
+  listSources(topicId?: string): Promise<SourceReference[]>;
+  listHadithFavorites(): Promise<HadithFavorite[]>;
+  toggleHadithFavorite(hadithId: string): Promise<boolean>;
+}
