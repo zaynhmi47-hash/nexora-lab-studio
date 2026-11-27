@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   profileImage: { width: '100%', height: '100%' },
   imageFallback: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   imageFallbackText: { fontSize: 72, fontWeight: '800', opacity: 0.25 },
-  mediaZones: { ...StyleSheet.absoluteFillObject, flexDirection: 'row' },
+  mediaZones: { ...StyleSheet.absoluteFill, flexDirection: 'row' },
   mediaZone: { flex: 1 },
   mediaIndicators: { position: 'absolute', top: 10, left: 12, right: 12, flexDirection: 'row', gap: 4 },
   mediaIndicator: { flex: 1, height: 3, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.45)' },
