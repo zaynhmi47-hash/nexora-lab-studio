@@ -117,7 +117,7 @@ export class NotificationService {
             return;
         }
 
-        const defaultOptions: NotificationOptions & { vibrate?: number[] } = {
+        const defaultOptions: NotificationOptions & { vibrate?: number[]; actions?: Array<{ action: string; title: string; icon?: string }> } = {
             icon: '/logo.webp',
             badge: '/logo.webp',
             vibrate: [200, 100, 200],
