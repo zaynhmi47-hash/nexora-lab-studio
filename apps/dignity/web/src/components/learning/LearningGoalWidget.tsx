@@ -108,7 +108,7 @@ export interface AchievementCardProps {
 
 export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, className = '' }) => {
   const IconComponent =
-    (LucideIcons as Record<string, React.ElementType>)[achievement.iconName] || Trophy;
+    (LucideIcons as unknown as Record<string, React.ElementType>)[achievement.iconName] || Trophy;
 
   return (
     <div
