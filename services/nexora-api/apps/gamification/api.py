@@ -48,10 +48,10 @@ class GamificationDailyRewardView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        activity = GamificationService.claim_daily_reward(request.user)
+        activity, claimed = GamificationService.claim_daily_reward(request.user)
         return Response({
             "id": str(activity.id),
-            "claimed": activity.occurred_at.date() == timezone.localdate(),
+            "claimed": claimed,
             "xpEarned": activity.xp_earned,
             "occurredAt": activity.occurred_at.isoformat(),
         })
