@@ -5,6 +5,7 @@ import {
   EducationType,
   EducationLevel,
   EducationFormat,
+  DurationFilter,
 } from '../../../types';
 
 interface FilterModalProps {
@@ -40,7 +41,7 @@ const formats: EducationFormat[] = [
   'Group',
 ];
 
-const durations = [
+const durations: { value: DurationFilter; label: string }[] = [
   { value: 'under_1h', label: 'Under 1 hour' },
   { value: '1_to_5h', label: '1 to 5 hours' },
   { value: '5_to_20h', label: '5 to 20 hours' },
@@ -89,7 +90,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
     });
   };
 
-  const toggleDuration = (dur: string) => {
+  const toggleDuration = (dur: DurationFilter) => {
     setDraft((prev) => {
       const exists = prev.durations.includes(dur);
       return {
