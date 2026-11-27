@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import React from 'react';
@@ -29,7 +30,7 @@ const jsonResponse = (payload: unknown, status = 200) =>
   });
 
 describe('contexts/auth-context', () => {
-  const mockedApi = apiClient as unknown as { updateUserLanguage: vi.Mock };
+  const mockedApi = apiClient as unknown as { updateUserLanguage: Mock };
 
   beforeEach(() => {
     mockedApi.updateUserLanguage.mockReset();
