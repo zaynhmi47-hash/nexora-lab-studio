@@ -151,16 +151,23 @@ class GamificationService:
 
     @staticmethod
     @transaction.atomic
-    def claim_daily_reward(user: NexoraUser) -> GamificationActivity:
+    def claim_daily_reward(user: NexoraUser) -> tuple[GamificationActivity, bool]:
         today = timezone.localdate().isoformat()
-        return GamificationService.record_activity(
+        occurred_at = timezone.now()
+        activity, created = GamificationActivity.objects.get_or_create(
             user=user,
             source=GamificationActivity.Source.GAMIFICATION,
             action="daily_reward",
             source_key=f"daily:{today}",
-            xp_earned=10,
-            occurred_at=timezone.now(),
+            defaults={"xp_earned": 10, "occurred_at": occurred_at},
         )
+        if not created and activity.deleted_at is not None:
+            activity.deleted_at = None
+            activity.xp_earned = 10
+            activity.occurred_at = occurred_at
+            activity.save(update_fields=["deleted_at", "xp_earned", "occurred_at", "updated_at"])
+            created = True
+        return activity, created
 
     @staticmethod
     def quiz_xp_allowed(user: NexoraUser, lesson_key: str, passed: bool) -> int:
