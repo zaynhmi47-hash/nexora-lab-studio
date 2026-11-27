@@ -21,3 +21,8 @@ export type DhikrItem = {
   target: number;
   completed: number;
 };
+
+export interface PrayerPort {
+  getDailySchedule(): Promise<DailyPrayerSchedule>;
+  setPrayerCompleted(prayerName: PrayerName, completed: boolean): Promise<DailyPrayerSchedule>;
+}
