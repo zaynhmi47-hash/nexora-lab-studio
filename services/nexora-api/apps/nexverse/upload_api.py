@@ -20,6 +20,7 @@ from .models import NexverseWork
 
 
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+MAX_ACTIVE_UPLOADS = 5
 ALLOWED_ASSETS = {
     NexverseUploadSession.AssetType.MANUSCRIPT: {
         "application/pdf": {".pdf"},
@@ -100,8 +101,17 @@ class NexverseUploadSessionListCreateView(APIView):
         if size_bytes < 1 or size_bytes > MAX_UPLOAD_BYTES:
             return Response({"detail": "File size must be between 1 byte and 50 MB.", "code": "FILE_SIZE_LIMIT"}, status=400)
 
+        now = timezone.now()
+        active_uploads = NexverseUploadSession.objects.filter(
+            owner=request.user,
+            status=NexverseUploadSession.Status.CREATED,
+            expires_at__gt=now,
+        ).count()
+        if active_uploads >= MAX_ACTIVE_UPLOADS:
+            return Response({"detail": "You already have five active uploads. Complete or wait for an existing session to expire.", "code": "ACTIVE_UPLOAD_LIMIT"}, status=429)
+
         session_id = uuid4()
-        expires_at = timezone.now() + timedelta(minutes=20)
+        expires_at = now + timedelta(minutes=20)
         storage_path = f"nexverse/{uid}/uploads/{session_id}/{filename}"
         session = NexverseUploadSession.objects.create(
             id=session_id,
