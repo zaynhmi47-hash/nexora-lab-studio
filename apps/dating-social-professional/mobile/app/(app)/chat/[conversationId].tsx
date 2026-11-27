@@ -89,7 +89,7 @@ export default function ChatScreen() {
             {!olderMessages.length && !query.data?.items.length && <View style={styles.state}><Text>No messages yet. Start the conversation.</Text></View>}
             {loadOlder.isError && <View style={styles.errorBanner}><Text>Could not load older messages.</Text></View>}
           </>}
-      </ScrollView>
+      </ScrollView>}
     {send.isError && <View style={styles.errorBanner}><Text>Message failed to send. Check your connection and try again.</Text></View>}
     <View style={styles.composer}>
       <View style={styles.inputWrap}>
