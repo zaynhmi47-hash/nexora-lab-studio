@@ -1,9 +1,12 @@
 import { onIdTokenChanged } from 'firebase/auth';
 
 import type { AuthToken, TokenPort } from '../TokenPort';
+import { hasFirebaseConfig } from './config';
 import { getFirebaseAuth } from './client';
 
 async function toAuthToken(): Promise<AuthToken | null> {
+  if (!hasFirebaseConfig()) return null;
+
   const user = getFirebaseAuth().currentUser;
   if (!user) return null;
 
@@ -17,6 +20,8 @@ async function toAuthToken(): Promise<AuthToken | null> {
 export function createFirebaseTokenPort(): TokenPort {
   return {
     async getIdToken(forceRefresh = false): Promise<AuthToken | null> {
+      if (!hasFirebaseConfig()) return null;
+
       const user = getFirebaseAuth().currentUser;
       if (!user) return null;
 
@@ -28,12 +33,17 @@ export function createFirebaseTokenPort(): TokenPort {
       };
     },
     async clear(): Promise<void> {
-      await getFirebaseAuth().signOut();
+      if (hasFirebaseConfig()) await getFirebaseAuth().signOut();
     },
   };
 }
 
 export function subscribeToFirebaseTokenChanges(listener: (token: AuthToken | null) => void): () => void {
+  if (!hasFirebaseConfig()) {
+    listener(null);
+    return () => undefined;
+  }
+
   return onIdTokenChanged(getFirebaseAuth(), async () => {
     listener(await toAuthToken());
   });
