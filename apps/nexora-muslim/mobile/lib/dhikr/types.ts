@@ -9,6 +9,16 @@ export type Dhikr = {
   category: 'morning' | 'evening' | 'general';
 };
 
+export type DhikrHistoryEntry = {
+  id: string;
+  dhikrId: string;
+  count: number;
+  recordedAt: string;
+};
+
 export interface DhikrRepository {
   getAll(): Promise<Dhikr[]>;
+  increment(dhikrId: string): Promise<Dhikr>;
+  reset(dhikrId: string): Promise<Dhikr>;
+  getHistory(dhikrId?: string): Promise<DhikrHistoryEntry[]>;
 }
