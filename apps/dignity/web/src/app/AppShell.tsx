@@ -566,17 +566,7 @@ export const AppShellContent: React.FC = () => {
                   }
                   isExamActive={false}
                   examTitle={activeAssessmentCourseTitle}
-                  onNavigatePractice={() => handleNavigate('practice')}
-                  onNavigateCourse={(cTitle) => {
-                    const match = mockCourses.find((c) =>
-                      c.title.toLowerCase().includes(cTitle.toLowerCase())
-                    );
-                    if (match) {
-                      handleSelectCourse(match);
-                    } else {
-                      handleNavigate('explore');
-                    }
-                  }}
+                  onNavigate={handleNavigate}
                 />
               )}
 
