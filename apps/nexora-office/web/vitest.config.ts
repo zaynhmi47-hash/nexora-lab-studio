@@ -4,6 +4,8 @@ import path from 'path';
 export default defineConfig({
   resolve: {
     alias: [
+      { find: 'next/navigation', replacement: path.resolve(__dirname, 'test/mocks/next-navigation.ts') },
+      { find: 'next/server', replacement: path.resolve(__dirname, 'test/mocks/next-server.ts') },
       { find: '@/locales', replacement: path.resolve(__dirname, 'messages') },
       { find: '@', replacement: path.resolve(__dirname, '.') },
     ],
