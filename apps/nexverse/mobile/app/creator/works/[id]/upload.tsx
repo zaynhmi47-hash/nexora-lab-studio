@@ -157,7 +157,7 @@ export default function UploadCenterScreen() {
             <Text style={s.progressTitle}>Mengunggah {currentLabel}</Text>
             <Text style={s.percent}>{progress}%</Text>
           </View>
-          <View style={s.track}><View style={[s.fill, { width: String(progress) + '%' }]} /></View>
+          <View style={s.track}><View style={[s.fill, { width: (String(progress) + '%') as `${number}%` }]} /></View>
           <Text style={s.cardBody}>Jangan tutup halaman sampai upload selesai.</Text>
         </View>
       ) : null}
