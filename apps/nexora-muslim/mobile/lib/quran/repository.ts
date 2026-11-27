@@ -43,7 +43,7 @@ export const nexoraCoreQuranRepository = (session: AuthSession): QuranPort => ({
   }),
   listBookmarks: () => request<Bookmark[]>(session, '/bookmarks/'),
   saveBookmark: async (bookmark) => {
-    const response = await request<Bookmark>(session, '/bookmarks/', {
+    await request<Bookmark>(session, '/bookmarks/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -52,7 +52,6 @@ export const nexoraCoreQuranRepository = (session: AuthSession): QuranPort => ({
         note: bookmark.note ?? '',
       }),
     });
-    return response;
   },
   removeBookmark: (bookmarkId) => request(session, `/bookmarks/${bookmarkId}/`, { method: 'DELETE' }),
   listRecitations: () => request<Recitation[]>(session, '/recitations/'),
