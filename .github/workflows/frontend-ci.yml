@@ -156,3 +156,7 @@ jobs:
 
       - name: Typecheck
         run: pnpm --filter "${{ matrix.package }}" ${{ matrix.script }}
+
+      - name: Run Nexora Office unit tests
+        if: matrix.app == 'Nexora Office web'
+        run: pnpm --filter "${{ matrix.package }}" test
