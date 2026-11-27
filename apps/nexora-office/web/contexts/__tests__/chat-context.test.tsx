@@ -17,6 +17,7 @@ vi.mock('@/contexts/notification-context', () => ({
 
 vi.mock('next-intl', () => ({
   useLocale: () => 'ro',
+  useTranslations: () => (key: string) => key,
 }));
 
 vi.mock('@/lib/api', () => ({
