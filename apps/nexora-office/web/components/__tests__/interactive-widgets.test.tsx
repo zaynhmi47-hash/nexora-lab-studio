@@ -23,6 +23,9 @@ vi.mock('@/lib/navigation', () => ({
 
 vi.mock('@/contexts/notification-context', () => ({
   useNotifications: vi.fn(),
+  resolveNotificationLink: vi.fn((notification: { type: string }) =>
+    notification.type === 'MESSAGE' ? '/dashboard?tab=messages' : '/notifications'
+  ),
 }));
 
 vi.mock('@/contexts/chat-context', () => ({
