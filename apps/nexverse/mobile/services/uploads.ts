@@ -110,3 +110,35 @@ export function processCreatorAsset(sessionId: string) {
     { method: 'POST', body: '{}' },
   );
 }
+
+
+export type ManuscriptChapterProposal = {
+  number: number;
+  title: string;
+  content: string;
+  characters: number;
+};
+
+export type ManuscriptExtraction = {
+  assetId: string;
+  filename: string;
+  format: 'EPUB' | 'TXT';
+  proposals: ManuscriptChapterProposal[];
+  totalChapters: number;
+};
+
+export function extractCreatorManuscript(sessionId: string) {
+  return nexverseApiRequest<ManuscriptExtraction>(
+    '/nexverse/creator/uploads/' + encodeURIComponent(sessionId) + '/extract/',
+  );
+}
+
+export function importCreatorManuscriptChapters(
+  sessionId: string,
+  chapters: Array<Pick<ManuscriptChapterProposal, 'title' | 'content'>>,
+) {
+  return nexverseApiRequest<{ items: Array<{ id: string; number: number; title: string }>; alreadyImported: boolean }>(
+    '/nexverse/creator/uploads/' + encodeURIComponent(sessionId) + '/chapters/',
+    { method: 'POST', body: JSON.stringify({ chapters }) },
+  );
+}
