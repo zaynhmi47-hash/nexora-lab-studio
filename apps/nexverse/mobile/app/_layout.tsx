@@ -23,6 +23,8 @@ export default function RootLayout() {
         <Stack.Screen name="creator/works/new" options={{ title: 'Karya Baru' }} />
         <Stack.Screen name="creator/works/[id]" options={{ title: 'Editor Karya' }} />
         <Stack.Screen name="creator/works/[id]/upload" options={{ title: 'Upload Center' }} />
+        <Stack.Screen name="creator/works/[id]/import" options={{ title: 'Manuscript Review' }} />
+        <Stack.Screen name="creator/works/[id]/studio" options={{ title: 'Chapter Studio' }} />
         <Stack.Screen name="auth/login" options={{ title: 'Masuk Nexora' }} />
         <Stack.Screen name="publisher/index" options={{ title: 'Publisher Studio' }} />
         <Stack.Screen name="publisher/login" options={{ title: 'Masuk Publisher Studio' }} />
