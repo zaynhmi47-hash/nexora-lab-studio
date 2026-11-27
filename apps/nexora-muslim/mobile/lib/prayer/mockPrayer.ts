@@ -1,4 +1,4 @@
-import type { DailyPrayerSchedule, DhikrItem } from './types';
+import type { DailyPrayerSchedule, DhikrItem, PrayerPort, PrayerName } from './types';
 
 export const mockPrayerSchedule: DailyPrayerSchedule = {
   dateLabel: 'Today',
@@ -19,3 +19,21 @@ export const mockDhikr: DhikrItem[] = [
   { id: 'istighfar', title: 'Istighfar', target: 100, completed: 37 },
   { id: 'salawat', title: 'Salawat', target: 100, completed: 24 },
 ];
+
+let currentSchedule: DailyPrayerSchedule = {
+  ...mockPrayerSchedule,
+  prayers: mockPrayerSchedule.prayers.map((prayer) => ({ ...prayer })),
+};
+
+export const mockPrayerRepository: PrayerPort = {
+  async getDailySchedule() {
+    return { ...currentSchedule, prayers: currentSchedule.prayers.map((prayer) => ({ ...prayer })) };
+  },
+  async setPrayerCompleted(prayerName: PrayerName, completed: boolean) {
+    currentSchedule = {
+      ...currentSchedule,
+      prayers: currentSchedule.prayers.map((prayer) => prayer.name === prayerName ? { ...prayer, completed } : prayer),
+    };
+    return { ...currentSchedule, prayers: currentSchedule.prayers.map((prayer) => ({ ...prayer })) };
+  },
+};
