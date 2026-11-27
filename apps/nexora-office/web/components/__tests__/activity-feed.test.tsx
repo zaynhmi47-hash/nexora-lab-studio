@@ -5,6 +5,8 @@ import { render, screen } from '@testing-library/react';
 import ActivityFeed from '@/components/ActivityFeed';
 import apiClient from '@/lib/api';
 
+vi.mock('next-intl', () => ({ useLocale: () => 'en' }));
+
 vi.mock('@/lib/navigation', () => ({
   Link: ({ href, children, ...rest }: any) => (
     <a href={href} {...rest}>
