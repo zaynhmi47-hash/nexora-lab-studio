@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { ChatProvider, useChat } from '@/contexts/chat-context';
@@ -66,12 +67,12 @@ vi.mock('@/lib/chat', () => {
 });
 
 describe('contexts/chat-context', () => {
-  const mockedUseAuth = useAuth as unknown as vi.Mock;
-  const mockedUseNotifications = useNotifications as unknown as vi.Mock;
+  const mockedUseAuth = useAuth as unknown as Mock;
+  const mockedUseNotifications = useNotifications as unknown as Mock;
   const mockedApi = apiClient as unknown as {
-    getChatGroups: vi.Mock;
-    getChatMessages: vi.Mock;
-    markChatMessagesAsRead: vi.Mock;
+    getChatGroups: Mock;
+    getChatMessages: Mock;
+    markChatMessagesAsRead: Mock;
   };
 
   beforeEach(() => {
