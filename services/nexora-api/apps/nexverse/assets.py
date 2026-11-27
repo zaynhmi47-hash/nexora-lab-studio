@@ -16,6 +16,9 @@ class NexverseUploadSession(AuditableBaseModel):
         UPLOADED = "uploaded", "Uploaded"
         EXPIRED = "expired", "Expired"
         REJECTED = "rejected", "Rejected"
+        PROCESSING = "processing", "Processing"
+        READY = "ready", "Ready"
+        FAILED = "failed", "Processing failed"
 
     work = models.ForeignKey(
         "nexverse.NexverseWork",
@@ -37,6 +40,9 @@ class NexverseUploadSession(AuditableBaseModel):
     uploaded_size_bytes = models.PositiveBigIntegerField(null=True, blank=True)
     checksum_md5 = models.CharField(max_length=64, blank=True)
     uploaded_at = models.DateTimeField(null=True, blank=True)
+    processing_metadata = models.JSONField(default=dict, blank=True)
+    processing_error = models.CharField(max_length=500, blank=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "nexverse_upload_sessions"
