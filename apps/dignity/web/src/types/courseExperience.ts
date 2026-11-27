@@ -74,6 +74,7 @@ export interface DetailedLesson {
 
   activities?: Activity[];
   projectId?: string;
+  assessmentId?: string;
   codeTask?: {
     problemStatement: string;
     starterCode: string;
@@ -219,6 +220,7 @@ export interface CourseCertificateEligibility {
 export interface DetailedCourse extends Omit<Course, 'format'> {
   format?: Course['format'] | string;
   courseType: string;
+  xpReward?: number;
 
   learningPathId?: string;
   learningPathTitle?: string;
