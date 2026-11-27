@@ -9,6 +9,37 @@ export type LocalUploadAsset = {
   mimeType: string;
   size: number;
 };
+export type UploadLibraryItem = {
+  id: string;
+  assetType: UploadAssetType;
+  filename: string;
+  contentType: string;
+  expectedSizeBytes: number;
+  uploadedSizeBytes: number | null;
+  checksum: string | null;
+  storagePath: string;
+  status: 'created' | 'uploaded' | 'expired' | 'rejected';
+  expiresAt: string;
+  createdAt: string;
+  uploadedAt: string | null;
+};
+
+export type UploadLibraryResponse = {
+  items: UploadLibraryItem[];
+  counts: Record<'created' | 'uploaded' | 'expired' | 'rejected', number>;
+  limit: number;
+};
+
+export function getCreatorUploadLibrary(workId: string, filters: { assetType?: UploadAssetType; status?: UploadLibraryItem['status'] } = {}) {
+  const params = new URLSearchParams();
+  if (filters.assetType) params.set('assetType', filters.assetType);
+  if (filters.status) params.set('status', filters.status);
+  const query = params.toString();
+  return nexverseApiRequest<UploadLibraryResponse>(
+    '/nexverse/creator/works/' + encodeURIComponent(workId) + '/uploads/' + (query ? '?' + query : ''),
+  );
+}
+
 export type UploadSession = {
   id: string;
   assetType: UploadAssetType;
