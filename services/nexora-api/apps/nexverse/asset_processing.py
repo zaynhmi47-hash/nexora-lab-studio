@@ -119,7 +119,7 @@ def inspect_asset(data: bytes, *, asset_type: str, content_type: str, filename: 
             decoded = data.decode("utf-8-sig")
         except UnicodeDecodeError as exc:
             raise AssetValidationError("Text manuscript must use UTF-8 encoding.") from exc
-        if any(ord(char) < 32 and char not in "\\n\\r\\t\\f" for char in decoded):
+        if any(ord(char) < 32 and char not in "\n\r\t\f" for char in decoded):
             raise AssetValidationError("Text manuscript contains unsupported control characters.")
         metadata.update({
             "format": "TXT",
