@@ -77,10 +77,9 @@ jobs:
           node-version: 22
           package-manager-cache: false
 
-      # The repository does not yet commit a pnpm lockfile. Keep CI runnable
-      # until the workspace lockfile is generated and checked in.
+      # Install from the committed workspace lockfile for reproducible CI.
       - name: Install frontend dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Check frontend/backend boundaries
         run: pnpm check:boundaries
