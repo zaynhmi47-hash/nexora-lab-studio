@@ -138,12 +138,15 @@ function isBasicAuthEnabled() {
 }
 
 // Cache credentials in closure to avoid repeated parsing
-let cachedBasicAuthCredentials: Array<{ user: string; password: string }> | null = null;
+let cachedBasicAuthCredentials: Array<{ user: string; password: string }> = [];
+let cachedBasicAuthSignature: string | null = null;
 
 function getBasicAuthCredentials() {
-  if (cachedBasicAuthCredentials !== null) {
+  const signature = `${process.env.BASIC_AUTH_USERS || ''}\\u0000${process.env.BASIC_AUTH_PASSWORDS || ''}`;
+  if (cachedBasicAuthSignature === signature) {
     return cachedBasicAuthCredentials;
   }
+  cachedBasicAuthSignature = signature;
 
   const users = (process.env.BASIC_AUTH_USERS || '')
     .split(',')
