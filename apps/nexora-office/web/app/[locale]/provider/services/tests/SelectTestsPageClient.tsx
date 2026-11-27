@@ -365,7 +365,7 @@ export default function SelectTestsPageClient() {
                     {question.type === 'MULTIPLE_CHOICE' && question.options && (
                         <div className="space-y-3">
 
-                            {parseJson(question.options).map((option: string, index: number) => (
+                            {parseStringArray(question.options).map((option: string, index: number) => (
                                 <div key={index} className="flex items-center space-x-2">
                                     <Checkbox
                                         id={`${question.id}-${index}`}
