@@ -12,7 +12,9 @@
     "start": "next start",
     "lint": "next lint",
     "analyze": "ANALYZE=true next build --webpack",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@calcom/embed-react": "^1.5.3",
