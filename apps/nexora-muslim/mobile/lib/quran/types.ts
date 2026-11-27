@@ -40,6 +40,33 @@ export type ReadingPosition = {
   updatedAt: string;
 };
 
+export type QuranReadingGoal = {
+  dailyTargetPages: number;
+  dailyTargetMinutes: number;
+};
+
+export type QuranReadingLog = {
+  date: string;
+  pages: number;
+  minutes: number;
+};
+
+export type QuranReadingStatistics = {
+  goal: QuranReadingGoal;
+  today: {
+    date: string;
+    pages: number;
+    minutes: number;
+    pagesProgress: number;
+    minutesProgress: number;
+  };
+  total: {
+    pages: number;
+    minutes: number;
+  };
+  currentStreak: number;
+};
+
 export interface QuranPort {
   listSurahs(): Promise<SurahSummary[]>;
   getSurah(surahNumber: number): Promise<QuranPage | null>;
@@ -49,4 +76,8 @@ export interface QuranPort {
   saveBookmark(bookmark: Bookmark): Promise<void>;
   removeBookmark(bookmarkId: string): Promise<void>;
   listRecitations(): Promise<Recitation[]>;
+  getReadingGoal(): Promise<QuranReadingGoal>;
+  updateReadingGoal(goal: QuranReadingGoal): Promise<QuranReadingGoal>;
+  getReadingStatistics(): Promise<QuranReadingStatistics>;
+  logReading(log: QuranReadingLog): Promise<QuranReadingLog>;
 }
