@@ -142,7 +142,7 @@ let cachedBasicAuthCredentials: Array<{ user: string; password: string }> = [];
 let cachedBasicAuthSignature: string | null = null;
 
 function getBasicAuthCredentials() {
-  const signature = `${process.env.BASIC_AUTH_USERS || ''}\\u0000${process.env.BASIC_AUTH_PASSWORDS || ''}`;
+  const signature = JSON.stringify([process.env.BASIC_AUTH_USERS || '', process.env.BASIC_AUTH_PASSWORDS || '']);
   if (cachedBasicAuthSignature === signature) {
     return cachedBasicAuthCredentials;
   }
