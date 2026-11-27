@@ -195,3 +195,53 @@ class NexverseUploadSessionApiTests(APITestCase):
         })
 
         self.assertEqual(response.status_code, 404)
+
+
+    def test_creator_can_list_only_own_work_uploads_with_status_counts(self):
+        created = self.post_upload({
+            "assetType": "manuscript",
+            "filename": "draft.pdf",
+            "contentType": "application/pdf",
+            "sizeBytes": 1024,
+        })
+        self.assertEqual(created.status_code, 201)
+
+        response = self.client.get(
+            f"/api/v1/nexverse/creator/works/{self.work.id}/uploads/"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data["items"]), 1)
+        self.assertEqual(response.data["items"][0]["filename"], "draft.pdf")
+        self.assertEqual(response.data["items"][0]["status"], "created")
+        self.assertEqual(response.data["counts"]["created"], 1)
+        self.assertEqual(response.data["counts"]["uploaded"], 0)
+
+    def test_upload_library_supports_asset_type_filter(self):
+        self.post_upload({
+            "assetType": "cover",
+            "filename": "cover.png",
+            "contentType": "image/png",
+            "sizeBytes": 1024,
+        })
+        self.post_upload({
+            "assetType": "manuscript",
+            "filename": "draft.pdf",
+            "contentType": "application/pdf",
+            "sizeBytes": 2048,
+        })
+
+        response = self.client.get(
+            f"/api/v1/nexverse/creator/works/{self.work.id}/uploads/?assetType=cover"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data["items"]), 1)
+        self.assertEqual(response.data["items"][0]["assetType"], "cover")
+
+    def test_upload_library_rejects_unknown_filters(self):
+        response = self.client.get(
+            f"/api/v1/nexverse/creator/works/{self.work.id}/uploads/?status=unknown"
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["code"], "INVALID_UPLOAD_STATUS")
