@@ -1,6 +1,5 @@
 'use client';
 
-import parseJson from "parse-json";
 import Cal, { getCalApi } from "@calcom/embed-react";
 
 export const dynamic = 'force-dynamic';
@@ -44,6 +43,16 @@ import { useAuth } from '@/contexts/auth-context';
 import { apiClient } from '@/lib/api';
 import { hasRole } from '@/lib/access';
 import { AnimatePresence, motion } from "framer-motion";
+
+function parseStringArray(input: string | undefined): string[] {
+    if (!input) return [];
+    try {
+        const parsed: unknown = JSON.parse(input);
+        return Array.isArray(parsed) ? parsed.map(String) : [];
+    } catch {
+        return input.split(',').map((value) => value.trim()).filter(Boolean);
+    }
+}
 
 interface TestData {
     serviceId: string;
@@ -341,7 +350,7 @@ export default function SelectTestsPageClient() {
                             value={currentAnswer as string || ''}
                             onValueChange={(value) => handleAnswerChange(question.id, value)}
                         >
-                            {parseJson(question.options).map((option: string, index: number) => (
+                            {parseStringArray(question.options).map((option: string, index: number) => (
                                 <div key={index} className="flex items-center space-x-2">
                                     <RadioGroupItem value={option} id={`${question.id}-${index}`} />
                                     <Label htmlFor={`${question.id}-${index}`} className="cursor-pointer">
