@@ -188,21 +188,3 @@ class LearningUserAchievement(AuditableBaseModel):
         constraints = [
             models.UniqueConstraint(fields=("user", "achievement"), name="learning_user_achievement_unique"),
         ]
-class LessonProgress(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='lesson_progresses')
-    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='progresses')
-    enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE, related_name='lesson_progresses')
-    
-    is_completed = models.BooleanField(default=False)
-    completed_at = models.DateTimeField(blank=True, null=True)
-    watch_time = models.IntegerField(default=0)
-    last_position = models.IntegerField(default=0)
-    quiz_score = models.IntegerField(blank=True, null=True)
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        db_table = 'learning_lessonprogress'
-        unique_together = ['user', 'lesson']
