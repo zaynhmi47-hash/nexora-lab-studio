@@ -1,19 +1,23 @@
-import {Stack} from "expo-router";
-import { StatusBar} from "expo-status-bar";
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 
 import { AuthProvider } from "@/src/providers/AuthProvider";
 
-
 export default function RootLayout() {
-    return (
-        <AuthProvider>
-            <statusbar style="auto"/>
-            <Stack 
-            screenOption ={{
-                headerShown: false,
+  return (
+    <AuthProvider>
+      <StatusBar style="auto" />
+      <Stack
+        screenOptions={{
+          headerShown: false,
           contentStyle: { backgroundColor: "#F4F6FA" },
-            }}
-            />
-       </AuthProvider>
-    )
+        }}
+      >
+        <Stack.Screen name="index" />
+        <Stack.Screen name="auth" />
+        <Stack.Screen name="account" />
+        <Stack.Screen name="catalog" />
+      </Stack>
+    </AuthProvider>
+  );
 }
