@@ -1,6 +1,8 @@
 from django.test import TestCase
+from django.utils import timezone
 
 from apps.identity.models import NexoraUser
+from apps.learning.models import LearningCourse, LearningLesson, LearningLessonCompletion
 
 from .models import GamificationActivity
 from .services import GamificationService, XPRewardRules
