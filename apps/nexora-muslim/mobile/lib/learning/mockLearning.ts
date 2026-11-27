@@ -1,8 +1,11 @@
 import type {
+  LearningAchievement,
   LearningCourse,
+  LearningHub,
   LearningPort,
   LearningProgress,
   QuizQuestion,
+  QuizResult,
 } from './types';
 
 const courses: LearningCourse[] = [
@@ -30,7 +33,7 @@ const courses: LearningCourse[] = [
   },
 ];
 
-const initialProgress: LearningProgress = {
+let progressState: LearningProgress = {
   userId: '00000000-0000-0000-0000-000000000001',
   xp: 60,
   level: 3,
@@ -51,22 +54,54 @@ const quizzes: Record<string, QuizQuestion[]> = {
   ],
 };
 
+const achievements: LearningAchievement[] = [
+  { id: 'first-lesson', title: 'First Steps', description: 'Complete your first lesson.', xpReward: 20, unlocked: true },
+  { id: 'steady-reader', title: 'Steady Reader', description: 'Build a consistent reading habit.', xpReward: 50, unlocked: false },
+];
+
+function copyProgress(userId: string): LearningProgress {
+  return { ...progressState, userId, completedLessonIds: [...progressState.completedLessonIds] };
+}
+
 export const mockLearning: LearningPort = {
   async getCourses() {
-    return courses;
+    return courses.map((course) => ({ ...course, lessons: course.lessons.map((lesson) => ({ ...lesson })) }));
+  },
+  async getHub(): Promise<LearningHub> {
+    return { courses: await this.getCourses(), progress: copyProgress(progressState.userId), achievements: await this.getAchievements() };
   },
   async getProgress(userId) {
-    return { ...initialProgress, userId, completedLessonIds: [...initialProgress.completedLessonIds] };
+    return copyProgress(userId);
   },
   async getQuiz(lessonId) {
-    return quizzes[lessonId] ?? [];
+    return (quizzes[lessonId] ?? []).map((question) => ({ ...question, options: [...question.options] }));
+  },
+  async completeQuiz(lessonId, answers): Promise<QuizResult> {
+    const questions = quizzes[lessonId] ?? [];
+    const correctAnswers = questions.filter((question) => answers[question.id] === question.correctOptionIndex).length;
+    const passed = questions.length > 0 && correctAnswers === questions.length;
+    const xpEarned = passed ? 20 : 0;
+    if (passed && !progressState.completedLessonIds.includes(lessonId)) {
+      progressState = {
+        ...progressState,
+        xp: progressState.xp + xpEarned,
+        completedLessonIds: [...progressState.completedLessonIds, lessonId],
+      };
+    }
+    return { lessonId, correctAnswers, totalQuestions: questions.length, xpEarned };
+  },
+  async getAchievements() {
+    return achievements.map((achievement) => ({ ...achievement }));
   },
   async completeLesson(userId, lessonId) {
-    const progress = await this.getProgress(userId);
-    if (!progress.completedLessonIds.includes(lessonId)) {
-      progress.completedLessonIds.push(lessonId);
-      progress.xp += 20;
+    if (!progressState.completedLessonIds.includes(lessonId)) {
+      progressState = {
+        ...progressState,
+        userId,
+        completedLessonIds: [...progressState.completedLessonIds, lessonId],
+        xp: progressState.xp + 20,
+      };
     }
-    return progress;
+    return copyProgress(userId);
   },
 };
