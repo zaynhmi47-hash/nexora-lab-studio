@@ -1,64 +1,108 @@
-import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from 'react';
-import type { AuthPort, AuthSession, NexoraIdentity } from './types';
+import { createContext, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
+import type { AuthPort, AuthRegistration, AuthSession, NexoraIdentity } from './types';
 
 const initialSession: AuthSession = {
   status: 'loading',
   identity: null,
 };
 
-const AuthContext = createContext<AuthSession>(initialSession);
+const unavailableSession: AuthSession = {
+  status: 'unavailable',
+  identity: null,
+  error: 'Authentication is not configured. Add the Firebase public environment variables.',
+};
 
-function createUnavailableAuthPort(): AuthPort {
-  return {
-    async getSession() {
-      return initialSession;
-    },
-    async signIn() {
-      throw new Error('Authentication provider is not configured yet.');
-    },
-    async signOut() {
-      return undefined;
-    },
-  };
+interface AuthContextValue extends AuthSession {
+  signIn(email: string, password: string): Promise<void>;
+  register(input: AuthRegistration): Promise<void>;
+  sendPasswordReset(email: string): Promise<void>;
+  signOut(): Promise<void>;
+}
+
+const unavailableError = () => new Error(unavailableSession.error);
+
+const AuthContext = createContext<AuthContextValue>({
+  ...unavailableSession,
+  async signIn() { throw unavailableError(); },
+  async register() { throw unavailableError(); },
+  async sendPasswordReset() { throw unavailableError(); },
+  async signOut() { throw unavailableError(); },
+});
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Authentication request failed.';
 }
 
 export function AuthProvider({ children, port }: PropsWithChildren<{ port?: AuthPort }>) {
-  const authPort = useMemo(() => port ?? createUnavailableAuthPort(), [port]);
-  const [session, setSession] = useState<AuthSession>(initialSession);
+  const [session, setSession] = useState<AuthSession>(() => port ? initialSession : unavailableSession);
 
   useEffect(() => {
+    if (!port) {
+      setSession(unavailableSession);
+      return;
+    }
+
     let active = true;
     const publish = (nextSession: AuthSession) => {
       if (active) setSession(nextSession);
     };
 
-    if (authPort.subscribe) {
-      const unsubscribe = authPort.subscribe(publish);
+    if (port.subscribe) {
+      const unsubscribe = port.subscribe(publish);
       return () => {
         active = false;
         unsubscribe();
       };
     }
 
-    void authPort.getSession()
+    void port.getSession()
       .then(publish)
       .catch((error: unknown) => {
-        publish({
-          status: 'error',
-          identity: null,
-          error: error instanceof Error ? error.message : 'Unable to restore authentication session.',
-        });
+        publish({ status: 'error', identity: null, error: getErrorMessage(error) });
       });
 
     return () => {
       active = false;
     };
-  }, [authPort]);
+  }, [port]);
 
-  return <AuthContext.Provider value={session}>{children}</AuthContext.Provider>;
+  const value = useMemo<AuthContextValue>(() => ({
+    ...session,
+    async signIn(email, password) {
+      if (!port) throw unavailableError();
+      setSession({ status: 'loading', identity: session.identity });
+      try {
+        setSession(await port.signIn(email, password));
+      } catch (error) {
+        setSession({ status: 'error', identity: null, error: getErrorMessage(error) });
+        throw error;
+      }
+    },
+    async register(input) {
+      if (!port) throw unavailableError();
+      setSession({ status: 'loading', identity: session.identity });
+      try {
+        setSession(await port.register(input));
+      } catch (error) {
+        setSession({ status: 'error', identity: null, error: getErrorMessage(error) });
+        throw error;
+      }
+    },
+    async sendPasswordReset(email) {
+      if (!port) throw unavailableError();
+      await port.sendPasswordReset(email);
+    },
+    async signOut() {
+      if (!port) throw unavailableError();
+      await port.signOut();
+      setSession({ status: 'signed_out', identity: null });
+    },
+  }), [port, session]);
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth(): AuthSession {
+export function useAuth(): AuthContextValue {
   return useContext(AuthContext);
 }
 
