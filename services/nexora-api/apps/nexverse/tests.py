@@ -353,3 +353,44 @@ class NexverseAssetProcessingApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, 404)
+
+
+class NexverseAssetProcessingClaimTests(APITestCase):
+    def test_processing_session_cannot_be_claimed_again(self):
+        user = NexoraUser.objects.create(
+            email="processing-claim@example.test",
+            status=NexoraUser.Status.ACTIVE,
+        )
+        author = NexverseAuthor.objects.create(
+            user=user,
+            slug="processing-claim",
+            pen_name="Processing Claim",
+        )
+        work = NexverseWork.objects.create(
+            author=author,
+            slug="processing-claim-work",
+            title="Processing Claim Work",
+        )
+        session = NexverseUploadSession.objects.create(
+            work=work,
+            owner=user,
+            asset_type=NexverseUploadSession.AssetType.MANUSCRIPT,
+            original_filename="chapter.txt",
+            content_type="text/plain",
+            expected_size_bytes=12,
+            storage_path="nexverse/processing-claim/uploads/already-processing/chapter.txt",
+            status=NexverseUploadSession.Status.PROCESSING,
+            expires_at=timezone.now() + timedelta(minutes=10),
+        )
+        self.client.force_authenticate(user=user)
+
+        response = self.client.post(
+            f"/api/v1/nexverse/creator/uploads/{session.id}/process/",
+            data={},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.data["code"], "ASSET_NOT_UPLOADED")
+        session.refresh_from_db()
+        self.assertEqual(session.status, NexverseUploadSession.Status.PROCESSING)
