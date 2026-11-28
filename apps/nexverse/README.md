@@ -215,3 +215,30 @@ Backend and mobile work must advance in the same milestone. Each feature defines
 ## Progress update rule
 
 Update this report in the same milestone whenever backend or frontend work is merged into `main`. Record commit, changed capability, test command and actual result, remaining blockers, and revised percentage. Do not increase the percentage solely because documentation or scaffolding was added.
+
+
+---
+
+# Engineering Update — Upload processing concurrency
+
+**Date:** 28 November 2026  
+**Branch:** `main`
+
+### Backend
+- Replaced the read-then-save processing transition with a conditional database update.
+- Only `uploaded` and retryable `failed` sessions can be atomically claimed.
+- A competing or stale request receives HTTP 409 with `ASSET_PROCESSING_CONFLICT`.
+- Added a focused API regression test asserting that an already-processing session is not processed again.
+
+### Frontend
+- When Firebase transfer fails after the backend has created an upload session, Upload Center now refreshes the asset library.
+- This exposes the server-side session state instead of leaving the UI unaware of a partially completed attempt.
+
+### Verification
+- Source-level changes committed; automated Django tests, mobile typecheck and Android build have **not** been executed in the Codespace during this turn.
+- The new regression test covers the already-processing state. A database-backed concurrency stress test remains outstanding.
+
+### Progress
+- Overall product estimate remains **34%** pending executable test results.
+- Backend creator/upload/moderation workstream: estimate remains **48%** until test execution and broader upload lifecycle validation.
+- Mobile creator/publisher workstream: estimate remains **40%** until typecheck and device validation.
