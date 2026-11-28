@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams, router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -33,6 +33,7 @@ export default function UploadCenterScreen() {
   const [loadingLibrary, setLoadingLibrary] = useState(true);
   const [libraryError, setLibraryError] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const cancelUploadRef = useRef<(() => void) | null>(null);
 
   const refreshLibrary = useCallback(async () => {
     if (!id) return;
@@ -115,6 +116,7 @@ export default function UploadCenterScreen() {
         assetType,
         { uri: file.uri, name: file.name, mimeType: file.mimeType, size: file.size },
         setProgress,
+        cancel => { cancelUploadRef.current = cancel; },
       );
       setSuccess(uploaded.filename + ' berhasil diunggah dan menunggu pemeriksaan.');
       await refreshLibrary();
@@ -123,6 +125,7 @@ export default function UploadCenterScreen() {
       // Keep the server-created session visible so a failed transfer is not hidden.
       await refreshLibrary();
     } finally {
+      cancelUploadRef.current = null;
       setUploading(false);
     }
   };
@@ -181,7 +184,12 @@ export default function UploadCenterScreen() {
             <Text style={s.percent}>{progress}%</Text>
           </View>
           <View style={s.track}><View style={[s.fill, { width: (String(progress) + '%') as `${number}%` }]} /></View>
-          <Text style={s.cardBody}>Jangan tutup halaman sampai upload selesai.</Text>
+          <View style={s.progressFooter}>
+            <Text style={[s.cardBody, { flex: 1 }]}>Upload dapat dibatalkan. Sesi yang belum selesai akan ditutup.</Text>
+            <Pressable onPress={() => cancelUploadRef.current?.()} style={s.cancelButton}>
+              <Text style={s.cancelText}>Batalkan</Text>
+            </Pressable>
+          </View>
         </View>
       ) : null}
       {success ? <View style={s.success}><Ionicons name="checkmark-circle" size={19} color={palette.green} /><Text style={s.successText}>{success}</Text></View> : null}
@@ -258,6 +266,9 @@ const s = StyleSheet.create({
   fill: { height: 7, borderRadius: 6, backgroundColor: palette.green },
   success: { flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: palette.mint, borderRadius: 11, padding: 12 },
   successText: { color: palette.greenDark, fontSize: 11, flex: 1, lineHeight: 16 },
+  progressFooter: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  cancelButton: { paddingVertical: 7, paddingHorizontal: 11, borderRadius: 8, backgroundColor: palette.rose },
+  cancelText: { color: '#8E443A', fontSize: 10, fontWeight: '900' },
   errorBox: { flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: palette.rose, borderRadius: 11, padding: 12 },
   errorText: { color: '#8E443A', fontSize: 11, flex: 1, lineHeight: 16 },
   libraryHeader: { flexDirection: 'row', alignItems: 'center', marginTop: 16 },
