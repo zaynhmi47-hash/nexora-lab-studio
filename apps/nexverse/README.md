@@ -242,3 +242,27 @@ Update this report in the same milestone whenever backend or frontend work is me
 - Overall product estimate remains **34%** pending executable test results.
 - Backend creator/upload/moderation workstream: estimate remains **48%** until test execution and broader upload lifecycle validation.
 - Mobile creator/publisher workstream: estimate remains **40%** until typecheck and device validation.
+
+
+## Engineering Update — Upload cancellation lifecycle
+
+**Date:** 28 November 2026  
+**Branch:** `main`
+
+### Backend
+- Added authenticated `POST /api/v1/nexverse/creator/uploads/{session_id}/cancel/`.
+- The endpoint is owner/work scoped and atomically transitions only `created` sessions to `expired`; it is idempotent for an already expired session and rejects uploaded/processing/ready assets.
+- No storage object deletion is attempted in this request path. Orphan-object cleanup requires a separate retention worker and is not claimed as implemented.
+
+### Mobile
+- Upload Center exposes a cancel action while Firebase resumable upload is active.
+- Cancelling stops the Firebase upload task, then closes the backend session and refreshes the asset library.
+- Existing progress display and completion flow remain in place.
+
+### Verification
+- GitHub source files were re-fetched after writes and the new endpoint, route, service call and UI callback were confirmed present.
+- Django tests, mobile TypeScript typecheck, Expo diagnostics and Android build were **not executed** in this environment. Runtime correctness remains unverified.
+- A transfer cancelled after an object has already completed but before completion API acknowledgement may race with the backend; the server deliberately refuses to cancel non-created sessions rather than silently changing a verified asset.
+
+### Progress
+- Overall estimate remains **34%**. No percentage increase is recorded until the backend and mobile checks run in the repository environment.
