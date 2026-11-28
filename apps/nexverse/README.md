@@ -106,3 +106,112 @@ A purchase intent starts as `pending` and does not grant access. `confirm_verifi
 - `DELETE` deactivates the current price so it no longer appears in public offers. Existing purchase records retain their amount and currency snapshots.
 - Free-preview chapters cannot be priced. A creator cannot inspect or modify another author's chapter price.
 - The current price model is a single active configuration per chapter. Full price-version history and creator revenue-share policy remain separate follow-up work.
+
+
+---
+
+# Nexverse Engineering Progress Report
+
+**Last audited:** 28 November 2026  
+**Repository:** `zaynhmi47-hash/nexora-lab-studio`  
+**Branch:** `main`  
+**Latest inspected Nexverse commit:** `ddc9fb7a2863888ec356812e7c73f300b121d471`
+
+> Progress percentages are engineering estimates against the full Nexverse product scope, not commit counts. Code/documentation presence alone does not establish production readiness.
+
+## Overall status
+
+**Estimated product implementation: 34%**
+
+| Workstream | Estimated completion | Audit status |
+|---|---:|---|
+| Backend domain, catalog and reader APIs | 60% | Core API surfaces present; runtime verification required |
+| Backend creator, upload and moderation | 48% | Draft workflow, upload pipeline, import and review APIs present; production gaps remain |
+| Backend monetization and creator earnings | 35% | Offers, purchase intents, entitlements and gross attribution ledger exist; settlement/payouts absent |
+| Mobile reader and discovery UI | 45% | Home, Discover, Library, Profile, work detail and reader documented as API-connected |
+| Mobile creator and publisher UI | 40% | Creator/Publisher Studio, upload/review and chapter editing flows documented |
+| Firebase and platform integration | 30% | Auth/Storage adapters and configuration path documented; live deployment unverified |
+| Quality, security and release readiness | 15% | Focused tests exist in source; full test/typecheck/CI/security/device validation unconfirmed |
+
+The product scope includes books, PDFs, articles, video, music, creator/publisher operations, rights management, subscriptions, advertising, analytics and international-scale delivery. Several domains are not yet implemented; the overall estimate is therefore conservative.
+
+## Completed or present in the repository
+
+### Backend
+- Nexverse API routes are mounted under `/api/v1/nexverse/`.
+- Public catalog supports search and filters; work detail exposes chapter metadata.
+- Reader delivery distinguishes free previews from paid chapters and checks access server-side.
+- Creator profile/work/chapter APIs include ownership-scoped editing and submission.
+- Moderation queue, work review and approve/reject decisions use role checks and audit history.
+- Firebase identity authentication protects creator/moderator APIs and resolves the shared Nexora identity.
+- Upload sessions validate ownership, MIME/extension, size and expiry; completion checks uploaded object metadata.
+- Asset processing validates file signatures and bounded file structures, extracts basic metadata and reports retryable failures.
+- EPUB/TXT manuscript extraction proposes chapter sections; creator confirmation imports draft chapters transactionally and prevents duplicate imports.
+- Chapter ordering validates the complete unique chapter list and uses a database transaction with row locks.
+- Reader progress, bookmarks, offers, purchase intents, entitlements, creator earnings attribution and chapter price configuration have API surfaces.
+
+### Frontend
+- Expo Router mobile app exists at `apps/nexverse/mobile`.
+- Home, Discover, Library, Profile, work detail and reader surfaces are documented.
+- Firebase Auth bridge uses the default Firebase app when available, AsyncStorage persistence and fresh ID tokens for protected API requests.
+- Publisher Studio has sign-in for pre-provisioned moderator accounts; it does not provide public moderator registration.
+- Creator upload center and manuscript review/import flows are documented.
+- Creator Chapter Studio supports draft chapter editing, local preview and explicit save through the owner-scoped API.
+- Mobile API clients for chapter editing and ordering have been added.
+
+## Remaining work
+
+### P0 — verify and stabilize current implementation
+- Run the complete Nexverse Django test suite and migrations in the actual Codespace.
+- Run mobile TypeScript typecheck, Expo dependency diagnostics and Android launch/build.
+- Verify API/mobile contract parity, error states, pagination, empty states and session expiry.
+- Verify Firebase Auth and Storage against the intended project, storage rules and deployment configuration.
+- Add or confirm CI jobs for backend tests, mobile typecheck and workspace boundary checks.
+- Perform security review of upload paths, private object access, moderator roles, paid chapter delivery and identity mapping.
+
+### P1 — complete the core publishing lifecycle
+- Finish upload retry/resume UX, progress, cancellation and failure recovery.
+- Add asynchronous processing workers; current processing is synchronous and creator-triggered.
+- Add PDF text extraction/OCR with resource limits and safe parsing.
+- Add malware scanning and secure private preview/delivery; structural validation is not antivirus.
+- Implement revision/version history, autosave and conflict handling for creator editing.
+- Complete publication scheduling, correction, archive and takedown workflows.
+- Add cover/asset management and rights/licensing metadata with auditable ownership claims.
+
+### P1 — monetization completion
+- Integrate a trusted payment provider and verified, idempotent webhooks.
+- Implement purchase settlement; purchase intent alone must never grant paid access.
+- Define refunds, entitlement expiry/revocation and subscription lifecycle.
+- Define creator revenue share, platform fees, taxes, payout onboarding and payout reconciliation.
+- Integrate financial audit/reporting through Nexora Finance rather than duplicating accounting.
+
+### P2 — broaden the media product
+- Video/audio upload, transcoding, streaming/playback and delivery controls.
+- Follow/following, creator channels, notifications and audience engagement.
+- Search ranking, recommendations, reading/watch/listening history and analytics.
+- Advertising, premium plans and subscription entitlements.
+- Rights reporting, copyright complaints, moderation escalation and transparency tools.
+- Accessibility, localization, offline/download policy and responsive web experience.
+
+## Parallel delivery model
+
+Backend and mobile work must advance in the same milestone. Each feature defines its API contract, backend behavior/tests and frontend screen/client/state/error handling together. Mock/contract fixtures are temporary integration support only; failed API requests must not silently fall back to sample data.
+
+| Parallel lane | Next deliverables |
+|---|---|
+| Backend | Run tests/migrations; close upload/publication gaps; worker-based processing; payment webhook contract |
+| Frontend | Validate Expo/typecheck; finish upload progress/retry and chapter workflow states; connect purchase/entitlement UI |
+| Integration | Contract tests, Firebase environment verification, creator-to-reader end-to-end scenario |
+| Quality | CI, security checks, Android device testing and release checklist |
+
+## Verification record
+
+- Repository files and recent commits were inspected on `main`.
+- Source includes focused API tests for public catalog/reader access and upload-session/asset-processing cases.
+- Tests being present in the repository is **not** proof that they pass.
+- No live command execution, complete backend test run, Expo typecheck, Android build, Firebase deployment or end-to-end test was performed during this audit. These results remain **unverified**, not passed.
+- Configuration instructions identify Firebase project `nexora-73cfa`; actual credentials, bucket, rules and deployed state were not verified.
+
+## Progress update rule
+
+Update this report in the same milestone whenever backend or frontend work is merged into `main`. Record commit, changed capability, test command and actual result, remaining blockers, and revised percentage. Do not increase the percentage solely because documentation or scaffolding was added.
