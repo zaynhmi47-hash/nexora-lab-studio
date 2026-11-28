@@ -60,7 +60,9 @@ class Command(BaseCommand):
                 self.stdout.write(f"Would delete expired upload object for session {session.pk}.")
                 continue
             try:
-                FirebaseProviderRegistry().storage().delete(reference)
+                storage = FirebaseProviderRegistry().storage()
+                if storage.exists(reference):
+                    storage.delete(reference)
                 deleted += 1
             except Exception:
                 failed += 1
