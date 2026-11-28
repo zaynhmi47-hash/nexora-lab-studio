@@ -59,6 +59,7 @@ export async function uploadCreatorAsset(
   assetType: UploadAssetType,
   asset: LocalUploadAsset,
   onProgress: (progress: number) => void,
+  onCancelReady?: (cancel: () => void) => void,
 ): Promise<UploadSession> {
   const session = await nexverseApiRequest<UploadSession>(
     '/nexverse/creator/works/' + encodeURIComponent(workId) + '/uploads/',
@@ -84,8 +85,10 @@ export async function uploadCreatorAsset(
   const objectRef = ref(storage, session.storagePath);
   const task = uploadBytesResumable(objectRef, blob, { contentType: asset.mimeType });
 
-  await new Promise<void>((resolve, reject) => {
-    task.on(
+  onCancelReady?.(() => task.cancel());
+  try {
+    await new Promise<void>((resolve, reject) => {
+      task.on(
       'state_changed',
       snapshot => {
         const progress = snapshot.totalBytes > 0
@@ -94,9 +97,21 @@ export async function uploadCreatorAsset(
         onProgress(progress);
       },
       reject,
-      resolve,
-    );
-  });
+        resolve,
+      );
+    });
+  } catch (cause) {
+    if (task.snapshot.state === 'canceled') {
+      await nexverseApiRequest<UploadSession>(
+        '/nexverse/creator/uploads/' + encodeURIComponent(session.id) + '/cancel/',
+        { method: 'POST', body: '{}' },
+      );
+      throw new Error('Upload dibatalkan. Sesi yang belum selesai telah ditutup.');
+    }
+    throw cause;
+  } finally {
+    onCancelReady?.(() => undefined);
+  }
 
   return nexverseApiRequest<UploadSession>(
     '/nexverse/creator/uploads/' + encodeURIComponent(session.id) + '/complete/',
