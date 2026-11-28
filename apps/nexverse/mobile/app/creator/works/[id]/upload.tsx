@@ -120,6 +120,8 @@ export default function UploadCenterScreen() {
       await refreshLibrary();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Upload gagal. Periksa koneksi lalu coba lagi.');
+      // Keep the server-created session visible so a failed transfer is not hidden.
+      await refreshLibrary();
     } finally {
       setUploading(false);
     }
