@@ -309,3 +309,42 @@ class NexverseAssetProcessView(APIView):
             "updated_at",
         ))
         return Response(_session_payload(session))
+
+
+class NexverseUploadCancelView(APIView):
+    authentication_classes = [FirebaseIdentityAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, session_id):
+        session = NexverseUploadSession.objects.filter(
+            pk=session_id,
+            owner=request.user,
+            work__author__user=request.user,
+            deleted_at__isnull=True,
+        ).first()
+        if session is None:
+            return Response({"detail": "Upload session not found."}, status=404)
+        if session.status == NexverseUploadSession.Status.EXPIRED:
+            return Response(_session_payload(session))
+        if session.status != NexverseUploadSession.Status.CREATED:
+            return Response(
+                {"detail": "Only an unfinished upload can be cancelled.", "code": "UPLOAD_NOT_CANCELLABLE"},
+                status=409,
+            )
+
+        cancelled = NexverseUploadSession.objects.filter(
+            pk=session.pk,
+            owner=request.user,
+            status=NexverseUploadSession.Status.CREATED,
+            deleted_at__isnull=True,
+        ).update(
+            status=NexverseUploadSession.Status.EXPIRED,
+            updated_at=timezone.now(),
+        )
+        session.refresh_from_db()
+        if cancelled != 1 and session.status != NexverseUploadSession.Status.EXPIRED:
+            return Response(
+                {"detail": "Upload state changed before cancellation completed.", "code": "UPLOAD_CANCEL_CONFLICT"},
+                status=409,
+            )
+        return Response(_session_payload(session))
