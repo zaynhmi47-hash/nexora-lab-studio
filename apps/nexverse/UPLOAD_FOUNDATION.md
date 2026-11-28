@@ -109,3 +109,12 @@ firebase deploy --only storage --project nexora-73cfa
 - Only one request can transition a given session to `processing`; competing requests receive HTTP 409 with `ASSET_PROCESSING_CONFLICT`.
 - This protects against duplicate creator taps, network retries and concurrent requests starting duplicate work against the same private object.
 - Processing remains synchronous in this milestone; the conditional claim is not a background queue.
+
+
+## Expired upload recovery and object cleanup
+
+- Mobile closes a newly created upload session when the local file cannot be read, its size changes, the Firebase transfer fails, or the creator cancels. If the cancellation API is unreachable, the session remains bounded by its 20-minute expiry.
+- The Django management command `cleanup_nexverse_uploads` transitions stale `created` sessions to `expired`, waits through a configurable grace period, and removes any corresponding private Firebase Storage object. It only targets `expired` sessions; verified `uploaded`, `processing`, `ready`, and `failed` assets are not deleted.
+- The cleanup command is bounded with `--limit`, supports `--dry-run`, checks object existence before deletion, and leaves database records as audit history. Failed Storage operations are logged for a later retry.
+- Run a preview from `services/nexora-api` with `python manage.py cleanup_nexverse_uploads --dry-run`; execute with `python manage.py cleanup_nexverse_uploads`. Production deployment must schedule this command periodically (for example, an operations cron or existing scheduler); no scheduler has been configured by this code change.
+- This cleanup is a retention/recovery mechanism, not resumable cross-process upload recovery. The current mobile client restarts a failed transfer as a new session.
