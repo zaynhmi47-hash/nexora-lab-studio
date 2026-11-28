@@ -1,6 +1,7 @@
 from datetime import timedelta
 from unittest.mock import patch
 
+from django.core.management import call_command
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
@@ -394,3 +395,57 @@ class NexverseAssetProcessingClaimTests(APITestCase):
         self.assertEqual(response.data["code"], "ASSET_NOT_UPLOADED")
         session.refresh_from_db()
         self.assertEqual(session.status, NexverseUploadSession.Status.PROCESSING)
+
+
+class NexverseUploadCleanupCommandTests(APITestCase):
+    def test_cleanup_deletes_only_expired_upload_objects(self):
+        user = NexoraUser.objects.create(
+            email="cleanup@example.test",
+            status=NexoraUser.Status.ACTIVE,
+        )
+        author = NexverseAuthor.objects.create(
+            user=user,
+            slug="cleanup-author",
+            pen_name="Cleanup Author",
+        )
+        work = NexverseWork.objects.create(
+            author=author,
+            slug="cleanup-work",
+            title="Cleanup Work",
+        )
+        old = timezone.now() - timedelta(hours=3)
+        expired = NexverseUploadSession.objects.create(
+            work=work,
+            owner=user,
+            asset_type=NexverseUploadSession.AssetType.MANUSCRIPT,
+            original_filename="abandoned.pdf",
+            content_type="application/pdf",
+            expected_size_bytes=128,
+            storage_path="nexverse/cleanup/uploads/expired/abandoned.pdf",
+            status=NexverseUploadSession.Status.EXPIRED,
+            expires_at=old,
+        )
+        NexverseUploadSession.objects.filter(pk=expired.pk).update(updated_at=old)
+        uploaded = NexverseUploadSession.objects.create(
+            work=work,
+            owner=user,
+            asset_type=NexverseUploadSession.AssetType.MANUSCRIPT,
+            original_filename="verified.pdf",
+            content_type="application/pdf",
+            expected_size_bytes=128,
+            storage_path="nexverse/cleanup/uploads/uploaded/verified.pdf",
+            status=NexverseUploadSession.Status.UPLOADED,
+            expires_at=old,
+        )
+
+        with patch("apps.nexverse.management.commands.cleanup_nexverse_uploads.FirebaseProviderRegistry") as registry:
+            call_command("cleanup_nexverse_uploads")
+        storage = registry.return_value.storage.return_value
+        storage.delete.assert_called_once()
+        deleted_reference = storage.delete.call_args.args[0]
+        self.assertEqual(deleted_reference.namespace, "nexverse")
+        self.assertIn("expired/abandoned.pdf", deleted_reference.key)
+        expired.refresh_from_db()
+        uploaded.refresh_from_db()
+        self.assertEqual(expired.status, NexverseUploadSession.Status.EXPIRED)
+        self.assertEqual(uploaded.status, NexverseUploadSession.Status.UPLOADED)
