@@ -238,9 +238,26 @@ class NexverseAssetProcessView(APIView):
                 status=409,
             )
 
-        session.status = NexverseUploadSession.Status.PROCESSING
-        session.processing_error = ""
-        session.save(update_fields=("status", "processing_error", "updated_at"))
+        # Claim the session with one conditional UPDATE. A read-then-save sequence
+        # allows two concurrent requests to both start processing the same object.
+        claimed = NexverseUploadSession.objects.filter(
+            pk=session.pk,
+            owner=request.user,
+            status__in=(
+                NexverseUploadSession.Status.UPLOADED,
+                NexverseUploadSession.Status.FAILED,
+            ),
+            deleted_at__isnull=True,
+        ).update(
+            status=NexverseUploadSession.Status.PROCESSING,
+            processing_error="",
+            updated_at=timezone.now(),
+        )
+        if claimed != 1:
+            return Response(
+                {"detail": "This asset is already being processed or its state changed. Refresh the upload library.", "code": "ASSET_PROCESSING_CONFLICT"},
+                status=409,
+            )
 
         reference = ObjectReference(
             namespace="nexverse",
