@@ -74,11 +74,24 @@ export async function uploadCreatorAsset(
     },
   );
 
-  const fileResponse = await fetch(asset.uri);
-  if (!fileResponse.ok) throw new Error('Berkas lokal tidak dapat dibaca.');
-  const blob = await fileResponse.blob();
-  if (blob.size !== asset.size) {
-    throw new Error('Ukuran berkas berubah setelah sesi upload dibuat. Silakan pilih ulang berkas.');
+  const closeUnfinishedSession = async () => {
+    await nexverseApiRequest<UploadSession>(
+      '/nexverse/creator/uploads/' + encodeURIComponent(session.id) + '/cancel/',
+      { method: 'POST', body: '{}' },
+    );
+  };
+
+  let blob: Blob;
+  try {
+    const fileResponse = await fetch(asset.uri);
+    if (!fileResponse.ok) throw new Error('Berkas lokal tidak dapat dibaca.');
+    blob = await fileResponse.blob();
+    if (blob.size !== asset.size) {
+      throw new Error('Ukuran berkas berubah setelah sesi upload dibuat. Silakan pilih ulang berkas.');
+    }
+  } catch (cause) {
+    try { await closeUnfinishedSession(); } catch { /* expiry cleanup is the fallback */ }
+    throw cause;
   }
 
   const storage = getStorage(getApp());
