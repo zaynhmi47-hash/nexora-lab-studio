@@ -266,3 +266,28 @@ Update this report in the same milestone whenever backend or frontend work is me
 
 ### Progress
 - Overall estimate remains **34%**. No percentage increase is recorded until the backend and mobile checks run in the repository environment.
+
+
+## Engineering Update — Upload recovery and Storage cleanup
+
+**Date:** 29 November 2026  
+**Branch:** `main`
+
+### Backend
+- Added the `cleanup_nexverse_uploads` Django management command.
+- The command expires stale `created` sessions, applies a grace period, then checks and deletes their private Firebase Storage object. It targets only `expired` sessions, leaves audit records intact, logs failed deletes for retry, and supports `--dry-run`, `--limit`, and `--grace-hours`.
+- Added a Django API test covering cleanup of an expired object without deleting an uploaded/verified session.
+
+### Mobile
+- Local-file read failures and size mismatches now attempt to close the newly created session.
+- Firebase transfer failures also attempt to close the unfinished session; when the API is unreachable, the 20-minute expiry and cleanup command provide the fallback.
+
+### Operations and limitations
+- Preview: `cd services/nexora-api && python manage.py cleanup_nexverse_uploads --dry-run`.
+- Execute: `python manage.py cleanup_nexverse_uploads`.
+- A production scheduler still needs to invoke the command periodically. This commit does not configure cron/Celery or implement persistent byte-offset resume across app restarts.
+- The command does not delete records, and it never targets verified or processing assets.
+
+### Verification
+- GitHub source files were re-fetched after changes. Automated Django tests, mobile typecheck, Expo diagnostics and Android build were not run in this environment; runtime behavior remains unverified.
+- Overall progress estimate remains **34%** pending executable verification and end-to-end validation.
