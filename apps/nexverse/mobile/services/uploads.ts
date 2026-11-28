@@ -102,23 +102,20 @@ export async function uploadCreatorAsset(
   try {
     await new Promise<void>((resolve, reject) => {
       task.on(
-      'state_changed',
-      snapshot => {
-        const progress = snapshot.totalBytes > 0
-          ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
-          : 0;
-        onProgress(progress);
-      },
-      reject,
+        'state_changed',
+        snapshot => {
+          const progress = snapshot.totalBytes > 0
+            ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
+            : 0;
+          onProgress(progress);
+        },
+        reject,
         resolve,
       );
     });
   } catch (cause) {
+    try { await closeUnfinishedSession(); } catch { /* expiry cleanup is the fallback */ }
     if (task.snapshot.state === 'canceled') {
-      await nexverseApiRequest<UploadSession>(
-        '/nexverse/creator/uploads/' + encodeURIComponent(session.id) + '/cancel/',
-        { method: 'POST', body: '{}' },
-      );
       throw new Error('Upload dibatalkan. Sesi yang belum selesai telah ditutup.');
     }
     throw cause;
