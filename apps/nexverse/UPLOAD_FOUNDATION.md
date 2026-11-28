@@ -101,3 +101,11 @@ firebase deploy --only storage --project nexora-73cfa
   `PUT /api/v1/nexverse/creator/works/{work_id}/chapters/order/`. The API locks the owned work, requires the complete unique chapter ID list, blocks submitted/published works and published chapters, and uses temporary chapter numbers inside a transaction to avoid unique-number collisions during swaps.
 - Editing and reordering remain unavailable after submission or publication; an explicit revision workflow is required before modifying published content.
 - This stage does not implement autosave, collaborative editing, version history, offline conflict resolution, or a revision/publishing workflow. Saving remains creator-triggered.
+
+
+## Concurrent processing protection
+
+- The processing endpoint claims an eligible `uploaded` or `failed` session with a conditional database update.
+- Only one request can transition a given session to `processing`; competing requests receive HTTP 409 with `ASSET_PROCESSING_CONFLICT`.
+- This protects against duplicate creator taps, network retries and concurrent requests starting duplicate work against the same private object.
+- Processing remains synchronous in this milestone; the conditional claim is not a background queue.
